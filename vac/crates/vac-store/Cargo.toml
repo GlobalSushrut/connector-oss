@@ -1,0 +1,18 @@
+[package]
+name = "vac-store"
+description = "Content-addressable storage for VAC"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vac-core = { path = "../vac-core" }
+cid = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+dashmap = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

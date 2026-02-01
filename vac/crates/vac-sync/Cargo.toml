@@ -1,0 +1,21 @@
+[package]
+name = "vac-sync"
+description = "Sync protocol for VAC vaults"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vac-core = { path = "../vac-core" }
+vac-prolly = { path = "../vac-prolly" }
+vac-store = { path = "../vac-store" }
+vac-crypto = { path = "../vac-crypto" }
+cid = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

@@ -1,0 +1,22 @@
+[package]
+name = "aapi-core"
+description = "AAPI Core - VĀKYA schema, Sandhi canonicalization, and validation"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+jsonschema = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+assert-json-diff = { workspace = true }

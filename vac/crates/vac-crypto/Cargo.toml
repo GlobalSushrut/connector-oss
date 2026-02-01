@@ -1,0 +1,18 @@
+[package]
+name = "vac-crypto"
+description = "Cryptographic primitives for VAC (Ed25519, UCAN)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vac-core = { path = "../vac-core" }
+ed25519-dalek = { workspace = true }
+sha2 = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+bs58 = "0.5"
+
+[dev-dependencies]
+proptest = { workspace = true }

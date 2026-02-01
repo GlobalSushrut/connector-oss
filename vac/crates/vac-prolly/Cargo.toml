@@ -1,0 +1,18 @@
+[package]
+name = "vac-prolly"
+description = "Prolly tree implementation for VAC"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vac-core = { path = "../vac-core" }
+cid = { workspace = true }
+sha2 = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tokio = { workspace = true }

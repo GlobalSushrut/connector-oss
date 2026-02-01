@@ -1,0 +1,15 @@
+[package]
+name = "vac-red"
+description = "Regressive Entropic Displacement engine for VAC"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vac-core = { path = "../vac-core" }
+sprs = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

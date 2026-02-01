@@ -1,0 +1,31 @@
+[package]
+name = "aapi-gateway"
+description = "AAPI Gateway - HTTP/gRPC server for AAPI protocol"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aapi-core = { path = "../aapi-core" }
+aapi-crypto = { path = "../aapi-crypto" }
+aapi-indexdb = { path = "../aapi-indexdb" }
+aapi-adapters = { path = "../aapi-adapters" }
+aapi-metarules = { path = "../aapi-metarules" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+reqwest = { workspace = true }
