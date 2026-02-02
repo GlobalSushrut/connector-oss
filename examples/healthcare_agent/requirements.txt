@@ -1,0 +1,2 @@
+# Healthcare Agent Demo Dependencies
+# No external dependencies needed - demo uses only Python stdlib
