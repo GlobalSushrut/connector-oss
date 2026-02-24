@@ -1,0 +1,52 @@
+connector:
+  provider: deepseek
+  model: deepseek-chat
+  api_key: ${DEEPSEEK_API_KEY}
+  comply: [soc2]
+  security:
+    signing: true
+    data_classification: confidential
+    retention_days: 3650
+    jurisdiction: US
+
+  firewall:
+    block_injection: true
+    pii_types: [ssn, credit_card, account_number]
+    pii_threshold: 0.7
+    max_calls_per_minute: 60
+    max_input_length: 8192
+
+  behavior:
+    window_ms: 60000
+    anomaly_threshold: 0.8
+    max_actions_per_window: 50
+    detect_contamination: true
+
+  checkpoint:
+    write_through: true
+    wal_enabled: true
+
+agents:
+  ingestion:
+    instructions: "Transaction ingestion agent. Parse and normalize transaction data. Flag missing fields. Max 2 sentences."
+    role: reader
+
+  risk_scorer:
+    instructions: "Risk scoring agent. Score transaction risk 0-100. List top 3 risk signals. Max 3 sentences."
+    role: writer
+
+  sanctions_checker:
+    instructions: "Sanctions compliance agent. Check against OFAC/EU/UN lists. State CLEAR or FLAGGED with reason. Max 2 sentences."
+    role: writer
+    comply: [soc2]
+
+  decision:
+    instructions: "Fraud decision agent. Final APPROVE/DECLINE/REVIEW with one-line rationale."
+    role: admin
+
+observability:
+  service_name: banking-fraud-demo
+  environment: demo
+  log_level: info
+  log_format: json
+  metrics_enabled: true

@@ -1,0 +1,23 @@
+{
+  "name": "@connector-oss/vac-wasm",
+  "version": "0.1.0",
+  "description": "Rust MemoryKernel WASM bindings — CID, DAG-CBOR, Ed25519, audit export, AAPI",
+  "license": "Apache-2.0",
+  "main": "vac_wasm.js",
+  "types": "vac_wasm.d.ts",
+  "files": [
+    "vac_wasm_bg.wasm",
+    "vac_wasm.js",
+    "vac_wasm.d.ts",
+    "vac_wasm_bg.wasm.d.ts"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target nodejs --out-dir pkg",
+    "build:web": "wasm-pack build --target web --out-dir pkg-web",
+    "test": "wasm-pack test --node"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/connector-oss/connector-oss"
+  }
+}

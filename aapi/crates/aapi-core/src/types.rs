@@ -350,3 +350,395 @@ mod tests {
         assert_eq!(child.parent_span_id, Some(parent.span_id));
     }
 }
+
+// =============================================================================
+// Agent Memory Context — Cross-system linkage between AAPI actions and VAC memory
+//
+// Every AAPI action exists in the context of an agent's memory. These types
+// connect the action layer (AAPI) to the memory layer (VAC), enabling:
+// - Full provenance: action → decision → evidence → raw data
+// - Multi-agent coordination with namespace isolation
+// - Machine-world interaction logging for audit
+// =============================================================================
+
+/// Agent context — identifies the agent and its memory namespace
+///
+/// Attached to every VĀKYA to establish which agent is acting,
+/// in which namespace, and with what memory session context.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentContext {
+    /// Agent identifier (e.g., "agent:healthcare-bot-v2")
+    pub agent_id: String,
+    /// Agent type/role (e.g., "triage", "analyst", "executor")
+    pub agent_role: Option<String>,
+    /// Memory namespace for isolation (e.g., "org:hospital/team:er")
+    pub namespace: String,
+    /// Active session ID in VAC memory
+    pub session_id: Option<String>,
+    /// Pipeline ID grouping related actions
+    pub pipeline_id: Option<String>,
+    /// Parent agent ID (for delegated sub-agents)
+    pub parent_agent_id: Option<String>,
+    /// Model being used (e.g., "gpt-4o", "deepseek-chat")
+    pub model: Option<String>,
+    /// Agent framework (e.g., "langchain", "crewai", "autogen", "custom")
+    pub framework: Option<String>,
+}
+
+/// Interaction log entry — records every machine-world interaction
+///
+/// Every API call, database query, file access, or external service
+/// invocation by an agent is logged as an InteractionLog. This provides:
+/// - Complete audit trail for regulatory compliance
+/// - Cost tracking across LLM providers
+/// - Performance monitoring and debugging
+/// - Replay capability for incident investigation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InteractionLog {
+    /// Unique interaction ID
+    pub interaction_id: String,
+    /// Associated VĀKYA ID (if this interaction was part of an authorized action)
+    pub vakya_id: Option<String>,
+    /// Agent context
+    pub agent_id: String,
+    /// Interaction type
+    pub interaction_type: InteractionType,
+    /// Target service/resource
+    pub target: String,
+    /// HTTP method or operation type
+    pub operation: String,
+    /// Request payload (may be redacted for sensitive data)
+    pub request_payload: Option<serde_json::Value>,
+    /// Response payload (may be redacted)
+    pub response_payload: Option<serde_json::Value>,
+    /// Status (success, error, timeout)
+    pub status: InteractionStatus,
+    /// HTTP status code or service-specific code
+    pub status_code: Option<i32>,
+    /// Duration in milliseconds
+    pub duration_ms: u64,
+    /// Token usage (for LLM interactions)
+    pub tokens: Option<InteractionTokens>,
+    /// Estimated cost in USD
+    pub cost_usd: Option<f64>,
+    /// Error details (if failed)
+    pub error: Option<String>,
+    /// Timestamp
+    pub timestamp: Timestamp,
+    /// VAC MemPacket CID (if this interaction was stored as a memory packet)
+    pub packet_cid: Option<String>,
+    /// Trace context for distributed tracing
+    pub trace: Option<TraceContext>,
+}
+
+/// Type of machine-world interaction
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum InteractionType {
+    /// LLM inference call (OpenAI, Anthropic, DeepSeek, etc.)
+    LlmInference,
+    /// Tool/function call
+    ToolCall,
+    /// Database query (SQL, NoSQL, vector DB)
+    DatabaseQuery,
+    /// HTTP API call
+    HttpApi,
+    /// File system operation
+    FileSystem,
+    /// Message queue publish/consume
+    MessageQueue,
+    /// Email/notification send
+    Notification,
+    /// Search engine query
+    Search,
+    /// Custom/other
+    Custom,
+}
+
+/// Status of an interaction
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum InteractionStatus {
+    Success,
+    Error,
+    Timeout,
+    RateLimited,
+    Cancelled,
+}
+
+/// Token usage for LLM interactions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InteractionTokens {
+    pub prompt_tokens: u64,
+    pub completion_tokens: u64,
+    pub total_tokens: u64,
+    pub model: String,
+    /// Cache hit tokens (for prompt caching)
+    #[serde(default)]
+    pub cached_tokens: u64,
+}
+
+/// Action record — complete documentation of an agent action end-to-end
+///
+/// This is the "receipt" that documents everything about an action:
+/// what was intended, how it was authorized, what happened, and what evidence exists.
+/// This is the unit of audit documentation — one ActionRecord per agent action.
+///
+/// Satisfies: EU AI Act Art. 12 (decision logging), HIPAA audit trail,
+/// FINRA supervision records, FDA electronic records
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionRecord {
+    /// Unique action record ID
+    pub record_id: String,
+
+    // --- Intent ---
+    /// What the agent intended to do (human-readable)
+    pub intent: String,
+    /// Action domain and verb (e.g., "ehr.update_allergy")
+    pub action: String,
+    /// Target resource
+    pub target_resource: String,
+    /// Reasoning chain (why this action was chosen)
+    pub reasoning: Option<String>,
+    /// Confidence in the decision (0.0 - 1.0)
+    pub confidence: Option<f64>,
+
+    // --- Authorization ---
+    /// AAPI VĀKYA ID that authorized this action
+    pub vakya_id: Option<String>,
+    /// Actor who authorized
+    pub authorized_by: Option<String>,
+    /// Capability reference used
+    pub capability_ref: Option<String>,
+    /// Whether human approval was obtained
+    #[serde(default)]
+    pub human_approved: bool,
+    /// Human approver ID
+    pub approver_id: Option<String>,
+
+    // --- Execution ---
+    /// Agent that executed the action
+    pub agent_id: String,
+    /// Agent namespace
+    pub namespace: String,
+    /// Session ID during execution
+    pub session_id: Option<String>,
+    /// Pipeline ID
+    pub pipeline_id: Option<String>,
+    /// Execution status
+    pub outcome: ActionOutcome,
+    /// Error details (if failed)
+    pub error: Option<String>,
+    /// Duration in milliseconds
+    pub duration_ms: Option<u64>,
+
+    // --- Evidence ---
+    /// VAC MemPacket CIDs that document this action
+    #[serde(default)]
+    pub evidence_cids: Vec<String>,
+    /// Input packet CID (what data was used)
+    pub input_cid: Option<String>,
+    /// Output packet CID (what was produced)
+    pub output_cid: Option<String>,
+    /// State snapshot CID (before/after state)
+    pub state_snapshot_cid: Option<String>,
+    /// Tool interaction CIDs
+    #[serde(default)]
+    pub tool_interaction_cids: Vec<String>,
+
+    // --- Provenance ---
+    /// Prolly tree root at time of action
+    pub prolly_root: Option<String>,
+    /// Merkle tree root at time of action
+    pub merkle_root: Option<String>,
+    /// Block number in VAC chain
+    pub block_no: Option<u64>,
+
+    // --- Compliance ---
+    /// Applicable regulations
+    #[serde(default)]
+    pub regulations: Vec<String>,
+    /// Data classification
+    pub data_classification: Option<String>,
+    /// Retention period in days
+    #[serde(default)]
+    pub retention_days: u64,
+    /// Whether this action is reversible
+    #[serde(default)]
+    pub reversible: bool,
+
+    // --- Timestamps ---
+    /// When the action was initiated
+    pub initiated_at: Timestamp,
+    /// When the action completed
+    pub completed_at: Option<Timestamp>,
+}
+
+/// Outcome of an agent action
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionOutcome {
+    /// Action completed successfully
+    Success,
+    /// Action partially completed
+    Partial,
+    /// Action failed
+    Failed,
+    /// Action was denied by access control
+    Denied,
+    /// Action was rolled back
+    RolledBack,
+    /// Action is pending human approval
+    PendingApproval,
+    /// Action was cancelled
+    Cancelled,
+}
+
+impl std::fmt::Display for ActionOutcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ActionOutcome::Success => write!(f, "success"),
+            ActionOutcome::Partial => write!(f, "partial"),
+            ActionOutcome::Failed => write!(f, "failed"),
+            ActionOutcome::Denied => write!(f, "denied"),
+            ActionOutcome::RolledBack => write!(f, "rolled_back"),
+            ActionOutcome::PendingApproval => write!(f, "pending_approval"),
+            ActionOutcome::Cancelled => write!(f, "cancelled"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod agent_context_tests {
+    use super::*;
+
+    #[test]
+    fn test_agent_context_creation() {
+        let ctx = AgentContext {
+            agent_id: "agent:healthcare-bot".to_string(),
+            agent_role: Some("triage".to_string()),
+            namespace: "org:hospital/team:er".to_string(),
+            session_id: Some("session:abc123".to_string()),
+            pipeline_id: Some("pipeline:intake-001".to_string()),
+            parent_agent_id: None,
+            model: Some("gpt-4o".to_string()),
+            framework: Some("langchain".to_string()),
+        };
+
+        assert_eq!(ctx.agent_id, "agent:healthcare-bot");
+        assert_eq!(ctx.agent_role.as_deref(), Some("triage"));
+        assert_eq!(ctx.namespace, "org:hospital/team:er");
+    }
+
+    #[test]
+    fn test_interaction_log_llm() {
+        let log = InteractionLog {
+            interaction_id: "int:001".to_string(),
+            vakya_id: Some("vakya:v-001".to_string()),
+            agent_id: "agent:bot".to_string(),
+            interaction_type: InteractionType::LlmInference,
+            target: "api.openai.com".to_string(),
+            operation: "chat.completions".to_string(),
+            request_payload: Some(serde_json::json!({"model": "gpt-4o"})),
+            response_payload: None,
+            status: InteractionStatus::Success,
+            status_code: Some(200),
+            duration_ms: 1500,
+            tokens: Some(InteractionTokens {
+                prompt_tokens: 500,
+                completion_tokens: 200,
+                total_tokens: 700,
+                model: "gpt-4o".to_string(),
+                cached_tokens: 100,
+            }),
+            cost_usd: Some(0.0105),
+            error: None,
+            timestamp: Timestamp::now(),
+            packet_cid: Some("bafy2bzace...".to_string()),
+            trace: None,
+        };
+
+        assert_eq!(log.interaction_type, InteractionType::LlmInference);
+        assert_eq!(log.status, InteractionStatus::Success);
+        assert_eq!(log.tokens.as_ref().unwrap().total_tokens, 700);
+        assert_eq!(log.tokens.as_ref().unwrap().cached_tokens, 100);
+    }
+
+    #[test]
+    fn test_interaction_log_tool_call() {
+        let log = InteractionLog {
+            interaction_id: "int:002".to_string(),
+            vakya_id: None,
+            agent_id: "agent:bot".to_string(),
+            interaction_type: InteractionType::DatabaseQuery,
+            target: "postgres://ehr-db".to_string(),
+            operation: "SELECT".to_string(),
+            request_payload: Some(serde_json::json!({"query": "SELECT * FROM patients WHERE id = $1"})),
+            response_payload: Some(serde_json::json!({"rows": 1})),
+            status: InteractionStatus::Success,
+            status_code: None,
+            duration_ms: 12,
+            tokens: None,
+            cost_usd: None,
+            error: None,
+            timestamp: Timestamp::now(),
+            packet_cid: None,
+            trace: None,
+        };
+
+        assert_eq!(log.interaction_type, InteractionType::DatabaseQuery);
+        assert_eq!(log.duration_ms, 12);
+    }
+
+    #[test]
+    fn test_action_record_full_lifecycle() {
+        let record = ActionRecord {
+            record_id: "ar:001".to_string(),
+            intent: "Update patient allergy record with penicillin allergy".to_string(),
+            action: "ehr.update_allergy".to_string(),
+            target_resource: "ehr:patient:P-44291".to_string(),
+            reasoning: Some("LLM extracted allergy from clinical note with 0.95 confidence".to_string()),
+            confidence: Some(0.95),
+            vakya_id: Some("vakya:v-001".to_string()),
+            authorized_by: Some("did:key:z6MkDoctor".to_string()),
+            capability_ref: Some("cap:ehr-write".to_string()),
+            human_approved: true,
+            approver_id: Some("dr.smith@hospital.org".to_string()),
+            agent_id: "agent:healthcare-bot".to_string(),
+            namespace: "org:hospital/team:er".to_string(),
+            session_id: Some("session:abc".to_string()),
+            pipeline_id: Some("pipeline:intake-001".to_string()),
+            outcome: ActionOutcome::Success,
+            error: None,
+            duration_ms: Some(2500),
+            evidence_cids: vec!["bafy...input".to_string(), "bafy...extraction".to_string()],
+            input_cid: Some("bafy...input".to_string()),
+            output_cid: Some("bafy...output".to_string()),
+            state_snapshot_cid: Some("bafy...snapshot".to_string()),
+            tool_interaction_cids: vec!["bafy...llm-call".to_string()],
+            prolly_root: Some("bafy...prolly".to_string()),
+            merkle_root: Some("bafy...merkle".to_string()),
+            block_no: Some(42),
+            regulations: vec!["hipaa".to_string(), "eu_ai_act".to_string()],
+            data_classification: Some("phi".to_string()),
+            retention_days: 2555,
+            reversible: true,
+            initiated_at: Timestamp::now(),
+            completed_at: Some(Timestamp::now()),
+        };
+
+        assert_eq!(record.outcome, ActionOutcome::Success);
+        assert!(record.human_approved);
+        assert_eq!(record.evidence_cids.len(), 2);
+        assert_eq!(record.regulations.len(), 2);
+        assert!(record.reversible);
+    }
+
+    #[test]
+    fn test_action_outcome_display() {
+        assert_eq!(ActionOutcome::Success.to_string(), "success");
+        assert_eq!(ActionOutcome::Denied.to_string(), "denied");
+        assert_eq!(ActionOutcome::RolledBack.to_string(), "rolled_back");
+        assert_eq!(ActionOutcome::PendingApproval.to_string(), "pending_approval");
+    }
+}

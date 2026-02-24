@@ -1,0 +1,326 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://connector-oss.dev/schemas/connector.schema.json",
+  "title": "Connector Config",
+  "description": "Declarative configuration for connector-oss agents and pipelines",
+  "type": "object",
+  "properties": {
+    "connector": {
+      "description": "Global connector settings",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "description": "LLM provider name",
+          "type": "string",
+          "enum": ["openai", "anthropic", "deepseek", "mistral", "ollama", "custom"],
+          "default": "openai"
+        },
+        "model": {
+          "description": "Model name e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat",
+          "type": "string",
+          "examples": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022", "deepseek-chat"]
+        },
+        "api_key": {
+          "description": "API key — use ${ENV_VAR} for environment variable interpolation",
+          "type": "string",
+          "examples": ["${OPENAI_API_KEY}", "${ANTHROPIC_API_KEY}"]
+        },
+        "endpoint": {
+          "description": "Custom LLM endpoint URL (for self-hosted or proxy)",
+          "type": "string",
+          "format": "uri"
+        },
+        "storage": {
+          "description": "Persistent storage URI for kernel checkpointing",
+          "type": "string",
+          "examples": ["sqlite:./connector.db", "sqlite::memory:", "prolly://./store"]
+        },
+        "comply": {
+          "description": "Compliance frameworks to enforce globally",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["hipaa", "soc2", "gdpr", "eu_ai_act", "dod"]
+          }
+        },
+        "security": { "$ref": "#/definitions/security" },
+        "firewall": { "$ref": "#/definitions/firewall" },
+        "fallbacks": {
+          "description": "LLM fallback providers (tried in order if primary fails)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["provider", "model"],
+            "properties": {
+              "provider": { "type": "string" },
+              "model": { "type": "string" },
+              "api_key": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "agents": {
+      "description": "Named agent definitions",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/agent" }
+    },
+    "pipelines": {
+      "description": "Named pipeline definitions",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/pipeline" }
+    }
+  },
+  "definitions": {
+    "agent": {
+      "type": "object",
+      "required": ["instructions"],
+      "properties": {
+        "instructions": {
+          "description": "System prompt / role instructions for the agent",
+          "type": "string"
+        },
+        "role": {
+          "description": "Agent role label (e.g. analyst, reviewer, coordinator)",
+          "type": "string"
+        },
+        "tools": {
+          "description": "Tools this agent is allowed to use",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "deny_tools": {
+          "description": "Tools explicitly denied to this agent",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "allow_data": {
+          "description": "Data classifications this agent can read",
+          "type": "array",
+          "items": { "type": "string", "examples": ["PHI", "PII", "financial", "public"] }
+        },
+        "deny_data": {
+          "description": "Data classifications this agent cannot read",
+          "type": "array",
+          "items": { "type": "string", "examples": ["PHI", "PII", "financial"] }
+        },
+        "require_approval": {
+          "description": "Tools that require human-in-the-loop approval before execution",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "comply": {
+          "description": "Compliance frameworks for this agent (overrides global)",
+          "type": "array",
+          "items": { "type": "string", "enum": ["hipaa", "soc2", "gdpr", "eu_ai_act", "dod"] }
+        },
+        "security": { "$ref": "#/definitions/security" },
+        "budget": {
+          "description": "Token and cost budget for this agent",
+          "type": "object",
+          "properties": {
+            "max_tokens": { "type": "integer", "minimum": 1 },
+            "max_cost_usd": { "type": "number", "minimum": 0 }
+          }
+        },
+        "rate_limit": {
+          "description": "Max calls per minute",
+          "type": "integer",
+          "minimum": 1
+        },
+        "output_guards": {
+          "description": "Named output validation guards",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "pattern"],
+            "properties": {
+              "name": { "type": "string" },
+              "pattern": {
+                "description": "Regex pattern the output must match (or must NOT match if negate=true)",
+                "type": "string"
+              },
+              "negate": { "type": "boolean", "default": false }
+            }
+          }
+        }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "required": ["actors"],
+      "properties": {
+        "actors": {
+          "description": "Ordered list of actors in this pipeline",
+          "type": "array",
+          "items": { "$ref": "#/definitions/actor" }
+        },
+        "flow": {
+          "description": "Routing DSL e.g. 'intake → diagnosis → treatment'",
+          "type": "string",
+          "examples": ["intake → diagnosis → treatment", "a → b → c"]
+        },
+        "comply": {
+          "description": "Compliance frameworks for this pipeline",
+          "type": "array",
+          "items": { "type": "string", "enum": ["hipaa", "soc2", "gdpr", "eu_ai_act", "dod"] }
+        },
+        "hipaa": {
+          "description": "HIPAA-specific settings (shorthand for comply+security)",
+          "type": "object",
+          "properties": {
+            "jurisdiction": { "type": "string", "examples": ["US", "EU", "UK"] },
+            "retention_days": { "type": "integer", "minimum": 1, "examples": [2555, 365, 90] }
+          }
+        },
+        "gdpr": {
+          "description": "GDPR-specific settings",
+          "type": "object",
+          "properties": {
+            "retention_days": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "security": { "$ref": "#/definitions/security" },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "max_tokens": { "type": "integer" },
+            "max_cost_usd": { "type": "number" }
+          }
+        },
+        "rate_limit": { "type": "integer" }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "required": ["name", "instructions"],
+      "properties": {
+        "name": { "type": "string" },
+        "instructions": { "type": "string" },
+        "role": { "type": "string" },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "deny_tools": { "type": "array", "items": { "type": "string" } },
+        "allow_data": { "type": "array", "items": { "type": "string" } },
+        "deny_data": { "type": "array", "items": { "type": "string" } },
+        "require_approval": { "type": "array", "items": { "type": "string" } },
+        "memory_from": {
+          "description": "Actor names whose memory this actor can read",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "signing": {
+          "description": "Enable Ed25519 signing on every memory packet",
+          "type": "boolean",
+          "default": false
+        },
+        "scitt": {
+          "description": "Enable SCITT receipt generation",
+          "type": "boolean",
+          "default": false
+        },
+        "require_mfa": {
+          "description": "Require MFA verification before approval-gated tools",
+          "type": "boolean",
+          "default": false
+        },
+        "max_delegation_depth": {
+          "description": "Maximum capability delegation chain depth",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        },
+        "data_classification": {
+          "description": "Default data classification tag for all packets",
+          "type": "string",
+          "examples": ["PHI", "PII", "confidential", "public"]
+        },
+        "jurisdiction": {
+          "description": "Data jurisdiction tag",
+          "type": "string",
+          "examples": ["US", "EU", "UK", "GLOBAL"]
+        },
+        "retention_days": {
+          "description": "Data retention period in days",
+          "type": "integer",
+          "minimum": 1
+        },
+        "key_rotation_days": {
+          "description": "Signing key rotation interval in days",
+          "type": "integer",
+          "minimum": 1
+        },
+        "audit_export": {
+          "description": "Audit export destination URI",
+          "type": "string",
+          "examples": ["file:./audit.jsonl", "s3://my-bucket/audit/"]
+        },
+        "ip_allowlist": {
+          "description": "IP addresses allowed to connect",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "firewall": {
+      "type": "object",
+      "properties": {
+        "block_injection": {
+          "description": "Block prompt injection attempts",
+          "type": "boolean",
+          "default": true
+        },
+        "block_pii": {
+          "description": "Block PII leakage in outputs",
+          "type": "boolean",
+          "default": false
+        },
+        "pii_threshold": {
+          "description": "PII detection score threshold (0.0–1.0)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "injection_threshold": {
+          "description": "Injection detection score threshold (0.0–1.0)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.8
+        },
+        "blocked_tools": {
+          "description": "Tools always blocked regardless of agent config",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "allowed_tools": {
+          "description": "Tools always allowed regardless of threat score",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "rate_window_seconds": {
+          "description": "Rate limiting window in seconds",
+          "type": "integer",
+          "default": 60
+        },
+        "max_calls_per_window": {
+          "description": "Max calls per agent per rate window",
+          "type": "integer",
+          "default": 100
+        },
+        "preset": {
+          "description": "Use a built-in firewall preset",
+          "type": "string",
+          "enum": ["default", "strict", "hipaa"],
+          "default": "default"
+        }
+      }
+    }
+  }
+}

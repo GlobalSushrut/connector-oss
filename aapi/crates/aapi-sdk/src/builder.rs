@@ -205,6 +205,11 @@ impl VakyaRequestBuilder {
                 approval_lane: ApprovalLane::None,
                 scopes: vec![],
                 context: None,
+                delegation_chain_cid: None,
+                execution_constraints: None,
+                port_id: None,
+                required_phase: None,
+                required_role: None,
             })
             .body(self.body);
 
@@ -222,6 +227,7 @@ impl VakyaRequestBuilder {
                 reason,
                 chain: vec![],
                 confidence: None,
+                evidence_cids: vec![],
             });
         }
 

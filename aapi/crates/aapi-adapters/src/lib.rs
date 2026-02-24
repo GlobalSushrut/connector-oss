@@ -6,6 +6,7 @@
 pub mod traits;
 pub mod file;
 pub mod http;
+pub mod remote;
 pub mod effect;
 pub mod registry;
 pub mod error;
@@ -13,6 +14,7 @@ pub mod error;
 pub use traits::*;
 pub use file::*;
 pub use http::*;
+pub use remote::*;
 pub use effect::*;
 pub use registry::*;
 pub use error::*;

@@ -1,0 +1,25 @@
+[package]
+name = "vac-replicate"
+description = "CID-based replication engine extending vac-sync with real-time streaming"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vac-core = { path = "../vac-core" }
+vac-sync = { path = "../vac-sync" }
+vac-bus = { path = "../vac-bus" }
+vac-crypto = { path = "../vac-crypto" }
+cid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

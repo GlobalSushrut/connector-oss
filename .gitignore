@@ -1,0 +1,47 @@
+# Rust build artifacts
+target/
+**/target/
+
+# Compiled artifacts
+*.o
+*.so
+*.dylib
+*.rlib
+*.rmeta
+*.pdb
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.whl
+
+# Node / TypeScript
+node_modules/
+dist/
+*.js.map
+
+# Databases
+*.db
+*.redb
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example

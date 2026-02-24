@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/connector-engine",
+    "crates/connector-api",
+    "crates/connector-server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/GlobalSushrut/connector-oss"
+authors = ["Connector Team"]
+
+[workspace.dependencies]
+# Core kernels (path dependencies)
+vac-core = { path = "../vac/crates/vac-core" }
+aapi-core = { path = "../aapi/crates/aapi-core" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Content addressing
+cid = { version = "0.11", features = ["serde"] }
+multihash = { version = "0.19", features = ["serde"] }
+sha2 = "0.10"
+
+# Identity
+uuid = { version = "1.6", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+
+# Persistent storage
+redb = "2.4"
+
+# Testing
+proptest = "1.4"
+tempfile = "3.14"

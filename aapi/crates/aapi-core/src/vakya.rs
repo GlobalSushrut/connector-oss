@@ -51,6 +51,11 @@ pub struct Vakya {
     /// V7: Adhikaraṇa - The authority/context
     pub v7_adhikarana: Adhikarana,
     
+    /// V8: Pratyaya (प्रत्यय) - Expected effect declaration (Phase 9f)
+    /// Declares postconditions and verification criteria for the action.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v8_pratyaya: Option<Pratyaya>,
+    
     /// Body type descriptor
     pub body_type: BodyType,
     
@@ -266,6 +271,50 @@ impl Kriya {
     pub fn parse_action(&self) -> Option<(&str, &str)> {
         self.action.split_once('.')
     }
+
+    // =========================================================================
+    // Phase 9f: 15 new Kriya verb constructors
+    // =========================================================================
+
+    // --- Delegation verbs ---
+    /// delegate.capability — delegate a capability to another agent
+    pub fn delegate_capability() -> Self { Self::new("delegate", "capability") }
+    /// delegate.revoke — revoke a previously delegated capability
+    pub fn delegate_revoke() -> Self { Self::new("delegate", "revoke") }
+    /// delegate.attenuate — narrow an existing delegation
+    pub fn delegate_attenuate() -> Self { Self::new("delegate", "attenuate") }
+
+    // --- Port communication verbs ---
+    /// port.create — create a typed communication port
+    pub fn port_create() -> Self { Self::new("port", "create") }
+    /// port.send — send a message through a port
+    pub fn port_send() -> Self { Self::new("port", "send") }
+    /// port.receive — receive a message from a port
+    pub fn port_receive() -> Self { Self::new("port", "receive") }
+    /// port.close — close a port and drain its buffer
+    pub fn port_close() -> Self { Self::new("port", "close") }
+
+    // --- Pipeline coordination verbs ---
+    /// pipeline.handoff — hand off execution to the next agent in a pipeline
+    pub fn pipeline_handoff() -> Self { Self::new("pipeline", "handoff") }
+    /// pipeline.fork — fork execution into parallel branches
+    pub fn pipeline_fork() -> Self { Self::new("pipeline", "fork") }
+    /// pipeline.join — join parallel branches back together
+    pub fn pipeline_join() -> Self { Self::new("pipeline", "join") }
+
+    // --- Memory coordination verbs ---
+    /// memory.mount — mount a namespace for cross-agent memory sharing
+    pub fn memory_mount() -> Self { Self::new("memory", "mount") }
+    /// memory.seal — seal a memory region (make immutable)
+    pub fn memory_seal() -> Self { Self::new("memory", "seal") }
+    /// memory.share — share a memory packet via port
+    pub fn memory_share() -> Self { Self::new("memory", "share") }
+
+    // --- Execution control verbs ---
+    /// exec.suspend — suspend an agent's execution
+    pub fn exec_suspend() -> Self { Self::new("exec", "suspend") }
+    /// exec.checkpoint — checkpoint execution state for recovery
+    pub fn exec_checkpoint() -> Self { Self::new("exec", "checkpoint") }
 }
 
 /// V4: Karaṇa - The means/instrument
@@ -330,7 +379,7 @@ pub struct Apadana {
     pub location: Option<String>,
 }
 
-/// V7: Adhikaraṇa - The authority/context
+/// V7: Adhikaraṇa - The authority/context (enhanced Phase 9f)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Adhikarana {
     /// Capability token reference or inline token
@@ -359,6 +408,126 @@ pub struct Adhikarana {
     /// Context/environment constraints
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<AuthorityContext>,
+
+    // --- Phase 9f enhancements ---
+
+    /// Delegation proof chain CID (UCAN-compatible)
+    /// References a DelegationChain in the VAC kernel that authorizes this action.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delegation_chain_cid: Option<String>,
+
+    /// Execution constraints for kernel enforcement
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution_constraints: Option<ExecutionConstraints>,
+
+    /// Port ID through which this action is being communicated
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub port_id: Option<String>,
+
+    /// Required agent phase for this action to execute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub required_phase: Option<String>,
+
+    /// Required agent role for this action to execute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub required_role: Option<String>,
+}
+
+/// Execution constraints for kernel enforcement (Phase 9f)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionConstraints {
+    /// Maximum tokens this action may consume
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_tokens: Option<u64>,
+    /// Maximum cost in USD this action may incur
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_cost_usd: Option<f64>,
+    /// Maximum number of tool calls this action may make
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_tool_calls: Option<u32>,
+    /// Maximum execution time in milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_execution_ms: Option<u64>,
+    /// Data classification required for tools used (e.g., "phi", "pii", "public")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_classification: Option<String>,
+    /// Whether this action requires human approval before execution
+    #[serde(default)]
+    pub requires_approval: bool,
+}
+
+/// V8: Pratyaya (प्रत्यय) - Expected effect declaration (Phase 9f)
+///
+/// Declares what the action is expected to produce, enabling:
+/// - Pre-flight validation (can this effect be achieved?)
+/// - Post-flight verification (was the expected effect achieved?)
+/// - Compliance auditing (was the declared effect the actual effect?)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pratyaya {
+    /// Expected postconditions (assertions that should be true after action)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub postconditions: Vec<Postcondition>,
+
+    /// Verification method for confirming the effect
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification: Option<VerificationMethod>,
+
+    /// Rollback strategy if postconditions are not met
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rollback: Option<RollbackStrategy>,
+
+    /// Maximum acceptable latency for the effect (ms)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_latency_ms: Option<u64>,
+
+    /// Whether partial success is acceptable
+    #[serde(default)]
+    pub allow_partial: bool,
+}
+
+/// A postcondition assertion for Pratyaya
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Postcondition {
+    /// Human-readable description
+    pub description: String,
+    /// Machine-checkable assertion (JSONPath, CEL expression, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assertion: Option<String>,
+    /// Assertion language (jsonpath, cel, regex, custom)
+    #[serde(default = "default_assertion_lang")]
+    pub lang: String,
+    /// Whether this postcondition is required or advisory
+    #[serde(default = "default_true")]
+    pub required: bool,
+}
+
+fn default_assertion_lang() -> String { "jsonpath".to_string() }
+fn default_true() -> bool { true }
+
+/// Verification method for confirming an effect
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum VerificationMethod {
+    /// Poll a resource until postconditions are met
+    Poll { resource: String, interval_ms: u64, max_attempts: u32 },
+    /// Wait for a webhook/event callback
+    Callback { event_type: String, timeout_ms: u64 },
+    /// Verify by reading a specific CID from the content-addressed store
+    CidCheck { expected_cid: String },
+    /// No verification needed (fire-and-forget)
+    None,
+}
+
+/// Rollback strategy if postconditions fail
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RollbackStrategy {
+    /// Automatically reverse the action
+    AutoReverse,
+    /// Notify a human for manual intervention
+    HumanReview { escalation_channel: String },
+    /// Retry the action up to N times
+    Retry { max_retries: u32, backoff_ms: u64 },
+    /// Accept the failure and log it
+    AcceptFailure,
 }
 
 /// Reference to a capability token
@@ -487,9 +656,60 @@ pub struct VakyaMeta {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client: Option<ClientInfo>,
     
+    /// VAC memory linkage — connects this action to VAC memory packets
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vac_ref: Option<VacRef>,
+    
+    /// Compliance context — regulatory metadata for audit
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub compliance: Option<ComplianceContext>,
+    
+    /// Agent context — identifies the agent, namespace, session, and model
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_context: Option<crate::types::AgentContext>,
+    
     /// Custom extensions
     #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
     pub extensions: std::collections::HashMap<String, serde_json::Value>,
+}
+
+/// VAC memory reference — links an AAPI action to VAC memory
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VacRef {
+    /// CID of the VAC event that triggered this action
+    pub event_cid: Option<String>,
+    /// CIDs of VAC MemPackets that serve as evidence
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packet_cids: Vec<String>,
+    /// Pipeline ID grouping related packets
+    pub pipeline_id: Option<String>,
+    /// Block number in the VAC chain where evidence is committed
+    pub block_no: Option<u64>,
+    /// Prolly tree root CID at time of action
+    pub prolly_root: Option<String>,
+}
+
+/// Compliance context — regulatory metadata for audit trails
+///
+/// Satisfies: EU AI Act Art. 12, HIPAA §164.312, FINRA Rule 3110,
+/// FDA 21 CFR Part 11
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceContext {
+    /// Applicable regulations (e.g., "HIPAA", "EU_AI_ACT", "FINRA")
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub regulations: Vec<String>,
+    /// Data classification level (e.g., "PHI", "PII", "PUBLIC")
+    pub data_classification: Option<String>,
+    /// Whether human review is required before execution
+    #[serde(default)]
+    pub requires_human_review: bool,
+    /// Reason human review is required
+    pub review_reason: Option<String>,
+    /// Retention period in days (0 = indefinite)
+    #[serde(default)]
+    pub retention_days: u64,
+    /// Jurisdiction (e.g., "US", "EU", "UK")
+    pub jurisdiction: Option<String>,
 }
 
 /// Hetu - Reasoning/justification for the action
@@ -503,6 +723,9 @@ pub struct Hetu {
     /// Confidence score (0.0 - 1.0)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<f64>,
+    /// VAC evidence CIDs that support this reasoning (provenance linkage)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence_cids: Vec<String>,
 }
 
 /// A step in the reasoning chain
@@ -628,6 +851,7 @@ impl VakyaBuilder {
             v5_sampradana: self.sampradana,
             v6_apadana: self.apadana,
             v7_adhikarana: adhikarana,
+            v8_pratyaya: None,
             body_type,
             body,
             meta: VakyaMeta {
@@ -635,6 +859,9 @@ impl VakyaBuilder {
                 trace: self.trace,
                 hetu: self.hetu,
                 client: None,
+                vac_ref: None,
+                compliance: None,
+                agent_context: None,
                 extensions: std::collections::HashMap::new(),
             },
         };
@@ -661,6 +888,11 @@ mod tests {
             approval_lane: ApprovalLane::None,
             scopes: vec!["read".to_string(), "write".to_string()],
             context: None,
+            delegation_chain_cid: None,
+            execution_constraints: None,
+            port_id: None,
+            required_phase: None,
+            required_role: None,
         }
     }
 

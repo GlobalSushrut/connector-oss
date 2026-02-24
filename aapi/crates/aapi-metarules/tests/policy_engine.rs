@@ -32,6 +32,11 @@ fn test_adhikarana() -> Adhikarana {
         approval_lane: ApprovalLane::None,
         scopes: vec![],
         context: None,
+        delegation_chain_cid: None,
+        execution_constraints: None,
+        port_id: None,
+        required_phase: None,
+        required_role: None,
     }
 }
 

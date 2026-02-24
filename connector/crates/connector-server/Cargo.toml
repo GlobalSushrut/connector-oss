@@ -1,0 +1,40 @@
+[package]
+name = "connector-server"
+description = "Lightweight REST API + Prometheus metrics server for Connector"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "connector-server"
+path = "src/main.rs"
+
+[dependencies]
+# Connector
+connector-api = { path = "../connector-api" }
+connector-engine = { path = "../connector-engine" }
+
+# VAC kernel
+vac-core = { path = "../../../vac/crates/vac-core" }
+
+# Web framework
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Metrics
+prometheus-client = "0.22"
+
+# Content addressing
+cid = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

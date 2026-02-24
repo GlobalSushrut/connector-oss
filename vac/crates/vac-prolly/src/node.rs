@@ -135,7 +135,16 @@ impl ProllyNode {
         }
     }
     
-    /// Split node at boundary keys
+    /// Maximum entries per chunk (4×Q) to prevent DoS via crafted keys.
+    /// An attacker who controls keys could craft sequences that never trigger
+    /// a probabilistic boundary, creating arbitrarily large nodes.
+    pub const MAX_CHUNK_SIZE: usize = crate::DEFAULT_Q * 4;
+
+    /// Split node at boundary keys with enforced maximum chunk size.
+    ///
+    /// Boundaries are triggered by:
+    /// 1. Probabilistic: `hash(key) < THRESHOLD` (~1/Q probability)
+    /// 2. Hard limit: chunk exceeds `MAX_CHUNK_SIZE` entries (prevents DoS)
     pub fn split_at_boundaries(&self) -> Vec<Self> {
         use crate::boundary::is_boundary;
         
@@ -148,8 +157,9 @@ impl ProllyNode {
         let mut current_values = Vec::new();
         
         for (i, key) in self.keys.iter().enumerate() {
-            // If this key is a boundary and we have accumulated entries, start new chunk
-            if is_boundary(key) && !current_keys.is_empty() {
+            // Force boundary if chunk exceeds max size OR probabilistic boundary hit
+            let force_split = current_keys.len() >= Self::MAX_CHUNK_SIZE;
+            if (is_boundary(key) || force_split) && !current_keys.is_empty() {
                 chunks.push(Self {
                     level: self.level,
                     keys: std::mem::take(&mut current_keys),
@@ -238,5 +248,47 @@ mod tests {
         let mut node2 = ProllyNode::new_leaf(keys, values);
         
         assert_eq!(node1.hash(), node2.hash());
+    }
+
+    #[test]
+    fn test_h3_max_chunk_size_enforced() {
+        // H3: Even if no probabilistic boundary is hit, chunks must not exceed MAX_CHUNK_SIZE.
+        // Create a node with 200 entries (> MAX_CHUNK_SIZE=128) using keys that
+        // are unlikely to trigger probabilistic boundaries.
+        let max = ProllyNode::MAX_CHUNK_SIZE;
+        let keys: Vec<Vec<u8>> = (0..200u32)
+            .map(|i| format!("zzz_no_boundary_{:06}", i).into_bytes())
+            .collect();
+        let values: Vec<Cid> = (0..200).map(|_| Cid::default()).collect();
+
+        let node = ProllyNode::new_leaf(keys, values);
+        let chunks = node.split_at_boundaries();
+
+        // Every chunk must be <= MAX_CHUNK_SIZE
+        for (i, chunk) in chunks.iter().enumerate() {
+            assert!(
+                chunk.len() <= max,
+                "Chunk {} has {} entries, exceeds MAX_CHUNK_SIZE={}",
+                i, chunk.len(), max
+            );
+        }
+        // Must have at least 2 chunks (200 / 128 = at least 2)
+        assert!(chunks.len() >= 2, "Should have split into multiple chunks");
+    }
+
+    #[test]
+    fn test_h3_small_node_not_force_split() {
+        // A node smaller than MAX_CHUNK_SIZE should not be force-split
+        let keys: Vec<Vec<u8>> = (0..10u32)
+            .map(|i| format!("key_{:06}", i).into_bytes())
+            .collect();
+        let values: Vec<Cid> = (0..10).map(|_| Cid::default()).collect();
+
+        let node = ProllyNode::new_leaf(keys, values);
+        let chunks = node.split_at_boundaries();
+
+        // Total entries across all chunks must equal original
+        let total: usize = chunks.iter().map(|c| c.len()).sum();
+        assert_eq!(total, 10);
     }
 }

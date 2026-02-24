@@ -4,6 +4,9 @@
 
 pub mod cas;
 pub mod memory;
+pub mod prolly_bridge;
+pub mod indexdb_bridge;
+mod wiring_tests;
 
 pub use cas::*;
 pub use memory::*;

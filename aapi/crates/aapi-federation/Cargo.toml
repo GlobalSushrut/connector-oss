@@ -1,0 +1,25 @@
+[package]
+name = "aapi-federation"
+description = "AAPI Federation - Federated policy engine, cross-cell capability verification, SCITT exchange"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aapi-core = { path = "../aapi-core" }
+aapi-metarules = { path = "../aapi-metarules" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+ed25519-dalek = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

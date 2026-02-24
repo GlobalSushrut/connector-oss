@@ -35,6 +35,8 @@ impl ContentAddressable for crate::types::ManifestRoot {}
 impl ContentAddressable for crate::types::VaultPatch {}
 impl ContentAddressable for crate::types::InterferenceEdge {}
 impl ContentAddressable for crate::types::ProllyNode {}
+impl ContentAddressable for crate::types::MemPacket {}
+impl ContentAddressable for crate::types::SessionEnvelope {}
 
 #[cfg(test)]
 mod tests {

@@ -1,0 +1,41 @@
+{
+  "name": "connector_oss",
+  "version": "0.1.0",
+  "description": "Tamper-proof memory and chain-of-custody for AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "Apache-2.0",
+  "author": "Connector OSS Contributors",
+  "homepage": "https://github.com/GlobalSushrut/connector-oss",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GlobalSushrut/connector-oss.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GlobalSushrut/connector-oss/issues"
+  },
+  "keywords": [
+    "ai", "agents", "memory", "llm", "compliance",
+    "hipaa", "soc2", "gdpr", "audit", "trust", "tamper-proof",
+    "chain-of-custody", "deepseek", "openai", "anthropic"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "^5.3",
+    "vitest": "^1.0"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

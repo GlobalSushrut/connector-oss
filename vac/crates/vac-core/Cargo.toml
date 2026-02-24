@@ -17,6 +17,8 @@ serde_json = { workspace = true }
 ciborium = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

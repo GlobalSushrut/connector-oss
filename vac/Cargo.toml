@@ -8,13 +8,18 @@ members = [
     "crates/vac-store",
     "crates/vac-sync",
     "crates/vac-wasm",
+    "crates/vac-ffi",
+    "crates/vac-bus",
+    "crates/vac-cluster",
+    "crates/vac-replicate",
+    "crates/vac-route",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/your-org/vac"
+license = "Apache-2.0"
+repository = "https://github.com/GlobalSushrut/connector-oss"
 authors = ["VAC Team"]
 
 [workspace.dependencies]
@@ -52,6 +57,13 @@ anyhow = "1.0"
 # Logging
 tracing = "0.1"
 tracing-subscriber = "0.3"
+
+# Validation / AAPI bridge
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "v7", "serde"] }
+jsonschema = "0.18"
+serde_with = "3.0"
+hex = "0.4"
 
 # Testing
 proptest = "1.4"

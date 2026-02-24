@@ -9,6 +9,8 @@ members = [
     "crates/aapi-metarules",
     "crates/aapi-sdk",
     "crates/aapi-cli",
+    "crates/aapi-pipeline",
+    "crates/aapi-federation",
 ]
 
 [workspace.package]
@@ -16,7 +18,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["AAPI Contributors"]
 license = "Apache-2.0"
-repository = "https://github.com/aapi-protocol/aapi"
+repository = "https://github.com/GlobalSushrut/connector-oss"
 rust-version = "1.75"
 
 [workspace.dependencies]

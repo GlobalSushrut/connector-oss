@@ -33,6 +33,42 @@ pub trait IndexDbStore: Send + Sync {
     /// Get a receipt by VĀKYA ID
     async fn get_receipt(&self, vakya_id: &str) -> IndexDbResult<Option<ReceiptRecord>>;
     
+    /// Store a MemPacket record (3D envelope)
+    async fn store_packet(&self, record: MemPacketRecord) -> IndexDbResult<MemPacketRecord>;
+    
+    /// Get a MemPacket by CID
+    async fn get_packet(&self, packet_cid: &str) -> IndexDbResult<Option<MemPacketRecord>>;
+    
+    /// Get all MemPackets for a pipeline
+    async fn get_packets_by_pipeline(&self, pipeline_id: &str) -> IndexDbResult<Vec<MemPacketRecord>>;
+    
+    /// Get all MemPackets for a subject
+    async fn get_packets_by_subject(&self, subject_id: &str) -> IndexDbResult<Vec<MemPacketRecord>>;
+    
+    /// Get all MemPackets of a given type for a subject
+    async fn get_packets_by_type(&self, subject_id: &str, packet_type: &str) -> IndexDbResult<Vec<MemPacketRecord>>;
+    
+    /// Store a session record
+    async fn store_session(&self, session: SessionRecord) -> IndexDbResult<SessionRecord>;
+    
+    /// Get a session by ID
+    async fn get_session(&self, session_id: &str) -> IndexDbResult<Option<SessionRecord>>;
+    
+    /// Get active sessions for an agent
+    async fn get_active_sessions(&self, agent_id: &str) -> IndexDbResult<Vec<SessionRecord>>;
+    
+    /// Store an action record (complete action documentation)
+    async fn store_action_record(&self, record: ActionRecordEntry) -> IndexDbResult<ActionRecordEntry>;
+    
+    /// Get an action record by record_id
+    async fn get_action_record(&self, record_id: &str) -> IndexDbResult<Option<ActionRecordEntry>>;
+    
+    /// Store a kernel audit entry
+    async fn store_kernel_audit(&self, entry: KernelAuditRecord) -> IndexDbResult<KernelAuditRecord>;
+    
+    /// Get kernel audit entries for an agent
+    async fn get_kernel_audits_by_agent(&self, agent_pid: &str, limit: u32) -> IndexDbResult<Vec<KernelAuditRecord>>;
+    
     /// Store an audit log entry
     async fn store_audit_log(&self, entry: AuditLogEntry) -> IndexDbResult<()>;
     
@@ -52,6 +88,7 @@ pub struct SqliteIndexDb {
     vakya_tree: Arc<RwLock<MerkleTree>>,
     effect_tree: Arc<RwLock<MerkleTree>>,
     receipt_tree: Arc<RwLock<MerkleTree>>,
+    packet_tree: Arc<RwLock<MerkleTree>>,
 }
 
 impl SqliteIndexDb {
@@ -66,12 +103,14 @@ impl SqliteIndexDb {
         let vakya_tree = Arc::new(RwLock::new(MerkleTree::new()));
         let effect_tree = Arc::new(RwLock::new(MerkleTree::new()));
         let receipt_tree = Arc::new(RwLock::new(MerkleTree::new()));
+        let packet_tree = Arc::new(RwLock::new(MerkleTree::new()));
         
         let store = Self {
             pool,
             vakya_tree,
             effect_tree,
             receipt_tree,
+            packet_tree,
         };
         
         // Rebuild Merkle trees from existing data
@@ -176,6 +215,103 @@ impl SqliteIndexDb {
         "#).execute(pool).await?;
 
         sqlx::query(r#"
+            CREATE TABLE IF NOT EXISTS packet_records (
+                id TEXT PRIMARY KEY,
+                packet_cid TEXT UNIQUE NOT NULL,
+                packet_type TEXT NOT NULL,
+                pipeline_id TEXT NOT NULL,
+                subject_id TEXT NOT NULL,
+                payload_cid TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                entities TEXT DEFAULT '[]',
+                tags TEXT DEFAULT '[]',
+                source_kind TEXT NOT NULL,
+                source_principal TEXT NOT NULL,
+                trust_tier INTEGER NOT NULL DEFAULT 1,
+                confidence REAL,
+                epistemic TEXT NOT NULL DEFAULT 'observed',
+                evidence_cids TEXT DEFAULT '[]',
+                supersedes_cid TEXT,
+                reasoning TEXT,
+                domain_code TEXT,
+                vakya_id TEXT,
+                actor TEXT,
+                capability_ref TEXT,
+                signature TEXT,
+                policy_ref TEXT,
+                prolly_key TEXT NOT NULL,
+                seq_index INTEGER NOT NULL DEFAULT 0,
+                block_no INTEGER NOT NULL DEFAULT -1,
+                leaf_index INTEGER,
+                created_at TEXT NOT NULL
+            )
+        "#).execute(pool).await?;
+
+        sqlx::query(r#"
+            CREATE TABLE IF NOT EXISTS session_records (
+                id TEXT PRIMARY KEY,
+                session_id TEXT UNIQUE NOT NULL,
+                agent_id TEXT NOT NULL,
+                namespace TEXT NOT NULL,
+                label TEXT,
+                started_at TEXT NOT NULL,
+                ended_at TEXT,
+                tier TEXT NOT NULL DEFAULT 'hot',
+                scope TEXT NOT NULL DEFAULT 'episodic',
+                packet_count INTEGER NOT NULL DEFAULT 0,
+                total_tokens INTEGER NOT NULL DEFAULT 0,
+                summary TEXT,
+                parent_session_id TEXT,
+                metadata TEXT DEFAULT '{}',
+                created_at TEXT NOT NULL
+            )
+        "#).execute(pool).await?;
+
+        sqlx::query(r#"
+            CREATE TABLE IF NOT EXISTS action_records (
+                id TEXT PRIMARY KEY,
+                record_id TEXT UNIQUE NOT NULL,
+                intent TEXT NOT NULL,
+                action TEXT NOT NULL,
+                target_resource TEXT NOT NULL,
+                agent_id TEXT NOT NULL,
+                namespace TEXT NOT NULL,
+                vakya_id TEXT,
+                session_id TEXT,
+                pipeline_id TEXT,
+                outcome TEXT NOT NULL,
+                error TEXT,
+                duration_ms INTEGER,
+                human_approved INTEGER NOT NULL DEFAULT 0,
+                evidence_cids TEXT DEFAULT '[]',
+                regulations TEXT DEFAULT '[]',
+                data_classification TEXT,
+                retention_days INTEGER NOT NULL DEFAULT 0,
+                reversible INTEGER NOT NULL DEFAULT 0,
+                merkle_root TEXT,
+                initiated_at TEXT NOT NULL,
+                completed_at TEXT
+            )
+        "#).execute(pool).await?;
+
+        sqlx::query(r#"
+            CREATE TABLE IF NOT EXISTS kernel_audit (
+                id TEXT PRIMARY KEY,
+                audit_id TEXT UNIQUE NOT NULL,
+                timestamp TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                agent_pid TEXT NOT NULL,
+                target TEXT,
+                outcome TEXT NOT NULL,
+                reason TEXT,
+                error TEXT,
+                duration_us INTEGER,
+                vakya_id TEXT,
+                merkle_root TEXT
+            )
+        "#).execute(pool).await?;
+
+        sqlx::query(r#"
             CREATE TABLE IF NOT EXISTS audit_log (
                 id TEXT PRIMARY KEY,
                 event_type TEXT NOT NULL,
@@ -206,6 +342,48 @@ impl SqliteIndexDb {
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_type ON audit_log(event_type)")
             .execute(pool).await?;
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_packet_cid ON packet_records(packet_cid)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_packet_type ON packet_records(packet_type)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_packet_pipeline ON packet_records(pipeline_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_packet_subject ON packet_records(subject_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_packet_vakya ON packet_records(vakya_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_packet_prolly ON packet_records(prolly_key)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_packet_created ON packet_records(created_at)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_session_id ON session_records(session_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_session_agent ON session_records(agent_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_session_ns ON session_records(namespace)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_session_tier ON session_records(tier)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_action_record_id ON action_records(record_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_action_agent ON action_records(agent_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_action_vakya ON action_records(vakya_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_action_outcome ON action_records(outcome)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_action_ns ON action_records(namespace)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_kernel_audit_id ON kernel_audit(audit_id)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_kernel_audit_agent ON kernel_audit(agent_pid)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_kernel_audit_op ON kernel_audit(operation)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_kernel_audit_outcome ON kernel_audit(outcome)")
+            .execute(pool).await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_kernel_audit_ts ON kernel_audit(timestamp)")
             .execute(pool).await?;
 
         debug!("Database migrations completed");
@@ -246,8 +424,88 @@ impl SqliteIndexDb {
             receipt_tree.append(&hash);
         }
 
+        // Rebuild packet tree
+        let packet_hashes: Vec<(i64, String)> = sqlx::query_as(
+            "SELECT leaf_index, packet_cid FROM packet_records WHERE leaf_index IS NOT NULL ORDER BY leaf_index"
+        ).fetch_all(&self.pool).await?;
+        
+        let mut packet_tree = self.packet_tree.write().await;
+        for (_, cid) in packet_hashes {
+            packet_tree.append(&cid);
+        }
+        drop(packet_tree);
+
         info!("Merkle trees rebuilt from existing data");
         Ok(())
+    }
+
+    /// Convert a SQLite row to a SessionRecord
+    fn row_to_session_record(row: &sqlx::sqlite::SqliteRow) -> IndexDbResult<SessionRecord> {
+        let metadata_str: String = row.get("metadata");
+        let ended_at_str: Option<String> = row.get("ended_at");
+
+        Ok(SessionRecord {
+            id: row.get::<String, _>("id").parse().unwrap_or_default(),
+            session_id: row.get("session_id"),
+            agent_id: row.get("agent_id"),
+            namespace: row.get("namespace"),
+            label: row.get("label"),
+            started_at: DateTime::parse_from_rfc3339(&row.get::<String, _>("started_at"))
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now()),
+            ended_at: ended_at_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc))),
+            tier: row.get("tier"),
+            scope: row.get("scope"),
+            packet_count: row.get("packet_count"),
+            total_tokens: row.get("total_tokens"),
+            summary: row.get("summary"),
+            parent_session_id: row.get("parent_session_id"),
+            metadata: serde_json::from_str(&metadata_str).unwrap_or_default(),
+            created_at: DateTime::parse_from_rfc3339(&row.get::<String, _>("created_at"))
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now()),
+        })
+    }
+
+    /// Convert a SQLite row to a MemPacketRecord
+    fn row_to_packet_record(row: &sqlx::sqlite::SqliteRow) -> IndexDbResult<MemPacketRecord> {
+        let entities_str: String = row.get("entities");
+        let tags_str: String = row.get("tags");
+        let evidence_cids_str: String = row.get("evidence_cids");
+        let payload_json_str: String = row.get("payload_json");
+
+        Ok(MemPacketRecord {
+            id: row.get::<String, _>("id").parse().unwrap_or_default(),
+            packet_cid: row.get("packet_cid"),
+            packet_type: row.get("packet_type"),
+            pipeline_id: row.get("pipeline_id"),
+            subject_id: row.get("subject_id"),
+            payload_cid: row.get("payload_cid"),
+            payload_json: serde_json::from_str(&payload_json_str).unwrap_or_default(),
+            entities: serde_json::from_str(&entities_str).unwrap_or_default(),
+            tags: serde_json::from_str(&tags_str).unwrap_or_default(),
+            source_kind: row.get("source_kind"),
+            source_principal: row.get("source_principal"),
+            trust_tier: row.get::<i32, _>("trust_tier") as u8,
+            confidence: row.get("confidence"),
+            epistemic: row.get("epistemic"),
+            evidence_cids: serde_json::from_str(&evidence_cids_str).unwrap_or_default(),
+            supersedes_cid: row.get("supersedes_cid"),
+            reasoning: row.get("reasoning"),
+            domain_code: row.get("domain_code"),
+            vakya_id: row.get("vakya_id"),
+            actor: row.get("actor"),
+            capability_ref: row.get("capability_ref"),
+            signature: row.get("signature"),
+            policy_ref: row.get("policy_ref"),
+            prolly_key: row.get("prolly_key"),
+            seq_index: row.get("seq_index"),
+            block_no: row.get("block_no"),
+            leaf_index: row.get("leaf_index"),
+            created_at: DateTime::parse_from_rfc3339(&row.get::<String, _>("created_at"))
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| Utc::now()),
+        })
     }
 
     /// Get the Merkle tree for a given type
@@ -256,6 +514,7 @@ impl SqliteIndexDb {
             TreeType::Vakya => &self.vakya_tree,
             TreeType::Effect => &self.effect_tree,
             TreeType::Receipt => &self.receipt_tree,
+            TreeType::Packet => &self.packet_tree,
         }
     }
 }
@@ -502,6 +761,314 @@ impl IndexDbStore for SqliteIndexDb {
             }
             None => Ok(None),
         }
+    }
+
+    async fn store_packet(&self, mut record: MemPacketRecord) -> IndexDbResult<MemPacketRecord> {
+        // Add to Merkle tree
+        let mut tree = self.packet_tree.write().await;
+        let leaf_index = tree.append(&record.packet_cid);
+        drop(tree);
+
+        record.leaf_index = Some(leaf_index as i64);
+
+        let entities_str = serde_json::to_string(&record.entities)?;
+        let tags_str = serde_json::to_string(&record.tags)?;
+        let evidence_cids_str = serde_json::to_string(&record.evidence_cids)?;
+        let payload_json_str = serde_json::to_string(&record.payload_json)?;
+
+        sqlx::query(r#"
+            INSERT INTO packet_records (
+                id, packet_cid, packet_type, pipeline_id, subject_id,
+                payload_cid, payload_json, entities, tags,
+                source_kind, source_principal, trust_tier, confidence, epistemic,
+                evidence_cids, supersedes_cid, reasoning, domain_code,
+                vakya_id, actor, capability_ref, signature, policy_ref,
+                prolly_key, seq_index, block_no, leaf_index, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#)
+        .bind(record.id.to_string())
+        .bind(&record.packet_cid)
+        .bind(&record.packet_type)
+        .bind(&record.pipeline_id)
+        .bind(&record.subject_id)
+        .bind(&record.payload_cid)
+        .bind(&payload_json_str)
+        .bind(&entities_str)
+        .bind(&tags_str)
+        .bind(&record.source_kind)
+        .bind(&record.source_principal)
+        .bind(record.trust_tier as i32)
+        .bind(record.confidence)
+        .bind(&record.epistemic)
+        .bind(&evidence_cids_str)
+        .bind(&record.supersedes_cid)
+        .bind(&record.reasoning)
+        .bind(&record.domain_code)
+        .bind(&record.vakya_id)
+        .bind(&record.actor)
+        .bind(&record.capability_ref)
+        .bind(&record.signature)
+        .bind(&record.policy_ref)
+        .bind(&record.prolly_key)
+        .bind(record.seq_index)
+        .bind(record.block_no)
+        .bind(record.leaf_index)
+        .bind(record.created_at.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+
+        debug!(packet_cid = %record.packet_cid, packet_type = %record.packet_type, "Stored MemPacket record");
+        Ok(record)
+    }
+
+    async fn get_packet(&self, packet_cid: &str) -> IndexDbResult<Option<MemPacketRecord>> {
+        let row = sqlx::query(
+            "SELECT * FROM packet_records WHERE packet_cid = ?"
+        )
+        .bind(packet_cid)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(row) => Ok(Some(Self::row_to_packet_record(&row)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn get_packets_by_pipeline(&self, pipeline_id: &str) -> IndexDbResult<Vec<MemPacketRecord>> {
+        let rows = sqlx::query(
+            "SELECT * FROM packet_records WHERE pipeline_id = ? ORDER BY seq_index"
+        )
+        .bind(pipeline_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(|r| Self::row_to_packet_record(r)).collect()
+    }
+
+    async fn get_packets_by_subject(&self, subject_id: &str) -> IndexDbResult<Vec<MemPacketRecord>> {
+        let rows = sqlx::query(
+            "SELECT * FROM packet_records WHERE subject_id = ? ORDER BY created_at"
+        )
+        .bind(subject_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(|r| Self::row_to_packet_record(r)).collect()
+    }
+
+    async fn get_packets_by_type(&self, subject_id: &str, packet_type: &str) -> IndexDbResult<Vec<MemPacketRecord>> {
+        let rows = sqlx::query(
+            "SELECT * FROM packet_records WHERE subject_id = ? AND packet_type = ? ORDER BY created_at"
+        )
+        .bind(subject_id)
+        .bind(packet_type)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(|r| Self::row_to_packet_record(r)).collect()
+    }
+
+    async fn store_session(&self, record: SessionRecord) -> IndexDbResult<SessionRecord> {
+        let metadata_str = serde_json::to_string(&record.metadata)?;
+
+        sqlx::query(r#"
+            INSERT INTO session_records (
+                id, session_id, agent_id, namespace, label,
+                started_at, ended_at, tier, scope,
+                packet_count, total_tokens, summary,
+                parent_session_id, metadata, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#)
+        .bind(record.id.to_string())
+        .bind(&record.session_id)
+        .bind(&record.agent_id)
+        .bind(&record.namespace)
+        .bind(&record.label)
+        .bind(record.started_at.to_rfc3339())
+        .bind(record.ended_at.map(|t| t.to_rfc3339()))
+        .bind(&record.tier)
+        .bind(&record.scope)
+        .bind(record.packet_count)
+        .bind(record.total_tokens)
+        .bind(&record.summary)
+        .bind(&record.parent_session_id)
+        .bind(&metadata_str)
+        .bind(record.created_at.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+
+        debug!(session_id = %record.session_id, agent_id = %record.agent_id, "Stored session record");
+        Ok(record)
+    }
+
+    async fn get_session(&self, session_id: &str) -> IndexDbResult<Option<SessionRecord>> {
+        let row = sqlx::query(
+            "SELECT * FROM session_records WHERE session_id = ?"
+        )
+        .bind(session_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(row) => Ok(Some(Self::row_to_session_record(&row)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn get_active_sessions(&self, agent_id: &str) -> IndexDbResult<Vec<SessionRecord>> {
+        let rows = sqlx::query(
+            "SELECT * FROM session_records WHERE agent_id = ? AND ended_at IS NULL ORDER BY started_at DESC"
+        )
+        .bind(agent_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(|r| Self::row_to_session_record(r)).collect()
+    }
+
+    async fn store_action_record(&self, record: ActionRecordEntry) -> IndexDbResult<ActionRecordEntry> {
+        let evidence_str = serde_json::to_string(&record.evidence_cids)?;
+        let regulations_str = serde_json::to_string(&record.regulations)?;
+
+        sqlx::query(r#"
+            INSERT INTO action_records (
+                id, record_id, intent, action, target_resource,
+                agent_id, namespace, vakya_id, session_id, pipeline_id,
+                outcome, error, duration_ms, human_approved,
+                evidence_cids, regulations, data_classification,
+                retention_days, reversible, merkle_root,
+                initiated_at, completed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#)
+        .bind(record.id.to_string())
+        .bind(&record.record_id)
+        .bind(&record.intent)
+        .bind(&record.action)
+        .bind(&record.target_resource)
+        .bind(&record.agent_id)
+        .bind(&record.namespace)
+        .bind(&record.vakya_id)
+        .bind(&record.session_id)
+        .bind(&record.pipeline_id)
+        .bind(&record.outcome)
+        .bind(&record.error)
+        .bind(record.duration_ms)
+        .bind(record.human_approved)
+        .bind(&evidence_str)
+        .bind(&regulations_str)
+        .bind(&record.data_classification)
+        .bind(record.retention_days)
+        .bind(record.reversible)
+        .bind(&record.merkle_root)
+        .bind(record.initiated_at.to_rfc3339())
+        .bind(record.completed_at.map(|t| t.to_rfc3339()))
+        .execute(&self.pool)
+        .await?;
+
+        debug!(record_id = %record.record_id, action = %record.action, "Stored action record");
+        Ok(record)
+    }
+
+    async fn get_action_record(&self, record_id: &str) -> IndexDbResult<Option<ActionRecordEntry>> {
+        let row = sqlx::query(
+            "SELECT * FROM action_records WHERE record_id = ?"
+        )
+        .bind(record_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(row) => {
+                let evidence_str: String = row.get("evidence_cids");
+                let regulations_str: String = row.get("regulations");
+                let completed_str: Option<String> = row.get("completed_at");
+
+                Ok(Some(ActionRecordEntry {
+                    id: row.get::<String, _>("id").parse().unwrap_or_default(),
+                    record_id: row.get("record_id"),
+                    intent: row.get("intent"),
+                    action: row.get("action"),
+                    target_resource: row.get("target_resource"),
+                    agent_id: row.get("agent_id"),
+                    namespace: row.get("namespace"),
+                    vakya_id: row.get("vakya_id"),
+                    session_id: row.get("session_id"),
+                    pipeline_id: row.get("pipeline_id"),
+                    outcome: row.get("outcome"),
+                    error: row.get("error"),
+                    duration_ms: row.get("duration_ms"),
+                    human_approved: row.get("human_approved"),
+                    evidence_cids: serde_json::from_str(&evidence_str).unwrap_or_default(),
+                    regulations: serde_json::from_str(&regulations_str).unwrap_or_default(),
+                    data_classification: row.get("data_classification"),
+                    retention_days: row.get("retention_days"),
+                    reversible: row.get("reversible"),
+                    merkle_root: row.get("merkle_root"),
+                    initiated_at: DateTime::parse_from_rfc3339(&row.get::<String, _>("initiated_at"))
+                        .map(|dt| dt.with_timezone(&Utc))
+                        .unwrap_or_else(|_| Utc::now()),
+                    completed_at: completed_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc))),
+                }))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn store_kernel_audit(&self, entry: KernelAuditRecord) -> IndexDbResult<KernelAuditRecord> {
+        sqlx::query(r#"
+            INSERT INTO kernel_audit (
+                id, audit_id, timestamp, operation, agent_pid,
+                target, outcome, reason, error, duration_us,
+                vakya_id, merkle_root
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#)
+        .bind(entry.id.to_string())
+        .bind(&entry.audit_id)
+        .bind(entry.timestamp.to_rfc3339())
+        .bind(&entry.operation)
+        .bind(&entry.agent_pid)
+        .bind(&entry.target)
+        .bind(&entry.outcome)
+        .bind(&entry.reason)
+        .bind(&entry.error)
+        .bind(entry.duration_us)
+        .bind(&entry.vakya_id)
+        .bind(&entry.merkle_root)
+        .execute(&self.pool)
+        .await?;
+
+        debug!(audit_id = %entry.audit_id, op = %entry.operation, "Stored kernel audit entry");
+        Ok(entry)
+    }
+
+    async fn get_kernel_audits_by_agent(&self, agent_pid: &str, limit: u32) -> IndexDbResult<Vec<KernelAuditRecord>> {
+        let rows = sqlx::query(
+            "SELECT * FROM kernel_audit WHERE agent_pid = ? ORDER BY timestamp DESC LIMIT ?"
+        )
+        .bind(agent_pid)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(|row| {
+            Ok(KernelAuditRecord {
+                id: row.get::<String, _>("id").parse().unwrap_or_default(),
+                audit_id: row.get("audit_id"),
+                timestamp: DateTime::parse_from_rfc3339(&row.get::<String, _>("timestamp"))
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now()),
+                operation: row.get("operation"),
+                agent_pid: row.get("agent_pid"),
+                target: row.get("target"),
+                outcome: row.get("outcome"),
+                reason: row.get("reason"),
+                error: row.get("error"),
+                duration_us: row.get("duration_us"),
+                vakya_id: row.get("vakya_id"),
+                merkle_root: row.get("merkle_root"),
+            })
+        }).collect()
     }
 
     async fn store_audit_log(&self, entry: AuditLogEntry) -> IndexDbResult<()> {

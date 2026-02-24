@@ -1,0 +1,24 @@
+connector:
+  provider: deepseek
+  model: deepseek-chat
+  api_key: ${DEEPSEEK_API_KEY}
+  comply: [soc2, gdpr]
+  security:
+    signing: true
+    data_classification: confidential
+    retention_days: 2555
+    require_mfa: false
+
+agents:
+  intake:
+    instructions: "Contract intake specialist. Extract parties, dates, key obligations. Max 3 sentences."
+    role: reader
+
+  reviewer:
+    instructions: "Legal reviewer. Identify risks, ambiguous clauses, missing terms. Max 3 sentences."
+    role: writer
+
+  approver:
+    instructions: "Senior counsel. Final approval decision with rationale. Max 2 sentences."
+    role: admin
+    require_approval: [finalize]

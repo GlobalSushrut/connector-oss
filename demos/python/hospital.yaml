@@ -1,0 +1,26 @@
+connector:
+  provider: deepseek
+  model: deepseek-chat
+  api_key: ${DEEPSEEK_API_KEY}
+  comply: [hipaa]
+  security:
+    signing: true
+    data_classification: PHI
+    retention_days: 2555
+    jurisdiction: US
+
+agents:
+  triage:
+    instructions: "ER triage nurse. Assess urgency (1=critical,5=minor), list vital concerns, top 3 differentials. Max 3 sentences."
+    comply: [hipaa]
+    allow_data: [PHI]
+
+  diagnosis:
+    instructions: "ER physician. Working diagnosis with ICD-10 code, immediate investigations. Max 3 sentences."
+    comply: [hipaa]
+    allow_data: [PHI]
+
+  treatment:
+    instructions: "Clinical pharmacist. First-line medications with RxNorm codes, dosing, contraindications. Max 3 sentences."
+    comply: [hipaa]
+    allow_data: [PHI]
