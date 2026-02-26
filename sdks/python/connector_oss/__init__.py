@@ -18,23 +18,23 @@ Usage:
 """
 
 try:
-    from vac_ffi import Connector, AgentHandle, PipelineOutput
+    from connector_oss.vac_ffi import Connector, Agent, Pipeline, PipelineResult
 except ImportError:
-    raise ImportError(
-        "\n"
-        "connector_oss requires the native Rust kernel (vac_ffi).\n"
-        "\n"
-        "If you installed via pip, the wheel should have included it.\n"
-        "If you are building from source:\n"
-        "\n"
-        "  cd vac/crates/vac-ffi\n"
-        "  maturin develop --release\n"
-        "\n"
-        "Then re-install:\n"
-        "  cd sdks/python && pip install -e .\n"
-    )
+    try:
+        from vac_ffi import Connector, Agent, Pipeline, PipelineResult  # type: ignore
+    except ImportError:
+        raise ImportError(
+            "\n"
+            "connector_oss requires the native Rust kernel.\n"
+            "\n"
+            "If you installed via pip and see this, please report a bug.\n"
+            "To build from source:\n"
+            "\n"
+            "  cd sdks/python\n"
+            "  maturin develop --release\n"
+        )
 
-__all__ = ["Connector", "AgentHandle", "PipelineOutput"]
+__all__ = ["Connector", "Agent", "Pipeline", "PipelineResult"]
 __version__ = "0.1.0"
 __author__ = "Connector OSS Contributors"
 __license__ = "Apache-2.0"

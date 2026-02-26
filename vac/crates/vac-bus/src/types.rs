@@ -133,6 +133,17 @@ pub enum ReplicationOp {
         approver: String,
         comment: Option<String>,
     },
+
+    // --- Phase L1.1: Signal Distribution ---
+    /// Deliver an async signal to an agent on a remote cell (cross-cell kill(2))
+    SignalDeliver {
+        /// Target agent PID
+        target_pid: String,
+        /// CBOR-encoded AgentSignal
+        signal_cbor: Vec<u8>,
+        /// Originating cell ID
+        origin_cell: String,
+    },
 }
 
 impl ReplicationOp {
@@ -155,6 +166,7 @@ impl ReplicationOp {
             Self::AdapterDeregister { .. } => "adapter_deregister",
             Self::ApprovalRequest { .. } => "approval_request",
             Self::ApprovalResponse { .. } => "approval_response",
+            Self::SignalDeliver { .. } => "signal_deliver",
         }
     }
 

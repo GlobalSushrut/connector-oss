@@ -761,6 +761,8 @@ mod tests {
                 outcome: OpOutcome::Success, reason: Some("register".into()),
                 error: None, duration_us: Some(100), vakya_id: None,
                 before_hash: None, after_hash: None, merkle_root: None, scitt_receipt_cid: None,
+                natural_language: None, business_impact: None, remediation_hint: None,
+                causal_chain: Vec::new(), severity: TelemetrySeverity::Info, gen_ai_attrs: None,
             },
             KernelAuditEntry {
                 audit_id: "a002".into(), timestamp: 2000,
@@ -769,6 +771,8 @@ mod tests {
                 outcome: OpOutcome::Success, reason: Some("store extraction".into()),
                 error: None, duration_us: Some(200), vakya_id: None,
                 before_hash: None, after_hash: Some("hash1".into()), merkle_root: None, scitt_receipt_cid: None,
+                natural_language: None, business_impact: None, remediation_hint: None,
+                causal_chain: Vec::new(), severity: TelemetrySeverity::Info, gen_ai_attrs: None,
             },
             KernelAuditEntry {
                 audit_id: "a003".into(), timestamp: 3000,
@@ -778,6 +782,8 @@ mod tests {
                 error: Some("No read access to namespace".into()),
                 duration_us: Some(10), vakya_id: None,
                 before_hash: None, after_hash: None, merkle_root: None, scitt_receipt_cid: None,
+                natural_language: None, business_impact: None, remediation_hint: None,
+                causal_chain: Vec::new(), severity: TelemetrySeverity::Error, gen_ai_attrs: None,
             },
             KernelAuditEntry {
                 audit_id: "a004".into(), timestamp: 4000,
@@ -787,6 +793,8 @@ mod tests {
                 error: Some("No access".into()),
                 duration_us: Some(5), vakya_id: None,
                 before_hash: None, after_hash: None, merkle_root: None, scitt_receipt_cid: None,
+                natural_language: None, business_impact: None, remediation_hint: None,
+                causal_chain: Vec::new(), severity: TelemetrySeverity::Error, gen_ai_attrs: None,
             },
             KernelAuditEntry {
                 audit_id: "a005".into(), timestamp: 5000,
@@ -795,6 +803,8 @@ mod tests {
                 outcome: OpOutcome::Success, reason: Some("evidence preservation".into()),
                 error: None, duration_us: Some(50), vakya_id: None,
                 before_hash: None, after_hash: None, merkle_root: None, scitt_receipt_cid: None,
+                natural_language: None, business_impact: None, remediation_hint: None,
+                causal_chain: Vec::new(), severity: TelemetrySeverity::Info, gen_ai_attrs: None,
             },
             KernelAuditEntry {
                 audit_id: "a006".into(), timestamp: 6000,
@@ -803,6 +813,8 @@ mod tests {
                 outcome: OpOutcome::Success, reason: None,
                 error: None, duration_us: Some(300), vakya_id: None,
                 before_hash: None, after_hash: None, merkle_root: None, scitt_receipt_cid: None,
+                natural_language: None, business_impact: None, remediation_hint: None,
+                causal_chain: Vec::new(), severity: TelemetrySeverity::Info, gen_ai_attrs: None,
             },
             KernelAuditEntry {
                 audit_id: "a007".into(), timestamp: 7000,
@@ -811,6 +823,8 @@ mod tests {
                 outcome: OpOutcome::Success, reason: Some("cleanup".into()),
                 error: None, duration_us: Some(150), vakya_id: None,
                 before_hash: None, after_hash: None, merkle_root: None, scitt_receipt_cid: None,
+                natural_language: None, business_impact: None, remediation_hint: None,
+                causal_chain: Vec::new(), severity: TelemetrySeverity::Info, gen_ai_attrs: None,
             },
         ]
     }

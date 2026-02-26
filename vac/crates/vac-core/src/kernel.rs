@@ -179,6 +179,123 @@ pub enum SyscallPayload {
         action: String,
         request: serde_json::Value,
     },
+
+    // --- Phase L1.1: Signal System ---
+    /// Send a signal to an agent
+    SendSignal {
+        target_pid: String,
+        signal: AgentSignal,
+    },
+    /// Register a signal handler
+    RegisterSignalHandler {
+        handler: SignalHandler,
+    },
+
+    // --- Phase L2.1: Token Budget ---
+    /// Set or update token budget for the calling agent
+    SetTokenBudget {
+        budget: TokenBudget,
+    },
+    /// Record token usage against the agent's budget
+    RecordTokenUsage {
+        tokens_used: u64,
+        cost_usd: f64,
+        model: String,
+    },
+
+    // --- Phase L2.2: LLM Scheduler ---
+    /// Schedule an LLM call through the kernel scheduler
+    LlmSchedule {
+        request_id: String,
+        model: String,
+        estimated_tokens: u64,
+    },
+    /// Dequeue the highest-priority LLM request
+    LlmDequeue,
+    /// Configure the scheduler policy
+    LlmSchedulerConfig {
+        policy: LlmSchedulerPolicy,
+    },
+
+    // --- Phase L2.3: Compute Cgroup ---
+    /// Register a compute cgroup
+    RegisterCgroup {
+        cgroup: ComputeCgroup,
+    },
+    /// Record a compute usage entry
+    RecordComputeUsage {
+        record: ComputeUsageRecord,
+    },
+
+    // --- Phase L3.1: Agent DID + Card Registry ---
+    /// Register a DID for the calling agent
+    RegisterAgentDid {
+        did: AgentDid,
+    },
+    /// Revoke the calling agent's DID
+    RevokeAgentDid {
+        did_string: String,
+    },
+    /// Publish or update an Agent Card
+    PublishAgentCard {
+        card: AgentCard,
+    },
+    /// Resolve an Agent Card by DID string
+    ResolveAgentCard {
+        did_string: String,
+    },
+
+    // --- Phase L3.2: MCP Bridge ---
+    /// Register an MCP server bridge
+    McpRegisterBridge {
+        entry: McpBridgeEntry,
+    },
+    /// Invoke a tool on a registered MCP bridge (sync simulation)
+    McpInvokeTool {
+        bridge_id: String,
+        tool_name: String,
+        arguments: serde_json::Value,
+    },
+    /// Deregister an MCP server bridge
+    McpDeregisterBridge {
+        bridge_id: String,
+    },
+
+    // --- Phase L4.1: Context Manager ---
+    /// Update context window — add packet CIDs and token count
+    UpdateContext {
+        add_cids: Vec<Cid>,
+        token_delta: i64,
+        max_tokens: u64,
+    },
+    /// Trim the context window — evict oldest N packets to free tokens
+    TrimContextWindow {
+        tokens_to_free: u64,
+    },
+    /// Query context pressure level
+    GetContextPressure,
+
+    // --- Phase L3.3: A2A Bridge ---
+    /// Open a new A2A task channel between two agents
+    A2AOpenChannel {
+        channel_id: String,
+        responder: String,
+        task_id: String,
+    },
+    /// Send an A2A message on an existing channel
+    A2ASendMessage {
+        channel_id: String,
+        message: A2AMessage,
+    },
+    /// Update A2A task state
+    A2AUpdateTaskState {
+        channel_id: String,
+        state: A2ATaskState,
+    },
+    /// Close an A2A channel
+    A2ACloseChannel {
+        channel_id: String,
+    },
 }
 
 /// Result of a syscall execution
@@ -272,6 +389,30 @@ pub struct MemoryKernel {
     rate_limit_windows: HashMap<(String, String), (u32, u32, i64, i64)>,
     /// Next port ID counter
     next_port_id: u64,
+
+    // --- Phase L2.2: LLM Scheduler ---
+    /// LLM request queue
+    pub llm_queue: Vec<SchedulerEntry>,
+    /// Current scheduler policy
+    pub scheduler_policy: LlmSchedulerPolicy,
+    /// Scheduler statistics
+    pub scheduler_stats: LlmSchedulerStats,
+    /// Per-agent virtual runtime (CFS)
+    pub agent_vruntime: HashMap<String, f64>,
+
+    // --- Phase L3.1: Agent DID + Card Registry ---
+    /// DID registry: did_string → AgentDid
+    pub did_registry: HashMap<String, AgentDid>,
+    /// Agent Card registry: did_string → AgentCard
+    pub card_registry: HashMap<String, AgentCard>,
+
+    // --- Phase L3.2: MCP Bridge ---
+    /// MCP bridge registry: bridge_id → McpBridgeEntry
+    pub mcp_bridges: HashMap<String, McpBridgeEntry>,
+
+    // --- Phase L3.3: A2A Bridge ---
+    /// A2A channel registry: channel_id → A2AChannel
+    pub a2a_channels: HashMap<String, A2AChannel>,
 }
 
 impl MemoryKernel {
@@ -300,6 +441,14 @@ impl MemoryKernel {
             delegation_chains: HashMap::new(),
             rate_limit_windows: HashMap::new(),
             next_port_id: 1,
+            llm_queue: Vec::new(),
+            scheduler_policy: LlmSchedulerPolicy::Cfs,
+            scheduler_stats: LlmSchedulerStats::default(),
+            agent_vruntime: HashMap::new(),
+            did_registry: HashMap::new(),
+            card_registry: HashMap::new(),
+            mcp_bridges: HashMap::new(),
+            a2a_channels: HashMap::new(),
         }
     }
 
@@ -352,6 +501,12 @@ impl MemoryKernel {
             after_hash: None,
             merkle_root: None,
             scitt_receipt_cid: None,
+            natural_language: None,
+            business_impact: None,
+            remediation_hint: None,
+            causal_chain: Vec::new(),
+            severity: TelemetrySeverity::default(),
+            gen_ai_attrs: None,
         };
         // Phase 4: HMAC chain — link this entry to the previous one
         entry.before_hash = self.audit_chain_hash.clone();
@@ -458,6 +613,37 @@ impl MemoryKernel {
             MemoryKernelOp::PortClose => self.handle_port_close(req, start),
             MemoryKernelOp::PortDelegate => self.handle_port_delegate(req, start),
             MemoryKernelOp::ToolDispatch => self.handle_tool_dispatch(req, start),
+            // --- Phase L1.1: Signal System ---
+            MemoryKernelOp::SendSignal => self.handle_send_signal(req, start),
+            MemoryKernelOp::RegisterSignalHandler => self.handle_register_signal_handler(req, start),
+            // --- Phase L2.1: Token Budget ---
+            MemoryKernelOp::SetTokenBudget => self.handle_set_token_budget(req, start),
+            MemoryKernelOp::RecordTokenUsage => self.handle_record_token_usage(req, start),
+            // --- Phase L2.2: LLM Scheduler ---
+            MemoryKernelOp::LlmSchedule => self.handle_llm_schedule(req, start),
+            MemoryKernelOp::LlmDequeue => self.handle_llm_dequeue(req, start),
+            MemoryKernelOp::LlmSchedulerConfig => self.handle_llm_scheduler_config(req, start),
+            // --- Phase L3.1: Agent DID + Card Registry ---
+            MemoryKernelOp::RegisterAgentDid => self.handle_register_agent_did(req, start),
+            MemoryKernelOp::RevokeAgentDid => self.handle_revoke_agent_did(req, start),
+            MemoryKernelOp::PublishAgentCard => self.handle_publish_agent_card(req, start),
+            MemoryKernelOp::ResolveAgentCard => self.handle_resolve_agent_card(req, start),
+            // --- Phase L3.2: MCP Bridge ---
+            MemoryKernelOp::McpRegisterBridge => self.handle_mcp_register_bridge(req, start),
+            MemoryKernelOp::McpInvokeTool => self.handle_mcp_invoke_tool(req, start),
+            MemoryKernelOp::McpDeregisterBridge => self.handle_mcp_deregister_bridge(req, start),
+            // --- Phase L4.1: Context Manager ---
+            MemoryKernelOp::UpdateContext => self.handle_update_context(req, start),
+            MemoryKernelOp::TrimContextWindow => self.handle_trim_context_window(req, start),
+            MemoryKernelOp::GetContextPressure => self.handle_get_context_pressure(req, start),
+            // --- Phase L3.3: A2A Bridge ---
+            MemoryKernelOp::A2AOpenChannel => self.handle_a2a_open_channel(req, start),
+            MemoryKernelOp::A2ASendMessage => self.handle_a2a_send_message(req, start),
+            MemoryKernelOp::A2AUpdateTaskState => self.handle_a2a_update_task_state(req, start),
+            MemoryKernelOp::A2ACloseChannel => self.handle_a2a_close_channel(req, start),
+            // --- Phase L2.3: Compute Cgroup ---
+            MemoryKernelOp::RegisterCgroup => self.handle_register_cgroup(req, start),
+            MemoryKernelOp::RecordComputeUsage => self.handle_record_compute_usage(req, start),
         }
     }
 
@@ -2826,6 +3012,12 @@ impl MemoryKernel {
                     after_hash: None,
                     merkle_root: None,
                     scitt_receipt_cid: None,
+            natural_language: None,
+                    business_impact: None,
+                    remediation_hint: None,
+                    causal_chain: Vec::new(),
+                    severity: TelemetrySeverity::default(),
+                    gen_ai_attrs: None,
                 },
                 value: SyscallValue::Error(err),
             })
@@ -2872,6 +3064,12 @@ impl MemoryKernel {
                 after_hash: None,
                 merkle_root: None,
                 scitt_receipt_cid: None,
+                natural_language: None,
+                business_impact: None,
+                remediation_hint: None,
+                causal_chain: Vec::new(),
+                severity: TelemetrySeverity::default(),
+                gen_ai_attrs: None,
             },
             value: SyscallValue::Error(err),
         })
@@ -2935,6 +3133,12 @@ impl MemoryKernel {
                     after_hash: None,
                     merkle_root: None,
                     scitt_receipt_cid: None,
+            natural_language: None,
+                    business_impact: None,
+                    remediation_hint: None,
+                    causal_chain: Vec::new(),
+                    severity: TelemetrySeverity::default(),
+                    gen_ai_attrs: None,
                 },
                 value: SyscallValue::Error(err),
             });
@@ -2989,6 +3193,12 @@ impl MemoryKernel {
                     after_hash: None,
                     merkle_root: None,
                     scitt_receipt_cid: None,
+            natural_language: None,
+                    business_impact: None,
+                    remediation_hint: None,
+                    causal_chain: Vec::new(),
+                    severity: TelemetrySeverity::default(),
+                    gen_ai_attrs: None,
                 },
                 value: SyscallValue::Error(err),
             });
@@ -3019,6 +3229,12 @@ impl MemoryKernel {
                     after_hash: None,
                     merkle_root: None,
                     scitt_receipt_cid: None,
+            natural_language: None,
+                    business_impact: None,
+                    remediation_hint: None,
+                    causal_chain: Vec::new(),
+                    severity: TelemetrySeverity::default(),
+                    gen_ai_attrs: None,
                 },
                 value: SyscallValue::Error(err),
             });
@@ -3672,6 +3888,402 @@ impl MemoryKernel {
             budget: BudgetPolicy::default(),
         });
     }
+
+    // =========================================================================
+    // Phase L1.1: Signal System handlers
+    // =========================================================================
+
+    fn handle_send_signal(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (target_pid, signal) = match req.payload {
+            SyscallPayload::SendSignal { target_pid, signal } => (target_pid, signal),
+            _ => { let a = self.make_audit(MemoryKernelOp::SendSignal, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        let exists = self.agents.contains_key(&target_pid);
+        if !exists {
+            let err = format!("Agent {} not found", target_pid);
+            let a = self.make_audit(MemoryKernelOp::SendSignal, &req.agent_pid, Some(target_pid), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+            return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+        }
+        self.deliver_signal_internal(&target_pid.clone(), signal.clone());
+        let a = self.make_audit(MemoryKernelOp::SendSignal, &req.agent_pid, Some(target_pid), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn deliver_signal_internal(&mut self, target_pid: &str, signal: AgentSignal) {
+        if let Some(acb) = self.agents.get_mut(target_pid) {
+            acb.pending_signals.push(signal.clone());
+            // Apply immediate state transitions for lifecycle signals
+            match &signal {
+                AgentSignal::Terminate => { acb.status = AgentStatus::Terminated; acb.phase = AgentPhase::Terminating; acb.terminated_at = Some(Self::now_ms()); }
+                AgentSignal::Suspend   => { if acb.status == AgentStatus::Running { acb.status = AgentStatus::Suspended; acb.phase = AgentPhase::Suspended; } }
+                AgentSignal::Resume    => { if acb.status == AgentStatus::Suspended { acb.status = AgentStatus::Running; acb.phase = AgentPhase::Active; } }
+                _ => {}
+            }
+        }
+    }
+
+    fn handle_register_signal_handler(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let handler = match req.payload {
+            SyscallPayload::RegisterSignalHandler { handler } => handler,
+            _ => { let a = self.make_audit(MemoryKernelOp::RegisterSignalHandler, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        let signal_type = handler.signal_type.clone();
+        if let Some(acb) = self.agents.get_mut(&req.agent_pid) {
+            acb.signal_handlers.retain(|h| h.signal_type != signal_type);
+            acb.signal_handlers.push(handler);
+        }
+        let a = self.make_audit(MemoryKernelOp::RegisterSignalHandler, &req.agent_pid, Some(signal_type), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    // =========================================================================
+    // Phase L2.1: Token Budget handlers
+    // =========================================================================
+
+    fn handle_set_token_budget(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let budget = match req.payload {
+            SyscallPayload::SetTokenBudget { budget } => budget,
+            _ => { let a = self.make_audit(MemoryKernelOp::SetTokenBudget, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        if let Some(acb) = self.agents.get_mut(&req.agent_pid) {
+            acb.token_budget = Some(budget.clone());
+        }
+        let a = self.make_audit(MemoryKernelOp::SetTokenBudget, &req.agent_pid, Some(format!("daily={}", budget.daily_limit)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_record_token_usage(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (tokens_used, cost_usd, model) = match req.payload {
+            SyscallPayload::RecordTokenUsage { tokens_used, cost_usd, model } => (tokens_used, cost_usd, model),
+            _ => { let a = self.make_audit(MemoryKernelOp::RecordTokenUsage, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        let now = Self::now_ms();
+        let mut budget_exhausted = false;
+        let mut budget_warning = false;
+        let mut remaining = u64::MAX;
+        if let Some(acb) = self.agents.get_mut(&req.agent_pid) {
+            acb.total_tokens_consumed += tokens_used;
+            acb.total_cost_usd += cost_usd;
+            if let Some(ref mut b) = acb.token_budget {
+                // Reset daily window
+                if now >= b.reset_at_daily { b.used_today = 0; b.reset_at_daily = now + 86_400_000; }
+                if now >= b.reset_at_hourly { b.used_this_hour = 0; b.reset_at_hourly = now + 3_600_000; }
+                b.used_today += tokens_used;
+                b.used_this_hour += tokens_used;
+                if b.daily_limit > 0 {
+                    remaining = b.daily_limit.saturating_sub(b.used_today);
+                    let pct = b.used_today as f64 / b.daily_limit as f64;
+                    if pct >= 1.0 { budget_exhausted = true; }
+                    else if pct >= 0.8 { budget_warning = true; }
+                }
+            }
+        }
+        if budget_exhausted { self.deliver_signal_internal(&req.agent_pid.clone(), AgentSignal::TokenBudgetExhausted); }
+        else if budget_warning { self.deliver_signal_internal(&req.agent_pid.clone(), AgentSignal::TokenBudgetWarning { remaining }); }
+        let a = self.make_audit(MemoryKernelOp::RecordTokenUsage, &req.agent_pid, Some(format!("tokens={} model={}", tokens_used, model)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    // =========================================================================
+    // Phase L2.2: LLM Scheduler handlers
+    // =========================================================================
+
+    fn handle_llm_schedule(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (request_id, model, estimated_tokens) = match req.payload {
+            SyscallPayload::LlmSchedule { request_id, model, estimated_tokens } => (request_id, model, estimated_tokens),
+            _ => { let a = self.make_audit(MemoryKernelOp::LlmSchedule, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        let priority = self.agents.get(&req.agent_pid).map(|a| a.agent_priority.clone()).unwrap_or(AgentPriority::Normal);
+        let weight = priority.weight();
+        let prev_vruntime = *self.agent_vruntime.get(&req.agent_pid).unwrap_or(&0.0);
+        let vruntime = prev_vruntime + (estimated_tokens as f64 / weight);
+        let entry = SchedulerEntry { request_id: request_id.clone(), agent_pid: req.agent_pid.clone(), model: model.clone(), estimated_tokens, priority: priority.clone(), vruntime, enqueued_at: Self::now_ms() };
+        self.llm_queue.push(entry);
+        // Sort by policy
+        match self.scheduler_policy {
+            LlmSchedulerPolicy::Fifo => {}
+            LlmSchedulerPolicy::WeightedRoundRobin => self.llm_queue.sort_by_key(|e| e.enqueued_at),
+            LlmSchedulerPolicy::Cfs => self.llm_queue.sort_by(|a, b| a.vruntime.partial_cmp(&b.vruntime).unwrap_or(std::cmp::Ordering::Equal)),
+        }
+        self.scheduler_stats.total_scheduled += 1;
+        self.scheduler_stats.queue_depth = self.llm_queue.len();
+        if self.scheduler_stats.min_vruntime == 0.0 || vruntime < self.scheduler_stats.min_vruntime { self.scheduler_stats.min_vruntime = vruntime; }
+        let a = self.make_audit(MemoryKernelOp::LlmSchedule, &req.agent_pid, Some(request_id), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_llm_dequeue(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        if self.llm_queue.is_empty() {
+            let a = self.make_audit(MemoryKernelOp::LlmDequeue, &req.agent_pid, None, OpOutcome::Skipped, req.reason, Some("Queue empty".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+            return SyscallResult { outcome: OpOutcome::Skipped, audit_entry: a, value: SyscallValue::None };
+        }
+        let entry = self.llm_queue.remove(0);
+        self.agent_vruntime.insert(entry.agent_pid.clone(), entry.vruntime);
+        self.scheduler_stats.total_scheduled = self.scheduler_stats.total_scheduled; // no total_dequeued field
+        self.scheduler_stats.queue_depth = self.llm_queue.len();
+        if let Some(next) = self.llm_queue.first() {
+            self.scheduler_stats.min_vruntime = next.vruntime;
+        }
+        let rid = entry.request_id.clone();
+        let a = self.make_audit(MemoryKernelOp::LlmDequeue, &req.agent_pid, Some(rid), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_llm_scheduler_config(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let policy = match req.payload {
+            SyscallPayload::LlmSchedulerConfig { policy } => policy,
+            _ => { let a = self.make_audit(MemoryKernelOp::LlmSchedulerConfig, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        self.scheduler_policy = policy.clone();
+        let a = self.make_audit(MemoryKernelOp::LlmSchedulerConfig, &req.agent_pid, Some(format!("{:?}", policy)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    /// Returns a snapshot of the current scheduler statistics.
+    pub fn scheduler_stats(&self) -> &LlmSchedulerStats { &self.scheduler_stats }
+
+    // =========================================================================
+    // Phase L2.3: Compute Cgroup handlers
+    // =========================================================================
+
+    fn handle_register_cgroup(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let cgroup = match req.payload {
+            SyscallPayload::RegisterCgroup { cgroup } => cgroup,
+            _ => { let a = self.make_audit(MemoryKernelOp::RegisterCgroup, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        let cid_str = format!("cgroup:{}", cgroup.name);
+        let name = cgroup.name.clone();
+        // Store cgroup as a packet in sys:compute namespace
+        let packet = MemPacket::new(PacketType::Decision, serde_json::to_value(&cgroup).unwrap_or_default(), Cid::default(), name.clone(), "sys:compute:cgroups".to_string(), Source { kind: SourceKind::Tool, principal_id: req.agent_pid.clone() }, Self::now_ms());
+        let cid = match compute_cid(&packet) { Ok(c) => c, Err(_) => Cid::default() };
+        self.packets.insert(cid.clone(), packet);
+        let a = self.make_audit(MemoryKernelOp::RegisterCgroup, &req.agent_pid, Some(name), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::Error(cid_str) }
+    }
+
+    fn handle_record_compute_usage(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let record = match req.payload {
+            SyscallPayload::RecordComputeUsage { record } => record,
+            _ => { let a = self.make_audit(MemoryKernelOp::RecordComputeUsage, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; }
+        };
+        let packet = MemPacket::new(PacketType::Decision, serde_json::to_value(&record).unwrap_or_default(), Cid::default(), record.agent_pid.clone(), "sys:compute:usage".to_string(), Source { kind: SourceKind::Tool, principal_id: req.agent_pid.clone() }, Self::now_ms());
+        let cid = match compute_cid(&packet) { Ok(c) => c, Err(_) => Cid::default() };
+        let cid_str = cid.to_string();
+        self.packets.insert(cid, packet);
+        let a = self.make_audit(MemoryKernelOp::RecordComputeUsage, &req.agent_pid, Some(record.cgroup.clone()), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::Error(cid_str) }
+    }
+
+    // =========================================================================
+    // Phase L3.1: Agent DID + Card Registry handlers
+    // =========================================================================
+
+    fn handle_register_agent_did(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let did = match req.payload { SyscallPayload::RegisterAgentDid { did } => did, _ => { let a = self.make_audit(MemoryKernelOp::RegisterAgentDid, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        let did_str = did.to_string();
+        self.did_registry.insert(did_str.clone(), did);
+        let a = self.make_audit(MemoryKernelOp::RegisterAgentDid, &req.agent_pid, Some(did_str), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_revoke_agent_did(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let did_string = match req.payload { SyscallPayload::RevokeAgentDid { did_string } => did_string, _ => { let a = self.make_audit(MemoryKernelOp::RevokeAgentDid, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        if self.did_registry.remove(&did_string).is_none() {
+            let err = format!("DID not found: {}", did_string);
+            let a = self.make_audit(MemoryKernelOp::RevokeAgentDid, &req.agent_pid, Some(did_string), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+            return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+        }
+        let a = self.make_audit(MemoryKernelOp::RevokeAgentDid, &req.agent_pid, Some(did_string), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_publish_agent_card(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let card = match req.payload { SyscallPayload::PublishAgentCard { card } => card, _ => { let a = self.make_audit(MemoryKernelOp::PublishAgentCard, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        let did_str = card.did.to_string();
+        self.card_registry.insert(did_str.clone(), card);
+        let a = self.make_audit(MemoryKernelOp::PublishAgentCard, &req.agent_pid, Some(did_str), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_resolve_agent_card(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let did_string = match req.payload { SyscallPayload::ResolveAgentCard { did_string } => did_string, _ => { let a = self.make_audit(MemoryKernelOp::ResolveAgentCard, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        match self.card_registry.get(&did_string) {
+            Some(card) => {
+                let json = serde_json::to_string(card).unwrap_or_default();
+                let a = self.make_audit(MemoryKernelOp::ResolveAgentCard, &req.agent_pid, Some(did_string), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::Error(json) }
+            }
+            None => {
+                let err = format!("Agent Card not found for DID: {}", did_string);
+                let a = self.make_audit(MemoryKernelOp::ResolveAgentCard, &req.agent_pid, Some(did_string), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) }
+            }
+        }
+    }
+
+    // =========================================================================
+    // Phase L3.2: MCP Bridge handlers
+    // =========================================================================
+
+    fn handle_mcp_register_bridge(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let mut entry = match req.payload { SyscallPayload::McpRegisterBridge { entry } => entry, _ => { let a = self.make_audit(MemoryKernelOp::McpRegisterBridge, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        entry.registered_by = req.agent_pid.clone();
+        entry.registered_at = Self::now_ms();
+        let bridge_id = entry.bridge_id.clone();
+        self.mcp_bridges.insert(bridge_id.clone(), entry);
+        let a = self.make_audit(MemoryKernelOp::McpRegisterBridge, &req.agent_pid, Some(bridge_id), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_mcp_invoke_tool(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (bridge_id, tool_name, arguments) = match req.payload { SyscallPayload::McpInvokeTool { bridge_id, tool_name, arguments } => (bridge_id, tool_name, arguments), _ => { let a = self.make_audit(MemoryKernelOp::McpInvokeTool, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        match self.mcp_bridges.get(&bridge_id) {
+            Some(bridge) if !bridge.active => {
+                let err = format!("MCP bridge {} is inactive", bridge_id);
+                let a = self.make_audit(MemoryKernelOp::McpInvokeTool, &req.agent_pid, Some(bridge_id), OpOutcome::Denied, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Denied, audit_entry: a, value: SyscallValue::Error(err) }
+            }
+            Some(bridge) => {
+                match bridge.find_tool(&tool_name) {
+                    None => {
+                        let err = format!("Tool {} not found on bridge {}", tool_name, bridge_id);
+                        let a = self.make_audit(MemoryKernelOp::McpInvokeTool, &req.agent_pid, Some(bridge_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                        SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) }
+                    }
+                    Some(_tool) => {
+                        let result = McpToolResult { tool_name: tool_name.clone(), content: arguments.clone(), success: true, error: None, duration_ms: start.elapsed().as_millis() as u64 };
+                        let json = serde_json::to_string(&result).unwrap_or_default();
+                        let a = self.make_audit(MemoryKernelOp::McpInvokeTool, &req.agent_pid, Some(format!("{}:{}", bridge_id, tool_name)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::Error(json) }
+                    }
+                }
+            }
+            None => {
+                let err = format!("MCP bridge not found: {}", bridge_id);
+                let a = self.make_audit(MemoryKernelOp::McpInvokeTool, &req.agent_pid, Some(bridge_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) }
+            }
+        }
+    }
+
+    fn handle_mcp_deregister_bridge(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let bridge_id = match req.payload { SyscallPayload::McpDeregisterBridge { bridge_id } => bridge_id, _ => { let a = self.make_audit(MemoryKernelOp::McpDeregisterBridge, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        if self.mcp_bridges.remove(&bridge_id).is_none() {
+            let err = format!("MCP bridge not found: {}", bridge_id);
+            let a = self.make_audit(MemoryKernelOp::McpDeregisterBridge, &req.agent_pid, Some(bridge_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+            return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+        }
+        let a = self.make_audit(MemoryKernelOp::McpDeregisterBridge, &req.agent_pid, Some(bridge_id), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    // =========================================================================
+    // Phase L4.1: Context Manager handlers
+    // =========================================================================
+
+    fn handle_update_context(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (add_cids, token_delta, max_tokens) = match req.payload { SyscallPayload::UpdateContext { add_cids, token_delta, max_tokens } => (add_cids, token_delta, max_tokens), _ => { let a = self.make_audit(MemoryKernelOp::UpdateContext, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        let ctx = self.contexts.entry(req.agent_pid.clone()).or_insert_with(|| ExecutionContext { agent_pid: req.agent_pid.clone(), session_id: "default".to_string(), pipeline_id: "default".to_string(), step_counter: 0, current_step_type: None, pending_tool_calls: Vec::new(), context_window: Vec::new(), context_tokens: 0, context_max_tokens: 128_000, reasoning_chain: Vec::new(), snapshot_at: 0, snapshot_cid: None, restored: false, suspend_count: 0, session_snapshot: None });
+        if max_tokens > 0 { ctx.context_max_tokens = max_tokens; }
+        for cid in add_cids { if !ctx.context_window.contains(&cid) { ctx.context_window.push(cid); } }
+        if token_delta >= 0 { ctx.context_tokens = ctx.context_tokens.saturating_add(token_delta as u64); } else { ctx.context_tokens = ctx.context_tokens.saturating_sub((-token_delta) as u64); }
+        let current_tokens = ctx.context_tokens;
+        let ctx_max = ctx.context_max_tokens;
+        drop(ctx);
+        let pressure = ContextPressureLevel::from_usage(current_tokens, ctx_max);
+        let pressure_str = pressure.to_string();
+        let should_signal = pressure.should_summarize();
+        let a = self.make_audit(MemoryKernelOp::UpdateContext, &req.agent_pid, Some(format!("tokens={}/{} pressure={}", current_tokens, ctx_max, pressure_str)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        if should_signal { if let Some(acb) = self.agents.get_mut(&req.agent_pid) { acb.pending_signals.push(AgentSignal::ContextPressure { level: pressure_str, current_tokens, max_tokens: ctx_max }); } }
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_trim_context_window(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let tokens_to_free = match req.payload { SyscallPayload::TrimContextWindow { tokens_to_free } => tokens_to_free, _ => { let a = self.make_audit(MemoryKernelOp::TrimContextWindow, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        let ctx = match self.contexts.get_mut(&req.agent_pid) { Some(c) => c, None => { let a = self.make_audit(MemoryKernelOp::TrimContextWindow, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("No context found".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("No context found".to_string()) }; } };
+        let n = ctx.context_window.len();
+        let tpp = if n > 0 { (ctx.context_tokens as f64 / n as f64).ceil() as u64 } else { 0 };
+        let mut freed = 0u64; let mut evicted = 0usize;
+        while freed < tokens_to_free && !ctx.context_window.is_empty() { ctx.context_window.remove(0); freed += tpp; evicted += 1; }
+        ctx.context_tokens = ctx.context_tokens.saturating_sub(freed);
+        let a = self.make_audit(MemoryKernelOp::TrimContextWindow, &req.agent_pid, Some(format!("evicted={} freed={}", evicted, freed)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_get_context_pressure(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (current, max) = match self.contexts.get(&req.agent_pid) { Some(ctx) => (ctx.context_tokens, ctx.context_max_tokens), None => (0, 128_000) };
+        let pressure = ContextPressureLevel::from_usage(current, max);
+        let result = serde_json::json!({ "pressure": pressure.to_string(), "current_tokens": current, "max_tokens": max, "should_summarize": pressure.should_summarize() });
+        let a = self.make_audit(MemoryKernelOp::GetContextPressure, &req.agent_pid, Some(pressure.to_string()), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::Error(result.to_string()) }
+    }
+
+    // =========================================================================
+    // Phase L3.3: A2A Bridge handlers
+    // =========================================================================
+
+    fn handle_a2a_open_channel(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (channel_id, responder, task_id) = match req.payload { SyscallPayload::A2AOpenChannel { channel_id, responder, task_id } => (channel_id, responder, task_id), _ => { let a = self.make_audit(MemoryKernelOp::A2AOpenChannel, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        if self.a2a_channels.contains_key(&channel_id) {
+            let err = format!("A2A channel already exists: {}", channel_id);
+            let a = self.make_audit(MemoryKernelOp::A2AOpenChannel, &req.agent_pid, Some(channel_id), OpOutcome::Denied, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+            return SyscallResult { outcome: OpOutcome::Denied, audit_entry: a, value: SyscallValue::Error(err) };
+        }
+        let channel = A2AChannel { channel_id: channel_id.clone(), initiator: req.agent_pid.clone(), responder, task_id: task_id.clone(), state: A2ATaskState::Submitted, messages: Vec::new(), created_at: Self::now_ms(), open: true };
+        self.a2a_channels.insert(channel_id.clone(), channel);
+        let a = self.make_audit(MemoryKernelOp::A2AOpenChannel, &req.agent_pid, Some(format!("{}:task={}", channel_id, task_id)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+        SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+    }
+
+    fn handle_a2a_send_message(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (channel_id, message) = match req.payload { SyscallPayload::A2ASendMessage { channel_id, message } => (channel_id, message), _ => { let a = self.make_audit(MemoryKernelOp::A2ASendMessage, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        match self.a2a_channels.get_mut(&channel_id) {
+            Some(ch) if ch.open => {
+                let msg_id = message.message_id.clone();
+                ch.push_message(message);
+                if ch.state == A2ATaskState::Submitted { ch.state = A2ATaskState::Working; }
+                let a = self.make_audit(MemoryKernelOp::A2ASendMessage, &req.agent_pid, Some(format!("{}:msg={}", channel_id, msg_id)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+            }
+            Some(_) => {
+                let err = format!("A2A channel {} is closed", channel_id);
+                let a = self.make_audit(MemoryKernelOp::A2ASendMessage, &req.agent_pid, Some(channel_id), OpOutcome::Denied, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Denied, audit_entry: a, value: SyscallValue::Error(err) }
+            }
+            None => {
+                let err = format!("A2A channel not found: {}", channel_id);
+                let a = self.make_audit(MemoryKernelOp::A2ASendMessage, &req.agent_pid, Some(channel_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) }
+            }
+        }
+    }
+
+    fn handle_a2a_update_task_state(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let (channel_id, state) = match req.payload { SyscallPayload::A2AUpdateTaskState { channel_id, state } => (channel_id, state), _ => { let a = self.make_audit(MemoryKernelOp::A2AUpdateTaskState, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        match self.a2a_channels.get_mut(&channel_id) {
+            Some(ch) => {
+                let state_str = state.to_string();
+                if matches!(state, A2ATaskState::Completed | A2ATaskState::Failed | A2ATaskState::Cancelled) { ch.open = false; }
+                ch.state = state;
+                let a = self.make_audit(MemoryKernelOp::A2AUpdateTaskState, &req.agent_pid, Some(format!("{}:state={}", channel_id, state_str)), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
+            }
+            None => {
+                let err = format!("A2A channel not found: {}", channel_id);
+                let a = self.make_audit(MemoryKernelOp::A2AUpdateTaskState, &req.agent_pid, Some(channel_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) }
+            }
+        }
+    }
+
+    fn handle_a2a_close_channel(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
+        let channel_id = match req.payload { SyscallPayload::A2ACloseChannel { channel_id } => channel_id, _ => { let a = self.make_audit(MemoryKernelOp::A2ACloseChannel, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
+        match self.a2a_channels.get_mut(&channel_id) {
+            Some(ch) => { ch.open = false; let a = self.make_audit(MemoryKernelOp::A2ACloseChannel, &req.agent_pid, Some(channel_id), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id); SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None } }
+            None => { let err = format!("A2A channel not found: {}", channel_id); let a = self.make_audit(MemoryKernelOp::A2ACloseChannel, &req.agent_pid, Some(channel_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id); SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) } }
+        }
+    }
+
 }
 
 impl Default for MemoryKernel {
@@ -5980,6 +6592,12 @@ mod tests {
                 after_hash: None,
                 merkle_root: None,
                 scitt_receipt_cid: None,
+                natural_language: None,
+                business_impact: None,
+                remediation_hint: None,
+                causal_chain: Vec::new(),
+                severity: TelemetrySeverity::default(),
+                gen_ai_attrs: None,
             };
             store.store_audit_entry(&entry).unwrap();
         }

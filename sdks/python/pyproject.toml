@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Security",
@@ -31,11 +32,10 @@ Repository = "https://github.com/GlobalSushrut/connector-oss"
 "Bug Tracker" = "https://github.com/GlobalSushrut/connector-oss/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "maturin>=1.0"]
+dev = ["pytest>=7.0", "maturin>=1.0", "twine"]
 
 [tool.maturin]
-# Points maturin at the vac-ffi crate which contains the PyO3 bindings
 manifest-path = "../../vac/crates/vac-ffi/Cargo.toml"
 python-source = "."
-module-name = "connector_oss._internal"
+module-name = "connector_oss.vac_ffi"
 features = ["pyo3/extension-module"]
