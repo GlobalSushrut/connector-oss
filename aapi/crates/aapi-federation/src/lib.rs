@@ -9,6 +9,8 @@ pub mod error;
 pub mod federated_policy;
 pub mod capability_verify;
 pub mod scitt_exchange;
+pub mod payment;
+pub mod marketplace;
 
 pub use error::*;
 pub use federated_policy::*;

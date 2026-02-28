@@ -182,7 +182,7 @@ impl MemoryCoordinator {
             agent_pid: owner.to_string(), operation: MemoryKernelOp::AccessGrant,
             payload: SyscallPayload::AccessGrant {
                 target_namespace: ns.to_string(), grantee_pid: grantee.to_string(),
-                read: true, write: false,
+                read: true, write: false, expires_at: None,
             },
             reason: Some("grant read".into()), vakya_id: None,
         });

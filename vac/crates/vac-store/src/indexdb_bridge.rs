@@ -711,6 +711,10 @@ mod tests {
             role: AgentRole::default(),
             namespace_mounts: Vec::new(),
             tool_bindings: Vec::new(),
+            signal_handlers: Vec::new(),
+            pending_signals: Vec::new(),
+            agent_priority: AgentPriority::default(),
+            token_budget: None,
         };
 
         store.store_agent(&acb).unwrap();
@@ -778,6 +782,12 @@ mod tests {
             after_hash: None,
             merkle_root: None,
             scitt_receipt_cid: None,
+            natural_language: None,
+            business_impact: None,
+            remediation_hint: None,
+            causal_chain: Vec::new(),
+            severity: TelemetrySeverity::default(),
+            gen_ai_attrs: None,
         };
 
         store.store_audit_entry(&entry).unwrap();

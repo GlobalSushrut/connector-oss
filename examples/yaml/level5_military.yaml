@@ -1,0 +1,240 @@
+# Level 5: Military-Grade — FIPS, post-quantum, BFT, formal verification, watchdog
+# This is the maximum security configuration. Every feature is activated.
+connector:
+  provider: anthropic
+  model: claude-3-5-sonnet-20241022
+  api_key: ${ANTHROPIC_API_KEY}
+  storage: connector://nats:4222?cells=8
+  comply: [hipaa, soc2, gdpr, eu_ai_act]
+  security:
+    signing: true
+    scitt: true
+    data_classification: top_secret
+    jurisdiction: US
+    retention_days: 3650  # 10 years
+    require_mfa: true
+    max_delegation_depth: 2
+    ip_allowlist: ["10.0.0.0/8", "172.16.0.0/12"]
+    audit_export: otel
+  firewall:
+    preset: strict
+    block_injection: true
+    injection_threshold: 0.3
+    pii_types: [ssn, credit_card, email, phone, dob, passport, driver_license, bank_account, ip_address, medical_record]
+    max_calls_per_minute: 60
+    max_input_length: 50000
+  behavior:
+    window_ms: 60000
+    anomaly_threshold: 0.7
+    max_actions_per_window: 100
+    max_error_rate: 0.05
+    detect_contamination: true
+  checkpoint:
+    write_through: true
+    wal_enabled: true
+    auto_checkpoint_threshold: 10
+
+# Military-grade cryptography
+crypto:
+  fips: true
+  post_quantum: true
+  noise_channels: true
+  encryption_at_rest: true
+  encryption_key: ${ENCRYPTION_KEY}
+  hmac_audit_chain: true
+
+# Byzantine fault tolerance
+consensus:
+  type: bft
+  validators: [cell-0, cell-1, cell-2, cell-3]
+  proposal_timeout_ms: 5000
+  formal_verify: true
+
+# Runtime invariant checking
+formal_verify:
+  enabled: true
+  lifecycle: true
+  namespace_isolation: true
+  budget: true
+  audit_completeness: true
+
+# System watchdog
+watchdog:
+  defaults: true
+  rules:
+    - name: "high-error-suspend"
+      condition: agent_error_rate_high
+      action: suspend_agent
+      cooldown_ms: 30000
+      agent_pattern: "*"
+    - name: "budget-exhausted-notify"
+      condition: token_budget_exhausted
+      action: notify_human
+      cooldown_ms: 60000
+    - name: "trust-low-restrict"
+      condition: trust_score_low
+      action: suspend_agent
+      cooldown_ms: 120000
+    - name: "partition-sync"
+      condition: cluster_partition
+      action: trigger_sync
+      cooldown_ms: 10000
+
+# Distributed cluster
+cluster:
+  mode: federated
+  node_id: ${NODE_ID}
+  peers: ["nats://node-1:4222", "nats://node-2:4222", "nats://node-3:4222"]
+  replication_factor: 3
+  consensus: raft
+  partition_strategy: consistent_hash
+  heartbeat_interval_ms: 1000
+  election_timeout_ms: 5000
+  replication_bus: nats://${NATS_HOST}:4222
+  scitt_federation: true
+
+# Agent economy
+negotiation:
+  max_rounds: 3
+  ttl_ms: 60000
+
+agents:
+  intel_analyst:
+    instructions: "You analyze classified intelligence reports. Never disclose sources."
+    role: analyst
+    clearance:
+      level: top_secret
+      integrity: critical
+      guard: mac
+    budget:
+      max_tokens: 100000
+      max_cost_usd: 50.0
+    rate_limit: 30
+    contract:
+      sla:
+        max_latency_ms: 3000
+        uptime_pct: 99.99
+        max_error_rate: 0.1
+      capabilities: [read_classified, analyze_intel, produce_report]
+      deny_capabilities: [publish_external, delete_records]
+      escrow:
+        amount: 5000
+        currency: credits
+        slash_on_failure: true
+        dispute_window_ms: 86400000  # 24 hours
+    watchdog:
+      rules:
+        - name: "analyst-threat"
+          condition: threat_elevated
+          action: suspend_agent
+          cooldown_ms: 5000
+
+  senior_reviewer:
+    instructions: "You review intelligence analyses for accuracy, bias, and compliance."
+    role: reviewer
+    memory_from: [intel_analyst]
+    clearance:
+      level: top_secret
+      integrity: critical
+      guard: mac
+    require_approval: [publish_report, escalate]
+    budget:
+      max_tokens: 50000
+    contract:
+      sla:
+        max_latency_ms: 5000
+      capabilities: [review, approve, reject, escalate]
+
+  approver:
+    instructions: "Final approval authority. Verify all findings before release."
+    role: admin
+    memory_from: [intel_analyst, senior_reviewer]
+    clearance:
+      level: top_secret
+      integrity: critical
+      guard: mac
+    require_approval: [release_to_external]
+    contract:
+      capabilities: [approve, release_to_external]
+
+tools:
+  classified_db:
+    description: "Query classified intelligence database"
+    resource: "intel://classified/*"
+    actions: [read]
+    data_classification: top_secret
+    requires_approval: false
+    timeout_ms: 5000
+  external_publish:
+    description: "Publish approved report to external system"
+    resource: "external://reports/*"
+    actions: [write]
+    data_classification: secret
+    requires_approval: true
+    timeout_ms: 10000
+
+pipelines:
+  intel_analysis:
+    actors:
+      - name: intel_analyst
+        instructions: "Analyze the intelligence data"
+        role: analyst
+      - name: senior_reviewer
+        instructions: "Review analysis for accuracy"
+        role: reviewer
+        memory_from: [intel_analyst]
+      - name: approver
+        instructions: "Final approval before release"
+        role: admin
+        memory_from: [intel_analyst, senior_reviewer]
+        require_approval: [release_to_external]
+    flow: "intel_analyst -> senior_reviewer -> approver"
+    comply: [soc2, eu_ai_act]
+    budget:
+      max_tokens: 200000
+      max_cost_usd: 100.0
+    security:
+      signing: true
+      scitt: true
+
+policies:
+  classified_access:
+    name: "Classified Data Access Control"
+    rules:
+      - effect: deny
+        action_pattern: "*"
+        resource_pattern: "intel://top_secret/*"
+        roles: [nurse, pharmacist]
+        priority: 1000
+      - effect: deny
+        action_pattern: "export.*"
+        resource_pattern: "intel://*"
+        priority: 900
+      - effect: require_approval
+        action_pattern: "release.*"
+        priority: 500
+      - effect: allow
+        action_pattern: "read.*"
+        resource_pattern: "intel://*"
+        roles: [analyst, reviewer, admin]
+        priority: 100
+
+swarm:
+  max_concurrent_agents: 50
+  agent_pool_size: 5
+  spawn_strategy: pre_warm
+  a2a_enabled: true
+  a2a_protocol: bus
+  max_delegation_hops: 3
+  saga_rollback: true
+
+observability:
+  service_name: intel-analysis-system
+  environment: production
+  otel_endpoint: ${OTEL_ENDPOINT}
+  otel_protocol: grpc
+  trace_sampling_rate: 1.0
+  metrics_enabled: true
+  log_level: info
+  log_format: json
+  log_export: true

@@ -1,0 +1,31 @@
+# Build artifacts
+**/target/
+**/dist/
+**/node_modules/
+**/__pycache__/
+**/*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Docs (not needed in build)
+docs/
+demos/assets/
+*.gif
+*.png
+*.jpg
+
+# CI
+.github/

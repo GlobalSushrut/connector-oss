@@ -1,0 +1,250 @@
+# Level 7: Full Stack — every feature enabled (kitchen sink reference)
+#
+# This is the complete reference config showing ALL available sections.
+# Use it as a template — remove sections you don't need.
+# Absent Tier 3 sections = feature OFF. Present = feature ON.
+
+connector:
+  # ── Tier 1: Required ──
+  provider: openai
+  model: gpt-4o
+  api_key: ${OPENAI_API_KEY}
+
+  # ── Tier 2: Defaults apply if omitted ──
+  max_tokens: 4096
+  temperature: 0.7
+  system_prompt: "You are a trusted AI assistant."
+  storage: sqlite:./full_stack.db
+  comply: [hipaa, soc2, gdpr]
+
+  fallbacks:
+    - provider: anthropic
+      model: claude-3-5-sonnet-20241022
+      api_key: ${ANTHROPIC_API_KEY}
+
+  router:
+    strategy: cost_aware
+    cost_threshold: 0.01
+    latency_threshold_ms: 5000
+
+  security:
+    signing: true
+    scitt: true
+    max_delegation_depth: 3
+    data_classification: confidential
+    jurisdiction: us
+    retention_days: 2555
+
+  firewall:
+    max_tokens_per_agent: 100000
+    max_actions_per_minute: 60
+    blocked_topics: [weapons, illegal]
+    require_human_approval_for: [delete_patient, prescribe_controlled]
+
+  behavior:
+    max_retries: 3
+    retry_delay_ms: 1000
+    timeout_ms: 30000
+
+  checkpoint:
+    interval_ops: 100
+    path: ./checkpoints/
+
+# ── Agents ──
+
+agents:
+  triage:
+    instructions: "You are a triage nurse. Assess symptoms and record vitals."
+    tools: [lookup_patient, record_vitals]
+    deny_data: [financial]
+  doctor:
+    instructions: "You are an ER doctor. Diagnose based on triage notes."
+    memory_from: [triage]
+    tools: [prescribe, order_lab]
+  pharmacist:
+    instructions: "You are a pharmacist. Verify prescriptions for safety."
+    memory_from: [doctor]
+
+# ── Pipelines ──
+
+pipelines:
+  er_visit:
+    actors:
+      - name: triage
+        instructions: "Assess the patient"
+        role: nurse
+      - name: doctor
+        instructions: "Diagnose and prescribe"
+        role: doctor
+        memory_from: [triage]
+      - name: pharmacist
+        instructions: "Verify prescription safety"
+        role: pharmacist
+        memory_from: [doctor]
+    flow: "triage -> doctor -> pharmacist"
+    comply: [hipaa]
+
+# ── Tools ──
+
+tools:
+  lookup_patient:
+    description: "Look up patient records by ID"
+    params:
+      - name: patient_id
+        type: string
+        required: true
+    domain: healthcare
+  record_vitals:
+    description: "Record patient vital signs"
+    params:
+      - name: patient_id
+        type: string
+      - name: bp
+        type: string
+      - name: hr
+        type: number
+
+# ── Policies ──
+
+policies:
+  hipaa_data:
+    rules:
+      - effect: deny
+        action_pattern: "export_*"
+        resource_pattern: "patient:*"
+        priority: 100
+      - effect: require_approval
+        action_pattern: "share_*"
+        resource_pattern: "patient:*"
+        priority: 90
+
+# ── Knowledge ──
+
+knowledge:
+  grounding_table: ./grounding/icd10.json
+  auto_ingest: true
+  dedup: true
+
+rag:
+  token_budget: 4096
+  max_facts: 20
+  min_relevance: 0.3
+
+memory:
+  gc_interval_secs: 300
+  cold_after_secs: 3600
+  archive_after_secs: 86400
+
+judgment:
+  profile: medical
+  min_score: 60
+  block_below: 30
+
+# ── Tier 3: Optional-Revoke (present = ON) ──
+
+cluster:
+  mode: cluster
+  node_id: ${NODE_ID}
+  peers: ["${PEER_1}", "${PEER_2}"]
+  replication_factor: 2
+  consensus: raft
+  partition_strategy: consistent_hash
+  heartbeat_interval_ms: 500
+  replication_bus: nats://localhost:4222
+  scitt_federation: true
+
+swarm:
+  max_concurrent_agents: 50
+  agent_pool_size: 10
+  spawn_strategy: pre_warm
+  a2a_enabled: true
+  a2a_protocol: bus
+  load_balance: true
+  saga_rollback: true
+
+streaming:
+  protocol: sse
+  chunk_size_tokens: 10
+  heartbeat_interval_ms: 1000
+  max_connections: 100
+  include_audit_events: true
+  include_trust_updates: true
+
+mcp:
+  mode: both
+  server_port: 8090
+  tool_discovery: auto
+  auth_token: ${MCP_TOKEN}
+  resource_subscriptions: true
+  max_sessions: 50
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  cors_origins: ["*"]
+  request_timeout_secs: 30
+  metrics_enabled: true
+  health_enabled: true
+  rate_limit_rps: 100
+
+perception:
+  extract_entities: true
+  extract_claims: true
+  verify_claims: true
+  quality_threshold: 50
+  grounding_domain: medical
+  strict_grounding: false
+
+cognitive:
+  max_cycles: 3
+  reflection_enabled: true
+  compile_knowledge_after_cycle: true
+  contradiction_halt: true
+  chain_of_thought: true
+  max_reasoning_steps: 10
+  min_cycle_quality: 40
+
+tracing_config:
+  otel_format: true
+  include_kernel_spans: true
+  include_llm_spans: true
+  include_tool_spans: true
+  sampling_rate: 1.0
+  otel_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+  otel_protocol: grpc
+
+observability:
+  service_name: connector-full-stack
+  service_version: "1.0.0"
+  environment: production
+  otel_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+  metrics_enabled: true
+  log_level: info
+  log_format: json
+  log_export: true
+
+# ── Military-Grade (Tier 3) ──
+
+crypto:
+  mode: fips
+  key_derivation: argon2id
+  signing_algorithm: ed25519
+  post_quantum: false
+
+consensus:
+  protocol: raft
+  election_timeout_ms: 3000
+  log_compaction_threshold: 10000
+
+watchdog:
+  enabled: true
+  check_interval_secs: 10
+  max_memory_mb: 4096
+  max_cpu_percent: 90
+  alert_webhook: ${WATCHDOG_WEBHOOK}
+
+negotiation:
+  enabled: true
+  max_rounds: 5
+  timeout_ms: 30000
+  strategy: collaborative

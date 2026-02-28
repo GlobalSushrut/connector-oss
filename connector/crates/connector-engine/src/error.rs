@@ -69,6 +69,9 @@ pub enum EngineError {
     #[error("Storage error: {0}")]
     StorageError(String),
 
+    #[error("Engine store error: {0}")]
+    StoreError(String),
+
     #[error("Instruction blocked: {0}")]
     InstructionBlocked(String),
 }

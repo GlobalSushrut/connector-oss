@@ -513,6 +513,96 @@ impl AuditTrail {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Display impls — clean, human-readable output for all observe types
+// ═══════════════════════════════════════════════════════════════
+
+impl std::fmt::Display for TrustBadge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.badge)
+    }
+}
+
+impl std::fmt::Display for ComplianceReport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let icon = match self.status {
+            ComplianceStatus::Compliant => "✅",
+            ComplianceStatus::PartiallyCompliant => "⚠️",
+            ComplianceStatus::NonCompliant => "❌",
+            ComplianceStatus::NotApplicable => "➖",
+        };
+        writeln!(f, "{} {} — {}/{} controls passed ({})",
+            icon, self.framework.to_uppercase(), self.controls_passed, self.controls_total, self.status)?;
+        for control in &self.controls {
+            let ctl = if control.passed { "✓" } else { "✗" };
+            writeln!(f, "  {} {} — {}", ctl, control.control_id, control.description)?;
+        }
+        if !self.remediations.is_empty() {
+            writeln!(f, "  Recommendations:")?;
+            for rem in &self.remediations {
+                writeln!(f, "    → {}", rem)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for AuditTrail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "📋 Audit Trail")?;
+        writeln!(f, "  {} entries recorded", self.total_entries)?;
+        if self.denied_count > 0 {
+            writeln!(f, "  {} operations denied ⛔", self.denied_count)?;
+        }
+        if self.approval_count > 0 {
+            writeln!(f, "  {} operations awaiting approval ⏳", self.approval_count)?;
+        }
+        write!(f, "  {}", self.explanation)
+    }
+}
+
+impl std::fmt::Display for XRayResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "🔍 Decision X-Ray")?;
+        writeln!(f)?;
+        for step in &self.reasoning_steps {
+            let human_action = match step.action.as_str() {
+                "input_received" => "Received input",
+                "memories_created" => "Stored observations",
+                "authorization" => "Checked permissions",
+                "trust_computed" => "Computed trust score",
+                _ => &step.action,
+            };
+            writeln!(f, "  {}. {} — {}", step.step, human_action, step.detail)?;
+        }
+        writeln!(f)?;
+        write!(f, "  {}", self.explanation)
+    }
+}
+
+impl std::fmt::Display for ReplaySnapshot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "⏪ Replay at {}", self.at)?;
+        writeln!(f, "  {} memories at that point", self.memory_count)?;
+        write!(f, "  {}", self.diff.summary)
+    }
+}
+
+impl std::fmt::Display for PassportBundle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "🛂 Memory Passport")?;
+        writeln!(f, "  Subject: {}", self.subject)?;
+        writeln!(f, "  Memories: {}", self.count)?;
+        writeln!(f, "  Exported: {}", self.exported_at)?;
+        if self.signature.is_some() {
+            write!(f, "  Signed: ✅ Ed25519")?;
+        } else {
+            write!(f, "  Signed: ❌ unsigned")?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

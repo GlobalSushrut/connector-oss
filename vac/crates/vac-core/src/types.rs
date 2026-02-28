@@ -2267,6 +2267,16 @@ impl DelegationChain {
                         ));
                     }
                 }
+                // Phase 1.5: Resource attenuation — child resources must be subset of parent
+                for resource in &proof.allowed_resources {
+                    if !parent.allowed_resources.iter().any(|pr| {
+                        pr == "*" || pr == resource || (pr.ends_with('*') && resource.starts_with(&pr[..pr.len()-1]))
+                    }) {
+                        return Err(format!(
+                            "Proof {} resource '{}' not covered by parent", i, resource
+                        ));
+                    }
+                }
                 // Subject chain: child issuer must be parent subject
                 if proof.issuer != parent.subject {
                     return Err(format!(

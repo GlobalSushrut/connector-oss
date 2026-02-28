@@ -1,15 +1,21 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.4,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "connector_oss"
-version = "0.1.0"
-description = "Tamper-proof memory and chain-of-custody for AI agents"
+name = "connector-oss"
+version = "0.2.0"
+description = "Tamper-proof memory, chain-of-custody, and OS-grade runtime for AI agents"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
-keywords = ["ai", "agents", "memory", "compliance", "hipaa", "audit", "llm", "trust"]
+authors = [{ name = "Connector OSS Contributors" }]
+keywords = [
+    "ai", "agents", "memory", "compliance", "hipaa", "soc2", "gdpr",
+    "audit", "llm", "trust", "tamper-proof", "chain-of-custody",
+    "deepseek", "openai", "anthropic", "policy", "firewall",
+    "multi-agent", "pipeline", "knowledge-graph", "rag",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,20 +28,26 @@ classifiers = [
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 dependencies = []
 
 [project.urls]
 Homepage = "https://github.com/GlobalSushrut/connector-oss"
-Documentation = "https://github.com/GlobalSushrut/connector-oss/blob/main/docs/01_INDEX.md"
+Documentation = "https://github.com/GlobalSushrut/connector-oss/blob/main/QUICKSTART.md"
 Repository = "https://github.com/GlobalSushrut/connector-oss"
 "Bug Tracker" = "https://github.com/GlobalSushrut/connector-oss/issues"
+Changelog = "https://github.com/GlobalSushrut/connector-oss/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "maturin>=1.0", "twine"]
+dev = ["pytest>=7.0", "maturin>=1.4", "twine"]
 
 [tool.maturin]
 manifest-path = "../../vac/crates/vac-ffi/Cargo.toml"
 python-source = "."
 module-name = "connector_oss.vac_ffi"
 features = ["pyo3/extension-module"]
+strip = true
+# Build wheels for: Linux (x86_64, aarch64), macOS (x86_64, aarch64), Windows (x86_64)
+# Handled by CI matrix — see .github/workflows/publish-pypi.yml

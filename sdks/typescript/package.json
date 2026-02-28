@@ -1,41 +1,84 @@
 {
-  "name": "connector_oss",
-  "version": "0.1.0",
-  "description": "Tamper-proof memory and chain-of-custody for AI agents",
+  "name": "@connector-oss/connector",
+  "version": "0.2.0",
+  "description": "Tamper-proof memory, chain-of-custody, and OS-grade runtime for AI agents — native Rust bindings via NAPI-RS with HTTP fallback",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "napi": {
+    "name": "connector-napi",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "x86_64-unknown-linux-musl",
+        "x86_64-apple-darwin"
+      ]
+    }
+  },
   "license": "Apache-2.0",
   "author": "Connector OSS Contributors",
   "homepage": "https://github.com/GlobalSushrut/connector-oss",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GlobalSushrut/connector-oss.git"
+    "url": "https://github.com/GlobalSushrut/connector-oss.git",
+    "directory": "sdks/typescript"
   },
   "bugs": {
     "url": "https://github.com/GlobalSushrut/connector-oss/issues"
   },
   "keywords": [
-    "ai", "agents", "memory", "llm", "compliance",
+    "ai", "agents", "memory", "llm", "compliance", "napi-rs", "rust",
     "hipaa", "soc2", "gdpr", "audit", "trust", "tamper-proof",
-    "chain-of-custody", "deepseek", "openai", "anthropic"
+    "chain-of-custody", "deepseek", "openai", "anthropic",
+    "multi-agent", "pipeline", "knowledge-graph", "rag",
+    "policy", "firewall", "protocol"
   ],
   "scripts": {
-    "build": "tsc",
+    "build:native": "napi build --platform --release --cargo-cwd native",
+    "build:ts": "tsc",
+    "build": "npm run build:native && npm run build:ts",
     "test": "vitest run",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "version": "npm run build"
+  },
+  "dependencies": {
+    "@napi-rs/cli": "^2.18"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
     "typescript": "^5.3",
     "vitest": "^1.0"
   },
+  "optionalDependencies": {
+    "@connector-oss/connector-linux-x64-gnu": "0.2.0",
+    "@connector-oss/connector-linux-x64-musl": "0.2.0",
+    "@connector-oss/connector-linux-arm64-gnu": "0.2.0",
+    "@connector-oss/connector-linux-arm64-musl": "0.2.0",
+    "@connector-oss/connector-darwin-x64": "0.2.0",
+    "@connector-oss/connector-darwin-arm64": "0.2.0",
+    "@connector-oss/connector-win32-x64-msvc": "0.2.0"
+  },
   "files": [
     "dist",
     "src",
+    "connector-napi.*.node",
     "README.md",
     "LICENSE"
   ],
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

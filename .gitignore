@@ -41,6 +41,9 @@ dist/
 .DS_Store
 Thumbs.db
 
+# NATS server binary (downloaded for testing)
+nats-server
+
 # Env
 .env
 .env.*

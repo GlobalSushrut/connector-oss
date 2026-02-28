@@ -110,15 +110,31 @@ fn verdict_from_score(score: f64, t: &VerdictThresholds, signals: &[Signal]) -> 
 pub fn scan_pii(text: &str) -> Vec<String> {
     let mut found = Vec::new();
     let checks: &[(&str, &str)] = &[
+        // Original 5 PII types
         ("SSN", r"\b\d{3}-\d{2}-\d{4}\b"),
         ("CREDIT_CARD", r"\b(?:\d{4}[- ]?){3}\d{4}\b"),
         ("EMAIL", r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"),
         ("PHONE", r"\b(?:\+?1[-.]?)?\(?\d{3}\)?[-.]?\d{3}[-.]?\d{4}\b"),
         ("MEDICAL_RECORD", r"(?i)\b(?:MRN|medical record|patient id)[:\s#]*\d{4,}\b"),
+        // Phase 4: 5 new PII types (10 total)
+        ("IP_ADDRESS", r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"),
+        ("PASSPORT", r"(?i)\bpassport[:\s#]*[A-Z]{1,2}\d{6,9}\b"),
+        ("BANK_ACCOUNT", r"(?i)\b(?:account|routing|iban)[:\s#]*\d{8,17}\b"),
+        ("NPI", r"(?i)\b(?:NPI|national provider)[:\s#]*\d{10}\b"),
     ];
+    // DOB needs context-aware detection (date near "born"/"dob"/"date of birth")
     for (label, pattern) in checks {
         if let Ok(re) = regex_lite::Regex::new(pattern) {
             if re.is_match(text) { found.push(label.to_string()); }
+        }
+    }
+    // DOB: date pattern with context keywords
+    let lower = text.to_lowercase();
+    if lower.contains("born") || lower.contains("dob") || lower.contains("date of birth")
+        || lower.contains("birthday")
+    {
+        if let Ok(re) = regex_lite::Regex::new(r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b") {
+            if re.is_match(text) { found.push("DOB".to_string()); }
         }
     }
     found

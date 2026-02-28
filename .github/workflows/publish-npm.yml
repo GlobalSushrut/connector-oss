@@ -1,0 +1,127 @@
+# ── Publish TypeScript SDK to npm ─────────────────────────────────
+# Triggered on release tag: v*
+# Builds NAPI-RS native addons for 7 platforms, publishes to npm
+#
+# Usage: npm install @connector-oss/connector
+#
+# Required secrets:
+#   NPM_TOKEN — npm access token (npmjs.com → Access Tokens → Automation)
+name: Publish npm
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-native:
+    name: Build native — ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: |
+              cd sdks/typescript
+              npm run build:native -- --target x86_64-unknown-linux-gnu
+
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: |
+              cd sdks/typescript
+              npm run build:native -- --target x86_64-unknown-linux-musl
+
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: |
+              cd sdks/typescript
+              npm run build:native -- --target aarch64-unknown-linux-gnu
+
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build: |
+              cd sdks/typescript
+              npm run build:native -- --target aarch64-unknown-linux-musl
+
+          - os: macos-13
+            target: x86_64-apple-darwin
+            build: |
+              cd sdks/typescript
+              npm run build:native -- --target x86_64-apple-darwin
+
+          - os: macos-14
+            target: aarch64-apple-darwin
+            build: |
+              cd sdks/typescript
+              npm run build:native -- --target aarch64-apple-darwin
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: |
+              cd sdks/typescript
+              npm run build:native -- --target x86_64-pc-windows-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: sdks/typescript
+
+      - name: Build native addon
+        run: ${{ matrix.settings.build }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.settings.target }}
+          path: sdks/typescript/connector-napi.*.node
+
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: build-native
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: sdks/typescript
+
+      - name: Download all native addons
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/typescript
+          pattern: native-*
+          merge-multiple: true
+
+      - name: Build TypeScript
+        run: npm run build:ts
+        working-directory: sdks/typescript
+
+      - name: List artifacts
+        run: ls -la connector-napi.* dist/ 2>/dev/null || true
+        working-directory: sdks/typescript
+
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: sdks/typescript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

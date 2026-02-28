@@ -1,0 +1,32 @@
+# Level 2: Pipeline — multi-agent flow with compliance
+connector:
+  provider: deepseek
+  model: deepseek-chat
+  api_key: ${DEEPSEEK_API_KEY}
+
+agents:
+  triage:
+    instructions: "You are a triage nurse. Assess symptoms and record vitals."
+  doctor:
+    instructions: "You are an ER doctor. Diagnose based on triage notes."
+    memory_from: [triage]
+  pharmacist:
+    instructions: "You are a pharmacist. Verify prescriptions for safety."
+    memory_from: [doctor]
+
+pipelines:
+  er_visit:
+    actors:
+      - name: triage
+        instructions: "Assess the patient"
+        role: nurse
+      - name: doctor
+        instructions: "Diagnose and prescribe"
+        role: doctor
+        memory_from: [triage]
+      - name: pharmacist
+        instructions: "Verify prescription safety"
+        role: pharmacist
+        memory_from: [doctor]
+    flow: "triage -> doctor -> pharmacist"
+    comply: [hipaa]

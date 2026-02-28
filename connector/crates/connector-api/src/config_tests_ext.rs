@@ -660,4 +660,201 @@ observability:
         assert_eq!(obs.service_name.as_deref(), Some("test-svc"));
         std::env::remove_var("TEST_OTEL_EP_CFG_40");
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Tests 41-50: New DX config sections (contracts, crypto, consensus, etc.)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ── 41. Crypto config — FIPS + PQ + Noise ───────────────────────────────
+    #[test]
+    fn test_41_crypto_config() {
+        let yaml = "connector:\n  provider: openai\n  model: gpt-4o\ncrypto:\n  fips: true\n  post_quantum: true\n  noise_channels: true\n  encryption_at_rest: true\n  hmac_audit_chain: true\n";
+        let c = load_config_str(yaml).unwrap().crypto.unwrap();
+        assert!(c.fips);
+        assert!(c.post_quantum);
+        assert!(c.noise_channels);
+        assert!(c.encryption_at_rest);
+        assert!(c.hmac_audit_chain);
+    }
+
+    // ── 42. Crypto absent = None ────────────────────────────────────────────
+    #[test]
+    fn test_42_crypto_absent_is_none() {
+        let yaml = "connector:\n  provider: openai\n  model: gpt-4o\n";
+        assert!(load_config_str(yaml).unwrap().crypto.is_none());
+    }
+
+    // ── 43. Consensus BFT config ────────────────────────────────────────────
+    #[test]
+    fn test_43_consensus_bft() {
+        let yaml = "connector:\n  provider: openai\n  model: gpt-4o\nconsensus:\n  type: bft\n  validators: [cell-0, cell-1, cell-2, cell-3]\n  proposal_timeout_ms: 5000\n  formal_verify: true\n";
+        let c = load_config_str(yaml).unwrap().consensus.unwrap();
+        assert_eq!(c.r#type, "bft");
+        assert_eq!(c.validators.len(), 4);
+        assert_eq!(c.proposal_timeout_ms, Some(5000));
+        assert!(c.formal_verify);
+    }
+
+    // ── 44. Watchdog config ─────────────────────────────────────────────────
+    #[test]
+    fn test_44_watchdog_config() {
+        let yaml = "connector:\n  provider: openai\n  model: gpt-4o\nwatchdog:\n  defaults: true\n  rules:\n    - name: high-error\n      condition: agent_error_rate_high\n      action: suspend_agent\n      cooldown_ms: 30000\n      agent_pattern: \"*\"\n";
+        let w = load_config_str(yaml).unwrap().watchdog.unwrap();
+        assert!(w.defaults);
+        assert_eq!(w.rules.len(), 1);
+        assert_eq!(w.rules[0].name, "high-error");
+        assert_eq!(w.rules[0].condition, "agent_error_rate_high");
+        assert_eq!(w.rules[0].action, "suspend_agent");
+    }
+
+    // ── 45. Formal verify config ────────────────────────────────────────────
+    #[test]
+    fn test_45_formal_verify_config() {
+        let yaml = "connector:\n  provider: openai\n  model: gpt-4o\nformal_verify:\n  enabled: true\n  lifecycle: true\n  namespace_isolation: true\n  budget: true\n  audit_completeness: true\n";
+        let f = load_config_str(yaml).unwrap().formal_verify.unwrap();
+        assert!(f.enabled);
+        assert!(f.lifecycle);
+        assert!(f.namespace_isolation);
+        assert!(f.budget);
+        assert!(f.audit_completeness);
+    }
+
+    // ── 46. Agent contract + clearance ──────────────────────────────────────
+    #[test]
+    fn test_46_agent_contract_clearance() {
+        let yaml = r#"
+connector:
+  provider: openai
+  model: gpt-4o
+agents:
+  analyst:
+    instructions: "Analyze data"
+    role: analyst
+    clearance:
+      level: top_secret
+      integrity: critical
+      guard: mac
+    contract:
+      capabilities: [read_classified, analyze]
+      deny_capabilities: [delete]
+      pricing: per_call
+      price_per_unit: 0.5
+      currency: credits
+      sla:
+        max_latency_ms: 3000
+        uptime_pct: 99.9
+      escrow:
+        amount: 1000
+        currency: credits
+        slash_on_failure: true
+"#;
+        let cfg = load_config_str(yaml).unwrap();
+        let a = cfg.agents.get("analyst").unwrap();
+        let cl = a.clearance.as_ref().unwrap();
+        assert_eq!(cl.level.as_deref(), Some("top_secret"));
+        assert_eq!(cl.integrity.as_deref(), Some("critical"));
+        assert_eq!(cl.guard.as_deref(), Some("mac"));
+        let ct = a.contract.as_ref().unwrap();
+        assert_eq!(ct.capabilities, vec!["read_classified", "analyze"]);
+        assert_eq!(ct.deny_capabilities, vec!["delete"]);
+        assert_eq!(ct.pricing.as_deref(), Some("per_call"));
+        let sla = ct.sla.as_ref().unwrap();
+        assert_eq!(sla.max_latency_ms, Some(3000));
+        assert_eq!(sla.uptime_pct, Some(99.9));
+        let esc = ct.escrow.as_ref().unwrap();
+        assert_eq!(esc.amount, Some(1000));
+        assert!(esc.slash_on_failure);
+    }
+
+    // ── 47. Negotiation config ──────────────────────────────────────────────
+    #[test]
+    fn test_47_negotiation_config() {
+        let yaml = "connector:\n  provider: openai\n  model: gpt-4o\nnegotiation:\n  max_rounds: 5\n  ttl_ms: 120000\n  auto_accept_below: 0.10\n";
+        let n = load_config_str(yaml).unwrap().negotiation.unwrap();
+        assert_eq!(n.max_rounds, Some(5));
+        assert_eq!(n.ttl_ms, Some(120000));
+        assert_eq!(n.auto_accept_below, Some(0.10));
+    }
+
+    // ── 48. Level 0 YAML example parses ─────────────────────────────────────
+    #[test]
+    fn test_48_level0_yaml_parses() {
+        let yaml = "connector:\n  provider: deepseek\n  model: deepseek-chat\n  api_key: test-key\nagents:\n  assistant:\n    instructions: \"You are helpful\"\n";
+        let cfg = load_config_str(yaml).unwrap();
+        assert_eq!(cfg.connector.provider.as_deref(), Some("deepseek"));
+        assert_eq!(cfg.agents.len(), 1);
+        assert!(cfg.agents.contains_key("assistant"));
+    }
+
+    // ── 49. Full military config — all sections present ─────────────────────
+    #[test]
+    fn test_49_full_military_config() {
+        let yaml = r#"
+connector:
+  provider: anthropic
+  model: claude-3
+  api_key: test-key
+  comply: [hipaa, soc2]
+  security:
+    signing: true
+    scitt: true
+crypto:
+  fips: true
+  post_quantum: true
+  noise_channels: true
+  encryption_at_rest: true
+consensus:
+  type: bft
+  validators: [c0, c1, c2]
+formal_verify:
+  enabled: true
+watchdog:
+  defaults: true
+  rules:
+    - name: test
+      condition: threat_elevated
+      action: suspend_agent
+negotiation:
+  max_rounds: 3
+agents:
+  analyst:
+    instructions: "Analyze"
+    clearance:
+      level: secret
+    contract:
+      sla:
+        max_latency_ms: 5000
+      capabilities: [read]
+      escrow:
+        amount: 500
+"#;
+        let cfg = load_config_str(yaml).unwrap();
+        assert!(cfg.crypto.is_some());
+        assert!(cfg.consensus.is_some());
+        assert!(cfg.formal_verify.is_some());
+        assert!(cfg.watchdog.is_some());
+        assert!(cfg.negotiation.is_some());
+        let a = cfg.agents.get("analyst").unwrap();
+        assert!(a.clearance.is_some());
+        assert!(a.contract.is_some());
+    }
+
+    // ── 50. Progressive complexity — each level adds, never removes ─────────
+    #[test]
+    fn test_50_progressive_complexity() {
+        // Level 0: bare minimum
+        let l0 = load_config_str("connector:\n  provider: test\n  model: m\n  api_key: k\n").unwrap();
+        assert!(l0.crypto.is_none());
+        assert!(l0.consensus.is_none());
+        assert!(l0.formal_verify.is_none());
+        assert!(l0.watchdog.is_none());
+
+        // Level 5: everything on — should still parse with all L0 fields intact
+        let l5 = load_config_str("connector:\n  provider: test\n  model: m\n  api_key: k\ncrypto:\n  fips: true\nconsensus:\n  validators: [a]\nformal_verify:\n  enabled: true\nwatchdog:\n  defaults: true\n").unwrap();
+        assert_eq!(l5.connector.provider.as_deref(), Some("test")); // L0 still works
+        assert!(l5.crypto.unwrap().fips);
+        assert!(l5.consensus.is_some());
+        assert!(l5.formal_verify.unwrap().enabled);
+        assert!(l5.watchdog.unwrap().defaults);
+    }
 }

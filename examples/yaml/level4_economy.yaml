@@ -1,0 +1,87 @@
+# Level 4: Economy + Contracts — escrow, negotiation, marketplace, reputation
+connector:
+  provider: anthropic
+  model: claude-3-5-sonnet-20241022
+  api_key: ${ANTHROPIC_API_KEY}
+  storage: redb://./marketplace.redb
+  comply: [soc2, gdpr]
+  security:
+    signing: true
+    scitt: true
+    data_classification: confidential
+  firewall:
+    preset: strict
+    block_injection: true
+    pii_types: [ssn, credit_card, email]
+
+negotiation:
+  max_rounds: 5
+  ttl_ms: 120000
+
+agents:
+  analyst:
+    instructions: "You analyze financial data and produce investment reports."
+    role: analyst
+    budget:
+      max_tokens: 200000
+      max_cost_usd: 20.0
+    contract:
+      sla:
+        max_latency_ms: 10000
+        uptime_pct: 99.5
+      capabilities: [analyze_data, produce_report]
+      pricing: per_call
+      price_per_unit: 0.50
+      currency: credits
+      escrow:
+        amount: 100
+        currency: credits
+        auto_release: true
+        slash_on_failure: true
+
+  reviewer:
+    instructions: "You review investment reports for accuracy and compliance."
+    role: reviewer
+    memory_from: [analyst]
+    require_approval: [publish_report]
+    budget:
+      max_tokens: 100000
+    contract:
+      sla:
+        max_latency_ms: 5000
+      capabilities: [review, approve, reject]
+      pricing: per_token
+      price_per_unit: 0.001
+
+pipelines:
+  investment_report:
+    actors:
+      - name: analyst
+        instructions: "Analyze Q4 financial data"
+        role: analyst
+      - name: reviewer
+        instructions: "Review report for accuracy"
+        role: reviewer
+        memory_from: [analyst]
+        require_approval: [publish_report]
+    flow: "analyst -> reviewer"
+    comply: [soc2]
+    budget:
+      max_tokens: 300000
+      max_cost_usd: 25.0
+
+knowledge:
+  seed:
+    entities:
+      - id: "sp500"
+        type: index
+        tags: [equity, us_market]
+      - id: "nasdaq"
+        type: index
+        tags: [equity, tech]
+    edges:
+      - from: sp500
+        to: nasdaq
+        relation: correlates_with
+        weight: 0.85
+  contradiction_check: true

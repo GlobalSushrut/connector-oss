@@ -1,29 +1,63 @@
+# ── Connector-OSS Docker Compose ─────────────────────────────────
+#
+# Quick start:
+#   export DEEPSEEK_API_KEY=sk-...
+#   docker compose up
+#
+# With observability stack:
+#   docker compose --profile observability up
+#
+# Endpoints:
+#   http://localhost:8080         — Connector REST API (38 routes)
+#   http://localhost:8080/health  — Health check
+#   http://localhost:8080/metrics — Prometheus metrics
+#   http://localhost:9090         — Prometheus UI (observability profile)
+#   http://localhost:3000         — Grafana UI (observability profile)
+
 services:
   connector:
     build: .
+    image: globalsushrut/connector-oss:latest
     ports:
       - "8080:8080"
     environment:
-      - CONNECTOR_LLM_PROVIDER=openai
-      - CONNECTOR_LLM_MODEL=gpt-4o
-      - CONNECTOR_LLM_API_KEY=${CONNECTOR_LLM_API_KEY}
+      - CONNECTOR_LLM_PROVIDER=${CONNECTOR_LLM_PROVIDER:-deepseek}
+      - CONNECTOR_LLM_MODEL=${CONNECTOR_LLM_MODEL:-deepseek-chat}
+      - CONNECTOR_LLM_API_KEY=${CONNECTOR_LLM_API_KEY:-${DEEPSEEK_API_KEY}}
+      - CONNECTOR_ENGINE_STORAGE=${CONNECTOR_ENGINE_STORAGE:-sqlite:/data/connector.db}
+      - CONNECTOR_CELL_ID=${CONNECTOR_CELL_ID:-cell_default}
       - CONNECTOR_ADDR=0.0.0.0:8080
-      - RUST_LOG=info
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - connector-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   prometheus:
     image: prom/prometheus:latest
+    profiles: ["observability"]
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
-      - connector
+      connector:
+        condition: service_healthy
 
   grafana:
     image: grafana/grafana:latest
+    profiles: ["observability"]
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=connector
     depends_on:
       - prometheus
+
+volumes:
+  connector-data:

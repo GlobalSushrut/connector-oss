@@ -55,7 +55,7 @@ fn cid_bytes(cid: &cid::Cid) -> Vec<u8> {
     cid.to_bytes()
 }
 
-fn cid_from_bytes(bytes: &[u8]) -> Result<cid::Cid, StoreError> {
+fn _cid_from_bytes(bytes: &[u8]) -> Result<cid::Cid, StoreError> {
     cid::Cid::try_from(bytes).map_err(|e| se(format!("Invalid CID: {}", e)))
 }
 

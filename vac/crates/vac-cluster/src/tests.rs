@@ -5,13 +5,13 @@ use std::time::Duration;
 
 use tokio::sync::Mutex;
 
-use vac_bus::{EventBus, InProcessBus, ReplicationOp};
+use vac_bus::{EventBus, InProcessBus, ReplicationEvent, ReplicationOp};
 use vac_core::store::{InMemoryKernelStore, KernelStore};
 use vac_core::types::*;
 
 use crate::cell::{Cell, CellStatus};
 use crate::cluster_store::ClusterKernelStore;
-use crate::receiver::{start_replication_loop, ReceiverStats};
+use crate::receiver::{start_replication_loop, start_verified_replication_loop, PeerRegistry, ReceiverStats};
 
 fn make_source() -> Source {
     Source {
@@ -162,6 +162,10 @@ async fn test_cluster_store_replicates_agent_register() {
         role: AgentRole::default(),
         namespace_mounts: Vec::new(),
         tool_bindings: Vec::new(),
+        signal_handlers: Vec::new(),
+        pending_signals: Vec::new(),
+        agent_priority: AgentPriority::default(),
+        token_budget: None,
     };
 
     store.store_agent(&acb).unwrap();
@@ -357,6 +361,12 @@ async fn test_receiver_applies_audit_entry() {
         after_hash: None,
         merkle_root: None,
         scitt_receipt_cid: None,
+        natural_language: None,
+        business_impact: None,
+        remediation_hint: None,
+        causal_chain: Vec::new(),
+        severity: TelemetrySeverity::default(),
+        gen_ai_attrs: None,
     };
     store1.store_audit_entry(&entry).unwrap();
 
@@ -983,6 +993,12 @@ async fn test_d15_audit_entry_replication() {
         after_hash: None,
         merkle_root: None,
         scitt_receipt_cid: None,
+        natural_language: None,
+        business_impact: None,
+        remediation_hint: None,
+        causal_chain: Vec::new(),
+        severity: TelemetrySeverity::default(),
+        gen_ai_attrs: None,
     };
     c1.writer.store_audit_entry(&entry).unwrap();
 
@@ -1049,6 +1065,8 @@ async fn test_d15_cell_seq_monotonic_across_ops() {
         reason: None, error: None, duration_us: None,
         vakya_id: None, before_hash: None, after_hash: None,
         merkle_root: None, scitt_receipt_cid: None,
+        natural_language: None, business_impact: None, remediation_hint: None,
+        causal_chain: Vec::new(), severity: TelemetrySeverity::default(), gen_ai_attrs: None,
     };
     c1.writer.store_audit_entry(&entry).unwrap();
 
@@ -1251,4 +1269,175 @@ async fn test_d15_bus_close_stops_replication() {
     // The local write succeeds but replication publish fails silently
     // (ClusterKernelStore logs the error but doesn't fail the local write)
     assert!(result.is_ok(), "Local write should still succeed");
+}
+
+// ── Phase 1.9: Event Signature Verification ──────────────────────────────
+
+#[tokio::test]
+async fn test_p1_9_valid_signature_accepted() {
+    let bus = Arc::new(InProcessBus::new());
+    let topic = "p19.valid";
+
+    // Cell-1 writes (signs events automatically via ClusterKernelStore)
+    let cell1 = Arc::new(Cell::new("cell-1"));
+    let local1 = InMemoryKernelStore::new();
+    let mut store1 = ClusterKernelStore::new(local1, bus.clone(), cell1.clone(), topic);
+
+    // Cell-2 receives with signature verification — register cell-1's public key
+    let cell2 = Arc::new(Cell::new("cell-2"));
+    let local2 = Arc::new(Mutex::new(InMemoryKernelStore::new()));
+    let mut peers = PeerRegistry::new();
+    peers.register("cell-1", *cell1.public_key());
+
+    let (_h2, s2) = start_verified_replication_loop(
+        local2.clone(), bus.clone(), cell2.clone(), topic, peers,
+    ).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Cell-1 writes a packet — automatically signed
+    store1.store_packet(&make_packet(&["alice"], 1000)).unwrap();
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let stats = s2.lock().await;
+    assert_eq!(stats.events_applied, 1, "Valid signed event should be accepted");
+    assert_eq!(stats.events_rejected, 0);
+}
+
+#[tokio::test]
+async fn test_p1_9_unsigned_event_rejected() {
+    let bus = Arc::new(InProcessBus::new());
+    let topic = "p19.unsigned";
+
+    let cell1 = Arc::new(Cell::new("cell-1"));
+    let cell2 = Arc::new(Cell::new("cell-2"));
+    let local2 = Arc::new(Mutex::new(InMemoryKernelStore::new()));
+
+    let mut peers = PeerRegistry::new();
+    peers.register("cell-1", *cell1.public_key());
+
+    let (_h2, s2) = start_verified_replication_loop(
+        local2.clone(), bus.clone(), cell2.clone(), topic, peers,
+    ).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Publish an UNSIGNED event directly (bypassing ClusterKernelStore)
+    let unsigned_event = ReplicationEvent::new(
+        "cell-1", 0,
+        ReplicationOp::Heartbeat { agent_count: 1, packet_count: 10, merkle_root: [0; 32], load: 5 },
+    );
+    assert!(!unsigned_event.is_signed());
+    bus.publish(topic, &unsigned_event).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let stats = s2.lock().await;
+    assert_eq!(stats.events_applied, 0, "Unsigned event should NOT be applied");
+    assert_eq!(stats.events_rejected, 1, "Unsigned event should be rejected");
+}
+
+#[tokio::test]
+async fn test_p1_9_invalid_signature_rejected() {
+    let bus = Arc::new(InProcessBus::new());
+    let topic = "p19.invalid";
+
+    let cell1 = Arc::new(Cell::new("cell-1"));
+    let cell2 = Arc::new(Cell::new("cell-2"));
+    let local2 = Arc::new(Mutex::new(InMemoryKernelStore::new()));
+
+    let mut peers = PeerRegistry::new();
+    peers.register("cell-1", *cell1.public_key());
+
+    let (_h2, s2) = start_verified_replication_loop(
+        local2.clone(), bus.clone(), cell2.clone(), topic, peers,
+    ).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Publish an event with a GARBAGE signature
+    let bad_event = ReplicationEvent::new(
+        "cell-1", 0,
+        ReplicationOp::Heartbeat { agent_count: 1, packet_count: 10, merkle_root: [0; 32], load: 5 },
+    ).with_signature(vec![0xDE; 64]); // wrong bytes
+
+    assert!(bad_event.is_signed());
+    bus.publish(topic, &bad_event).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let stats = s2.lock().await;
+    assert_eq!(stats.events_applied, 0, "Invalid signature should NOT be applied");
+    assert_eq!(stats.events_rejected, 1, "Invalid signature should be rejected");
+}
+
+#[tokio::test]
+async fn test_p1_9_unknown_peer_rejected() {
+    let bus = Arc::new(InProcessBus::new());
+    let topic = "p19.unknown";
+
+    let cell_rogue = Arc::new(Cell::new("cell-rogue"));
+    let cell2 = Arc::new(Cell::new("cell-2"));
+    let local2 = Arc::new(Mutex::new(InMemoryKernelStore::new()));
+
+    // PeerRegistry does NOT contain "cell-rogue"
+    let peers = PeerRegistry::new();
+
+    let (_h2, s2) = start_verified_replication_loop(
+        local2.clone(), bus.clone(), cell2.clone(), topic, peers,
+    ).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Rogue cell sends a properly signed event — but it's not a known peer
+    let mut rogue_event = ReplicationEvent::new(
+        "cell-rogue", 0,
+        ReplicationOp::Heartbeat { agent_count: 1, packet_count: 10, merkle_root: [0; 32], load: 5 },
+    );
+    rogue_event.sign(cell_rogue.signing_key());
+    assert!(rogue_event.is_signed());
+
+    bus.publish(topic, &rogue_event).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let stats = s2.lock().await;
+    assert_eq!(stats.events_applied, 0, "Unknown peer should NOT be applied");
+    assert_eq!(stats.events_rejected, 1, "Unknown peer should be rejected");
+}
+
+#[tokio::test]
+async fn test_p1_9_signed_event_wrong_key_rejected() {
+    let bus = Arc::new(InProcessBus::new());
+    let topic = "p19.wrongkey";
+
+    let cell1 = Arc::new(Cell::new("cell-1"));
+    let cell_imposter = Arc::new(Cell::new("cell-1-imposter")); // different key
+    let cell2 = Arc::new(Cell::new("cell-2"));
+    let local2 = Arc::new(Mutex::new(InMemoryKernelStore::new()));
+
+    let mut peers = PeerRegistry::new();
+    peers.register("cell-1", *cell1.public_key()); // registered with cell-1's real key
+
+    let (_h2, s2) = start_verified_replication_loop(
+        local2.clone(), bus.clone(), cell2.clone(), topic, peers,
+    ).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Imposter claims to be cell-1 but signs with different key
+    let mut imposter_event = ReplicationEvent::new(
+        "cell-1", 0,
+        ReplicationOp::Heartbeat { agent_count: 1, packet_count: 10, merkle_root: [0; 32], load: 5 },
+    );
+    imposter_event.sign(cell_imposter.signing_key()); // wrong key!
+
+    bus.publish(topic, &imposter_event).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let stats = s2.lock().await;
+    assert_eq!(stats.events_applied, 0, "Imposter event should NOT be applied");
+    assert_eq!(stats.events_rejected, 1, "Imposter event should be rejected");
 }

@@ -1,0 +1,4 @@
+# Level 0: Hello World — ONE LINE of config
+# Provider, model, and API key auto-detected from env vars.
+# Just set OPENAI_API_KEY or ANTHROPIC_API_KEY and go.
+agent: "You are a helpful assistant."

@@ -1,0 +1,38 @@
+[package]
+name = "connector-caps"
+description = "Ring 0+1: Capability Computer — execution contracts, runners, sandboxing, hardware abstraction"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# Internal
+vac-core = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Content addressing
+cid = { workspace = true }
+sha2 = { workspace = true }
+
+# Cryptography
+ed25519-dalek = { workspace = true }
+
+# Identity
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Async
+async-trait = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
+rand = "0.8"

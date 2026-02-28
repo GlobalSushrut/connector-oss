@@ -64,7 +64,11 @@ impl<S: KernelStore, B: EventBus> ClusterKernelStore<S, B> {
     /// The actual publish is fast (in-process: clone + send).
     fn replicate(&self, op: ReplicationOp) {
         let seq = self.cell.next_seq();
-        let event = ReplicationEvent::new(self.cell.cell_id.clone(), seq, op);
+        let mut event = ReplicationEvent::new(self.cell.cell_id.clone(), seq, op);
+
+        // Sign the event with this cell's Ed25519 key
+        event.sign(self.cell.signing_key());
+
         let bus = self.bus.clone();
         let topic = self.topic.clone();
 
@@ -72,7 +76,7 @@ impl<S: KernelStore, B: EventBus> ClusterKernelStore<S, B> {
             cell = %self.cell.cell_id,
             seq = seq,
             op = %event.op.op_type(),
-            "Replicating"
+            "Replicating (signed)"
         );
 
         // Spawn the publish as a background task — don't block the sync store

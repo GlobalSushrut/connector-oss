@@ -7,6 +7,8 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
+use ed25519_dalek::{SigningKey, VerifyingKey};
+use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
@@ -50,18 +52,50 @@ pub struct Cell {
     pub status: Arc<RwLock<CellStatus>>,
     /// Timestamp when this cell was created
     pub created_at: i64,
+    /// Ed25519 signing key for this cell (private)
+    signing_key: SigningKey,
+    /// Ed25519 verifying key for this cell (public)
+    verifying_key: VerifyingKey,
 }
 
 impl Cell {
-    /// Create a new cell with the given ID.
+    /// Create a new cell with the given ID and a fresh Ed25519 keypair.
     pub fn new(cell_id: impl Into<String>) -> Self {
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let verifying_key = signing_key.verifying_key();
         Self {
             cell_id: cell_id.into(),
             seq: AtomicU64::new(0),
             merkle_root: Arc::new(RwLock::new([0u8; 32])),
             status: Arc::new(RwLock::new(CellStatus::Starting)),
             created_at: chrono::Utc::now().timestamp_millis(),
+            signing_key,
+            verifying_key,
         }
+    }
+
+    /// Create a cell with a specific keypair (for testing or key restoration).
+    pub fn with_keypair(cell_id: impl Into<String>, signing_key: SigningKey) -> Self {
+        let verifying_key = signing_key.verifying_key();
+        Self {
+            cell_id: cell_id.into(),
+            seq: AtomicU64::new(0),
+            merkle_root: Arc::new(RwLock::new([0u8; 32])),
+            status: Arc::new(RwLock::new(CellStatus::Starting)),
+            created_at: chrono::Utc::now().timestamp_millis(),
+            signing_key,
+            verifying_key,
+        }
+    }
+
+    /// Get this cell's public verifying key.
+    pub fn public_key(&self) -> &VerifyingKey {
+        &self.verifying_key
+    }
+
+    /// Get this cell's signing key.
+    pub fn signing_key(&self) -> &SigningKey {
+        &self.signing_key
     }
 
     /// Get the next sequence number (atomically increments).

@@ -13,6 +13,8 @@ serde_json = { workspace = true }
 cid = { workspace = true }
 multihash = { workspace = true }
 sha2 = { workspace = true }
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
@@ -21,6 +23,7 @@ regex-lite = "0.1"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 redb = { workspace = true }
+rusqlite = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

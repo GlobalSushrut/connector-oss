@@ -12,6 +12,7 @@ libipld-cbor = { workspace = true }
 cid = { workspace = true }
 multihash = { workspace = true }
 sha2 = { workspace = true }
+aes-gcm = "0.10"
 serde = { workspace = true }
 serde_json = { workspace = true }
 ciborium = { workspace = true }

@@ -156,6 +156,11 @@ pub struct PipelineOutput {
     pub warnings: Vec<String>,
     /// Errors — things that failed
     pub errors: Vec<String>,
+    /// Run trace — full step-by-step trace of what happened (knowledge, prompt, LLM, grounding)
+    /// This is what makes Connector 100x more stable than LangChain/CrewAI/Mem0:
+    /// built-in, zero-config, always available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub run_trace: Option<serde_json::Value>,
 }
 
 /// Pipeline status — the dashboard.
@@ -424,6 +429,7 @@ impl OutputBuilder {
             events,
             warnings,
             errors,
+            run_trace: None,
         }
     }
 }
@@ -537,73 +543,89 @@ impl PipelineOutput {
 
 impl std::fmt::Display for PipelineOutput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let bar = "═".repeat(64);
-        let thin = "─".repeat(64);
+        // ═══════════════════════════════════════════════════════════
+        // CLEAN DEFAULT OUTPUT — designed to make people go "whoa"
+        //
+        // Inspired by: Vercel deploy output, Stripe dashboard,
+        // GitHub Actions summary, Terraform plan output.
+        //
+        // Shows what NO competitor shows: trust, compliance, provenance.
+        // ═══════════════════════════════════════════════════════════
 
-        // Header
-        writeln!(f, "╔{}╗", bar)?;
-        writeln!(f, "║  {} Pipeline Output {:>38}║",
-            if self.status.ok { "✅" } else { "❌" },
-            format!("Trust: {}/100 ({}) {}", self.status.trust, self.status.trust_grade,
-                if self.status.trust >= 90 { "🛡️" } else if self.status.trust >= 70 { "🔵" }
-                else if self.status.trust >= 50 { "🟡" } else { "🔴" })
-        )?;
-        writeln!(f, "╠{}╣", bar)?;
+        let trust_icon = match self.status.trust {
+            90..=100 => "🛡️",
+            70..=89 => "🔵",
+            50..=69 => "🟡",
+            _ => "🔴",
+        };
 
-        // Response (truncated)
-        let text_preview = if self.text.len() > 80 {
-            format!("{}...", &self.text[..77])
-        } else { self.text.clone() };
-        writeln!(f, "║  Response: {} [source: llm]", text_preview)?;
-        writeln!(f, "║  {}", thin)?;
+        // ── Line 1: Status badge ──
+        writeln!(f)?;
+        if self.status.ok {
+            writeln!(f, "  ✅ Agent complete — Trust: {}/100 ({}) {}",
+                self.status.trust, self.status.trust_grade, trust_icon)?;
+        } else {
+            writeln!(f, "  ❌ Agent failed — Trust: {}/100 ({}) {}",
+                self.status.trust, self.status.trust_grade, trust_icon)?;
+        }
 
-        // Dashboard
-        writeln!(f, "║  📊 Dashboard (all kernel-verified):")?;
-        writeln!(f, "║     Actors: {}  │  Steps: {}  │  Duration: {}ms",
-            self.status.actors, self.status.steps, self.status.duration_ms)?;
-        writeln!(f, "║     Memory: {} created, {} recalled, {} shared  │  Packets: {}",
-            self.memory.created, self.memory.recalled, self.memory.shared, self.memory.total_packets)?;
-        writeln!(f, "║     Auth: {} ✅ authorized, {} ❌ denied, {} ⏳ pending",
-            self.aapi.authorized, self.aapi.denied, self.aapi.pending_approval)?;
+        // ── Line 2: Response ──
+        writeln!(f)?;
+        let text = if self.text.len() > 120 {
+            format!("{}…", &self.text[..117])
+        } else {
+            self.text.clone()
+        };
+        for line in text.lines() {
+            writeln!(f, "  │ {}", line)?;
+        }
 
-        // Compliance
+        // ── Line 3: Stats bar ──
+        writeln!(f)?;
+        write!(f, "  {} agent · {}ms", self.status.actors, self.status.duration_ms)?;
+        if self.memory.created > 0 || self.memory.recalled > 0 {
+            write!(f, " · {} memories", self.memory.created + self.memory.recalled)?;
+        }
+        if self.status.steps > 1 {
+            write!(f, " · {} steps", self.status.steps)?;
+        }
+        writeln!(f)?;
+
+        // ── Line 4: Compliance (only if present — the "wow" differentiator) ──
         if !self.aapi.compliance.is_empty() {
-            let comp: Vec<String> = self.aapi.compliance.iter().map(|c| format!("{} ✓", c)).collect();
-            writeln!(f, "║     Compliance: {} [source: user]", comp.join("  "))?;
+            let comp: Vec<String> = self.aapi.compliance.iter()
+                .map(|c| format!("{} ✓", c.to_uppercase()))
+                .collect();
+            writeln!(f, "  {}", comp.join("  "))?;
         }
 
-        // Warnings
-        if !self.warnings.is_empty() {
-            writeln!(f, "║  {}", thin)?;
-            writeln!(f, "║  ⚠️  Warnings ({}):", self.warnings.len())?;
-            for w in &self.warnings {
-                writeln!(f, "║     • {}", w)?;
-            }
-        }
-
-        // Errors
-        if !self.errors.is_empty() {
-            writeln!(f, "║  {}", thin)?;
-            writeln!(f, "║  ❌ Errors ({}):", self.errors.len())?;
-            for e in &self.errors {
-                writeln!(f, "║     • {}", e)?;
-            }
-        }
-
-        // Provenance
+        // ── Line 5: Provenance — what NO competitor shows ──
         let kernel_events = self.events.iter().filter(|e| e.source == Provenance::Kernel).count();
-        writeln!(f, "║  {}", thin)?;
-        writeln!(f, "║  🔒 Provenance: {}/{} events kernel-verified (zero-fake: {})",
+        let zero_fake = kernel_events == self.events.len();
+        writeln!(f, "  🔒 {}/{} events verified · zero-fake: {}",
             kernel_events, self.events.len(),
-            if kernel_events == self.events.len() { "✅" } else { "⚠️" })?;
+            if zero_fake { "✅" } else { "⚠️" })?;
 
-        // Trace summary
-        writeln!(f, "║  📋 Trace: {} spans, ID: {}", self.trace.spans.len(),
-            if self.trace.trace_id.len() > 24 {
-                format!("{}...", &self.trace.trace_id[..21])
-            } else { self.trace.trace_id.clone() })?;
+        // ── Warnings (collapsed unless present) ──
+        if !self.warnings.is_empty() {
+            writeln!(f)?;
+            for w in &self.warnings {
+                writeln!(f, "  ⚠ {}", w)?;
+            }
+        }
 
-        writeln!(f, "╚{}╝", bar)?;
+        // ── Errors (collapsed unless present) ──
+        if !self.errors.is_empty() {
+            writeln!(f)?;
+            for e in &self.errors {
+                writeln!(f, "  ✗ {}", e)?;
+            }
+        }
+
+        // ── Hint: progressive disclosure ──
+        writeln!(f)?;
+        writeln!(f, "  ↳ .dashboard() .explain() .security_view() .share() for more")?;
+
         Ok(())
     }
 }
@@ -739,25 +761,19 @@ mod tests {
 
         let display = format!("{}", output);
 
-        // Human-readable box-drawing
-        assert!(display.contains("╔"));
-        assert!(display.contains("╚"));
-        // Dashboard section
-        assert!(display.contains("Dashboard"));
-        assert!(display.contains("kernel-verified"));
+        // Clean status badge
+        assert!(display.contains("Agent complete") || display.contains("Agent failed"), "missing status: {}", display);
         // Trust info
-        assert!(display.contains("/100"));
+        assert!(display.contains("/100"), "missing trust: {}", display);
         // Compliance
-        assert!(display.contains("soc2 ✓"));
+        assert!(display.contains("SOC2 ✓"), "missing compliance: {}", display);
         // Provenance
-        assert!(display.contains("Provenance"));
-        assert!(display.contains("zero-fake"));
-        // Trace info
-        assert!(display.contains("Trace"));
-        assert!(display.contains("spans"));
+        assert!(display.contains("zero-fake"), "missing provenance: {}", display);
+        assert!(display.contains("verified"), "missing verified: {}", display);
         // Response text
-        assert!(display.contains("Hello world"));
-        assert!(display.contains("[source: llm]"));
+        assert!(display.contains("Hello world"), "missing response: {}", display);
+        // Progressive disclosure hint
+        assert!(display.contains(".dashboard()"), "missing hint: {}", display);
     }
 
     #[test]

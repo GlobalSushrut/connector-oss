@@ -1,0 +1,44 @@
+[package]
+name = "connector-protocols"
+description = "Ring 3: Protocol Bridges — MCP, A2A, ACP, ANP, AP2 native integration"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# Internal
+vac-core = { workspace = true }
+aapi-core = { workspace = true }
+connector-engine = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Content addressing
+cid = { workspace = true }
+sha2 = { workspace = true }
+
+# Cryptography
+ed25519-dalek = { workspace = true }
+
+# Identity
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# HTTP / Web
+axum = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
+rand = "0.8"

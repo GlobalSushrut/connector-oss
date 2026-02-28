@@ -4,6 +4,9 @@ members = [
     "crates/connector-engine",
     "crates/connector-api",
     "crates/connector-server",
+    "crates/connector-protocols",
+    "crates/connector-caps",
+    "crates/connector-protocol",
 ]
 
 [workspace.package]
@@ -17,6 +20,7 @@ authors = ["Connector Team"]
 # Core kernels (path dependencies)
 vac-core = { path = "../vac/crates/vac-core" }
 aapi-core = { path = "../aapi/crates/aapi-core" }
+connector-engine = { path = "crates/connector-engine" }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -28,15 +32,30 @@ cid = { version = "0.11", features = ["serde"] }
 multihash = { version = "0.19", features = ["serde"] }
 sha2 = "0.10"
 
+# Cryptography
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+rand = "0.8"
+
 # Identity
 uuid = { version = "1.6", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+
+# Async
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+async-trait = "0.1"
+
+# HTTP / Web
+axum = "0.7"
+
+# Observability
+tracing = "0.1"
 
 # Error handling
 thiserror = "1.0"
 
 # Persistent storage
 redb = "2.4"
+rusqlite = { version = "0.31", features = ["bundled", "serde_json"] }
 
 # Testing
 proptest = "1.4"

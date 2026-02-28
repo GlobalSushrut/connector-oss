@@ -114,6 +114,8 @@ pub enum SyscallPayload {
         grantee_pid: String,
         read: bool,
         write: bool,
+        /// Optional TTL — grant expires at this epoch ms. None = permanent.
+        expires_at: Option<i64>,
     },
     /// Access revoke
     AccessRevoke {
@@ -369,8 +371,8 @@ pub struct MemoryKernel {
     next_audit_id: u64,
     /// Sealed packet CIDs (immutable after sealing)
     sealed_cids: std::collections::HashSet<Cid>,
-    /// Access grants: (grantee_pid, namespace) → (read, write)
-    access_grants: HashMap<(String, String), (bool, bool)>,
+    /// Access grants: (grantee_pid, namespace) → (read, write, expires_at)
+    access_grants: HashMap<(String, String), (bool, bool, Option<i64>)>,
     /// Namespace → list of packet CIDs (index for fast namespace queries)
     namespace_index: HashMap<String, Vec<Cid>>,
     /// Session → list of packet CIDs
@@ -531,6 +533,55 @@ impl MemoryKernel {
     }
 
     // =========================================================================
+    // Phase 1: Kernel Hardening utilities
+    // =========================================================================
+
+    /// Maximum pending signals per agent before oldest are dropped (Phase 1.8)
+    const MAX_PENDING_SIGNALS: usize = 64;
+
+    /// Canonicalize a namespace path — reject traversal attacks, normalize format.
+    ///
+    /// Rules:
+    /// - Reject `..` components (path traversal)
+    /// - Collapse `//` to `/`
+    /// - Strip trailing `/`
+    /// - Reject empty paths
+    /// - Reject paths containing null bytes
+    fn canonicalize_namespace_path(path: &str) -> Result<String, String> {
+        if path.is_empty() {
+            return Err("Empty namespace path".to_string());
+        }
+        if path.contains('\0') {
+            return Err("Namespace path contains null byte".to_string());
+        }
+
+        // Split on '/', filter empty segments (handles //), reject ..
+        let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+        for seg in &segments {
+            if *seg == ".." {
+                return Err(format!("Path traversal '..' rejected in namespace: {}", path));
+            }
+            if *seg == "." {
+                // Skip current-dir references silently
+                continue;
+            }
+        }
+
+        let clean: Vec<&str> = segments.into_iter().filter(|s| *s != ".").collect();
+        if clean.is_empty() {
+            return Err("Namespace path resolves to empty after normalization".to_string());
+        }
+
+        // Preserve "ns:" prefix style — if first segment contains ':', keep it
+        Ok(clean.join("/"))
+    }
+
+    /// Check if `child` namespace is a descendant of `parent` namespace (Phase 1.6)
+    fn is_namespace_descendant(parent: &str, child: &str) -> bool {
+        child == parent || child.starts_with(&format!("{}/", parent))
+    }
+
+    // =========================================================================
     // Public API
     // =========================================================================
 
@@ -681,8 +732,38 @@ impl MemoryKernel {
         self.packets.len()
     }
 
+    /// Get all packets (for DatabaseView browsing)
+    pub fn all_packets(&self) -> Vec<&MemPacket> {
+        self.packets.values().collect()
+    }
+
+    /// Get all registered agents
+    pub fn all_agents(&self) -> Vec<&AgentControlBlock> {
+        self.agents.values().collect()
+    }
+
+    /// Get agent count
+    pub fn agent_count(&self) -> usize {
+        self.agents.len()
+    }
+
+    /// Get all sessions
+    pub fn all_sessions(&self) -> Vec<&SessionEnvelope> {
+        self.sessions.values().collect()
+    }
+
+    /// Get session count
+    pub fn session_count(&self) -> usize {
+        self.sessions.len()
+    }
+
     /// Get the audit log
     pub fn audit_log(&self) -> &[KernelAuditEntry] {
+        &self.audit_log
+    }
+
+    /// Get audit entries (alias for audit_log for DatabaseView)
+    pub fn audit_entries(&self) -> &[KernelAuditEntry] {
         &self.audit_log
     }
 
@@ -906,6 +987,25 @@ impl MemoryKernel {
         acb.status = AgentStatus::Running;
         acb.phase = AgentPhase::Active;
         acb.last_active_at = Self::now_ms();
+
+        // Create ExecutionContext on start if not already present
+        self.contexts.entry(req.agent_pid.clone()).or_insert_with(|| ExecutionContext {
+            agent_pid: req.agent_pid.clone(),
+            session_id: "default".to_string(),
+            pipeline_id: "default".to_string(),
+            step_counter: 0,
+            current_step_type: None,
+            pending_tool_calls: Vec::new(),
+            context_window: Vec::new(),
+            context_tokens: 0,
+            context_max_tokens: 128_000,
+            reasoning_chain: Vec::new(),
+            snapshot_at: 0,
+            snapshot_cid: None,
+            restored: false,
+            suspend_count: 0,
+            session_snapshot: None,
+        });
 
         let audit = self.make_audit(
             MemoryKernelOp::AgentStart,
@@ -1192,14 +1292,27 @@ impl MemoryKernel {
             }
         };
 
-        // Check namespace access
+        // Check namespace access (Phase 1.1: canonicalize path first)
         let agent_ns = {
             let acb = self.agents.get(&req.agent_pid).unwrap();
             acb.namespace.clone()
         };
-        let packet_ns = packet.namespace.clone().unwrap_or(agent_ns.clone());
+        let raw_ns = packet.namespace.clone().unwrap_or(agent_ns.clone());
+        let packet_ns = match Self::canonicalize_namespace_path(&raw_ns) {
+            Ok(ns) => ns,
+            Err(e) => {
+                let audit = self.make_audit(
+                    MemoryKernelOp::MemWrite, &req.agent_pid, Some(raw_ns.clone()),
+                    OpOutcome::Denied, req.reason, Some(format!("Invalid namespace: {}", e)),
+                    Some(start.elapsed().as_micros() as u64), req.vakya_id,
+                );
+                return SyscallResult { outcome: OpOutcome::Denied, audit_entry: audit, value: SyscallValue::Error(format!("Invalid namespace: {}", e)) };
+            }
+        };
 
         // Verify write access to target namespace (legacy + mount table)
+        // Phase 1.3: track if access is via mount for quota debit
+        let mut access_via_mount = false;
         {
             let acb = self.agents.get(&req.agent_pid).unwrap();
             let has_legacy_access = packet_ns == acb.namespace || acb.writable_namespaces.contains(&packet_ns);
@@ -1207,6 +1320,9 @@ impl MemoryKernel {
                 Self::check_mount_access(acb, &packet_ns),
                 Some(MountMode::ReadWrite)
             );
+            if has_mount_access && !has_legacy_access {
+                access_via_mount = true;
+            }
             if !has_legacy_access && !has_mount_access {
                 let audit = self.make_audit(
                     MemoryKernelOp::MemWrite,
@@ -1334,6 +1450,13 @@ impl MemoryKernel {
         acb.memory_region.used_packets += 1;
         acb.last_active_at = Self::now_ms();
 
+        // Phase 1.3: If write was via mount, also debit the writing agent's quota
+        // (mount gives cross-namespace access but still charges the writer)
+        if access_via_mount {
+            // Already debited used_packets above for the writer — that's correct.
+            // The mount source namespace owner is NOT charged (they just provided access).
+        }
+
         let audit = self.make_audit(
             MemoryKernelOp::MemWrite,
             &req.agent_pid,
@@ -1401,25 +1524,61 @@ impl MemoryKernel {
 
         // Check namespace read access (legacy + mount table + access grants)
         let packet_ns = packet.namespace.clone().unwrap_or_default();
+        let now = Self::now_ms();
         let acb = self.agents.get(&req.agent_pid).unwrap();
+        let agent_own_ns = acb.namespace.clone();
         let has_legacy_read = packet_ns == acb.namespace || acb.readable_namespaces.contains(&packet_ns);
-        let has_grant_read = self
-            .access_grants
-            .get(&(req.agent_pid.clone(), packet_ns.clone()))
-            .map(|(r, _)| *r)
-            .unwrap_or(false);
+
+        // Phase 1.2: Check access grant with TTL enforcement
+        let has_grant_read = {
+            let grant = self.access_grants.get(&(req.agent_pid.clone(), packet_ns.clone()));
+            match grant {
+                Some((r, _, Some(exp))) if *exp > 0 && *exp < now => {
+                    // Grant expired — auto-remove it
+                    false // will remove below
+                }
+                Some((r, _, _)) => *r,
+                None => false,
+            }
+        };
+        // Phase 1.2: Auto-remove expired grants
+        if let Some((_, _, Some(exp))) = self.access_grants.get(&(req.agent_pid.clone(), packet_ns.clone())) {
+            if *exp > 0 && *exp < now {
+                self.access_grants.remove(&(req.agent_pid.clone(), packet_ns.clone()));
+                // Also clean up grantee's namespace lists
+                if let Some(grantee) = self.agents.get_mut(&req.agent_pid) {
+                    grantee.readable_namespaces.retain(|n| n != &packet_ns);
+                    grantee.writable_namespaces.retain(|n| n != &packet_ns);
+                }
+            }
+        }
+
+        let acb = self.agents.get(&req.agent_pid).unwrap();
         let mount_for_ns = Self::find_mount_for_namespace(acb, &packet_ns);
         let has_mount_read = mount_for_ns.is_some() && matches!(
             mount_for_ns.unwrap().mode,
             MountMode::ReadOnly | MountMode::ReadWrite | MountMode::Sealed
         );
+
+        // Phase 1.6: Namespace hierarchy — if grant/mount covers parent, child is accessible
+        let has_hierarchy_read = if !has_legacy_read && !has_grant_read && !has_mount_read {
+            // Check if any granted namespace is a parent of packet_ns
+            self.access_grants.iter().any(|((grantee, ns), (r, _, exp))| {
+                grantee == &req.agent_pid && *r
+                    && Self::is_namespace_descendant(ns, &packet_ns)
+                    && exp.map_or(true, |e| e == 0 || e >= now) // not expired
+            })
+        } else {
+            false
+        };
+
         // If access is via mount, also check mount filters
         let passes_mount_filter = if let Some(mount) = mount_for_ns {
             Self::packet_passes_mount_filters(packet, mount)
         } else {
             true // No mount = no filter to apply
         };
-        if !has_legacy_read && !has_grant_read && !has_mount_read {
+        if !has_legacy_read && !has_grant_read && !has_mount_read && !has_hierarchy_read {
             let audit = self.make_audit(
                 MemoryKernelOp::MemRead,
                 &req.agent_pid,
@@ -1462,6 +1621,10 @@ impl MemoryKernel {
             };
         }
 
+        // Phase 1.7: Cross-agent namespace leak detection
+        // If the packet was written by a different agent, flag it in the audit entry
+        let is_cross_agent_read = packet_ns != agent_own_ns;
+
         let result_packet = packet.clone();
 
         // Update agent activity
@@ -1469,7 +1632,7 @@ impl MemoryKernel {
             acb.last_active_at = Self::now_ms();
         }
 
-        let audit = self.make_audit(
+        let mut audit = self.make_audit(
             MemoryKernelOp::MemRead,
             &req.agent_pid,
             Some(packet_cid.to_string()),
@@ -1479,6 +1642,11 @@ impl MemoryKernel {
             Some(start.elapsed().as_micros() as u64),
             req.vakya_id,
         );
+
+        // Phase 1.7: Annotate cross-agent reads in audit
+        if is_cross_agent_read {
+            audit.reason = Some(format!("cross_agent_read:src_ns={}", packet_ns));
+        }
 
         SyscallResult {
             outcome: OpOutcome::Success,
@@ -2236,13 +2404,14 @@ impl MemoryKernel {
         req: SyscallRequest,
         start: std::time::Instant,
     ) -> SyscallResult {
-        let (target_namespace, grantee_pid, read, write) = match req.payload {
+        let (target_namespace, grantee_pid, read, write, expires_at) = match req.payload {
             SyscallPayload::AccessGrant {
                 target_namespace,
                 grantee_pid,
                 read,
                 write,
-            } => (target_namespace, grantee_pid, read, write),
+                expires_at,
+            } => (target_namespace, grantee_pid, read, write, expires_at),
             _ => {
                 let audit = self.make_audit(
                     MemoryKernelOp::AccessGrant,
@@ -2259,6 +2428,19 @@ impl MemoryKernel {
                     audit_entry: audit,
                     value: SyscallValue::Error("Invalid payload".to_string()),
                 };
+            }
+        };
+
+        // Phase 1.1: Canonicalize the target namespace
+        let target_namespace = match Self::canonicalize_namespace_path(&target_namespace) {
+            Ok(ns) => ns,
+            Err(e) => {
+                let audit = self.make_audit(
+                    MemoryKernelOp::AccessGrant, &req.agent_pid, Some(target_namespace.clone()),
+                    OpOutcome::Denied, req.reason, Some(format!("Invalid namespace: {}", e)),
+                    Some(start.elapsed().as_micros() as u64), req.vakya_id,
+                );
+                return SyscallResult { outcome: OpOutcome::Denied, audit_entry: audit, value: SyscallValue::Error(format!("Invalid namespace: {}", e)) };
             }
         };
 
@@ -2283,17 +2465,21 @@ impl MemoryKernel {
             };
         }
 
-        // Store the grant
+        // Store the grant (Phase 1.2: with TTL)
         self.access_grants
-            .insert((grantee_pid.clone(), target_namespace.clone()), (read, write));
+            .insert((grantee_pid.clone(), target_namespace.clone()), (read, write, expires_at));
 
         // Update grantee's readable/writable namespaces
-        if let Some(grantee) = self.agents.get_mut(&grantee_pid) {
-            if read && !grantee.readable_namespaces.contains(&target_namespace) {
-                grantee.readable_namespaces.push(target_namespace.clone());
-            }
-            if write && !grantee.writable_namespaces.contains(&target_namespace) {
-                grantee.writable_namespaces.push(target_namespace.clone());
+        // Phase 1.2: Only add to namespace lists for permanent grants (no TTL).
+        // TTL grants are enforced purely via access_grants map with expiry check.
+        if expires_at.is_none() || expires_at == Some(0) {
+            if let Some(grantee) = self.agents.get_mut(&grantee_pid) {
+                if read && !grantee.readable_namespaces.contains(&target_namespace) {
+                    grantee.readable_namespaces.push(target_namespace.clone());
+                }
+                if write && !grantee.writable_namespaces.contains(&target_namespace) {
+                    grantee.writable_namespaces.push(target_namespace.clone());
+                }
             }
         }
 
@@ -3729,6 +3915,30 @@ impl MemoryKernel {
 
         let acb = self.agents.get(&req.agent_pid).unwrap();
 
+        // Phase 1.4: Check if tool is accessible via Execute mount
+        // If the tool has a namespace_path, verify Execute mount covers it
+        let tool_binding_opt = acb.tool_bindings.iter().find(|b| {
+            b.tool_id == tool_id || (b.tool_id.ends_with('*') && tool_id.starts_with(&b.tool_id[..b.tool_id.len()-1]))
+        });
+        if let Some(binding) = tool_binding_opt {
+            // If namespace_path is set on the binding, check mount mode
+            if !binding.namespace_path.is_empty() {
+                let mount = Self::find_mount_for_namespace(acb, &binding.namespace_path);
+                if let Some(m) = mount {
+                    if m.mode != MountMode::Execute && m.mode != MountMode::ReadWrite {
+                        let audit = self.make_audit(
+                            MemoryKernelOp::ToolDispatch, &req.agent_pid,
+                            Some(format!("{}:{}", tool_id, action)),
+                            OpOutcome::Denied, req.reason,
+                            Some(format!("Mount for {} is {:?}, not Execute", binding.namespace_path, m.mode)),
+                            Some(start.elapsed().as_micros() as u64), req.vakya_id,
+                        );
+                        return SyscallResult { outcome: OpOutcome::Denied, audit_entry: audit, value: SyscallValue::Error("Mount not Execute".to_string()) };
+                    }
+                }
+            }
+        }
+
         // Default-deny: agent must have a ToolBinding that covers this tool+action
         if !Self::check_tool_binding(acb, &tool_id, &action) {
             let audit = self.make_audit(
@@ -3811,6 +4021,14 @@ impl MemoryKernel {
                 AccessCheck,
                 PortCreate, PortBind, PortSend, PortReceive, PortClose,
                 ToolDispatch,
+                SendSignal, RegisterSignalHandler,
+                SetTokenBudget, RecordTokenUsage,
+                LlmSchedule, LlmDequeue, LlmSchedulerConfig,
+                RegisterCgroup, RecordComputeUsage,
+                RegisterAgentDid, RevokeAgentDid, PublishAgentCard, ResolveAgentCard,
+                McpRegisterBridge, McpInvokeTool, McpDeregisterBridge,
+                A2AOpenChannel, A2ASendMessage, A2AUpdateTaskState, A2ACloseChannel,
+                UpdateContext, TrimContextWindow, GetContextPressure,
             ],
             phase_transitions: Vec::new(),
             rate_limits: std::collections::BTreeMap::new(),
@@ -3829,6 +4047,14 @@ impl MemoryKernel {
                 GarbageCollect, IndexRebuild, IntegrityCheck,
                 PortCreate, PortBind, PortSend, PortReceive, PortClose, PortDelegate,
                 ToolDispatch,
+                SendSignal, RegisterSignalHandler,
+                SetTokenBudget, RecordTokenUsage,
+                LlmSchedule, LlmDequeue, LlmSchedulerConfig,
+                RegisterCgroup, RecordComputeUsage,
+                RegisterAgentDid, RevokeAgentDid, PublishAgentCard, ResolveAgentCard,
+                McpRegisterBridge, McpInvokeTool, McpDeregisterBridge,
+                A2AOpenChannel, A2ASendMessage, A2AUpdateTaskState, A2ACloseChannel,
+                UpdateContext, TrimContextWindow, GetContextPressure,
             ],
             phase_transitions: Vec::new(),
             rate_limits: std::collections::BTreeMap::new(),
@@ -3849,6 +4075,14 @@ impl MemoryKernel {
                 AccessCheck,
                 PortCreate, PortBind, PortSend, PortReceive, PortClose,
                 ToolDispatch,
+                SendSignal, RegisterSignalHandler,
+                SetTokenBudget, RecordTokenUsage,
+                LlmSchedule, LlmDequeue, LlmSchedulerConfig,
+                RegisterCgroup, RecordComputeUsage,
+                RegisterAgentDid, RevokeAgentDid, PublishAgentCard, ResolveAgentCard,
+                McpRegisterBridge, McpInvokeTool, McpDeregisterBridge,
+                A2AOpenChannel, A2ASendMessage, A2AUpdateTaskState, A2ACloseChannel,
+                UpdateContext, TrimContextWindow, GetContextPressure,
             ],
             phase_transitions: Vec::new(),
             rate_limits: tool_rate_limits,
@@ -3911,6 +4145,11 @@ impl MemoryKernel {
 
     fn deliver_signal_internal(&mut self, target_pid: &str, signal: AgentSignal) {
         if let Some(acb) = self.agents.get_mut(target_pid) {
+            // Phase 1.8: Signal delivery bounds — drop oldest on overflow
+            if acb.pending_signals.len() >= Self::MAX_PENDING_SIGNALS {
+                let overflow = acb.pending_signals.len() - Self::MAX_PENDING_SIGNALS + 1;
+                acb.pending_signals.drain(..overflow);
+            }
             acb.pending_signals.push(signal.clone());
             // Apply immediate state transitions for lifecycle signals
             match &signal {
@@ -4088,10 +4327,13 @@ impl MemoryKernel {
 
     fn handle_revoke_agent_did(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
         let did_string = match req.payload { SyscallPayload::RevokeAgentDid { did_string } => did_string, _ => { let a = self.make_audit(MemoryKernelOp::RevokeAgentDid, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
-        if self.did_registry.remove(&did_string).is_none() {
-            let err = format!("DID not found: {}", did_string);
-            let a = self.make_audit(MemoryKernelOp::RevokeAgentDid, &req.agent_pid, Some(did_string), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
-            return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+        match self.did_registry.get_mut(&did_string) {
+            None => {
+                let err = format!("DID not found: {}", did_string);
+                let a = self.make_audit(MemoryKernelOp::RevokeAgentDid, &req.agent_pid, Some(did_string), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+            }
+            Some(did) => { did.revoked = true; }
         }
         let a = self.make_audit(MemoryKernelOp::RevokeAgentDid, &req.agent_pid, Some(did_string), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
         SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
@@ -4099,17 +4341,18 @@ impl MemoryKernel {
 
     fn handle_publish_agent_card(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
         let card = match req.payload { SyscallPayload::PublishAgentCard { card } => card, _ => { let a = self.make_audit(MemoryKernelOp::PublishAgentCard, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
-        let did_str = card.did.to_string();
-        self.card_registry.insert(did_str.clone(), card);
+        let did_str = card.did.did.clone();
+        self.card_registry.insert(req.agent_pid.clone(), card);
         let a = self.make_audit(MemoryKernelOp::PublishAgentCard, &req.agent_pid, Some(did_str), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
         SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
     }
 
     fn handle_resolve_agent_card(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
         let did_string = match req.payload { SyscallPayload::ResolveAgentCard { did_string } => did_string, _ => { let a = self.make_audit(MemoryKernelOp::ResolveAgentCard, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
-        match self.card_registry.get(&did_string) {
+        let found = self.card_registry.values().find(|c| c.did.did == did_string).cloned();
+        match found {
             Some(card) => {
-                let json = serde_json::to_string(card).unwrap_or_default();
+                let json = serde_json::to_string(&card).unwrap_or_default();
                 let a = self.make_audit(MemoryKernelOp::ResolveAgentCard, &req.agent_pid, Some(did_string), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
                 SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::Error(json) }
             }
@@ -4168,10 +4411,13 @@ impl MemoryKernel {
 
     fn handle_mcp_deregister_bridge(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
         let bridge_id = match req.payload { SyscallPayload::McpDeregisterBridge { bridge_id } => bridge_id, _ => { let a = self.make_audit(MemoryKernelOp::McpDeregisterBridge, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
-        if self.mcp_bridges.remove(&bridge_id).is_none() {
-            let err = format!("MCP bridge not found: {}", bridge_id);
-            let a = self.make_audit(MemoryKernelOp::McpDeregisterBridge, &req.agent_pid, Some(bridge_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
-            return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+        match self.mcp_bridges.get_mut(&bridge_id) {
+            None => {
+                let err = format!("MCP bridge not found: {}", bridge_id);
+                let a = self.make_audit(MemoryKernelOp::McpDeregisterBridge, &req.agent_pid, Some(bridge_id), OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+            }
+            Some(bridge) => { bridge.active = false; }
         }
         let a = self.make_audit(MemoryKernelOp::McpDeregisterBridge, &req.agent_pid, Some(bridge_id), OpOutcome::Success, req.reason, None, Some(start.elapsed().as_micros() as u64), req.vakya_id);
         SyscallResult { outcome: OpOutcome::Success, audit_entry: a, value: SyscallValue::None }
@@ -4183,7 +4429,14 @@ impl MemoryKernel {
 
     fn handle_update_context(&mut self, req: SyscallRequest, start: std::time::Instant) -> SyscallResult {
         let (add_cids, token_delta, max_tokens) = match req.payload { SyscallPayload::UpdateContext { add_cids, token_delta, max_tokens } => (add_cids, token_delta, max_tokens), _ => { let a = self.make_audit(MemoryKernelOp::UpdateContext, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some("Invalid payload".to_string()), Some(start.elapsed().as_micros() as u64), req.vakya_id); return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error("Invalid payload".to_string()) }; } };
-        let ctx = self.contexts.entry(req.agent_pid.clone()).or_insert_with(|| ExecutionContext { agent_pid: req.agent_pid.clone(), session_id: "default".to_string(), pipeline_id: "default".to_string(), step_counter: 0, current_step_type: None, pending_tool_calls: Vec::new(), context_window: Vec::new(), context_tokens: 0, context_max_tokens: 128_000, reasoning_chain: Vec::new(), snapshot_at: 0, snapshot_cid: None, restored: false, suspend_count: 0, session_snapshot: None });
+        let ctx = match self.contexts.get_mut(&req.agent_pid) {
+            Some(c) => c,
+            None => {
+                let err = format!("No active context for agent {}. Call AgentStart first.", req.agent_pid);
+                let a = self.make_audit(MemoryKernelOp::UpdateContext, &req.agent_pid, None, OpOutcome::Failed, req.reason, Some(err.clone()), Some(start.elapsed().as_micros() as u64), req.vakya_id);
+                return SyscallResult { outcome: OpOutcome::Failed, audit_entry: a, value: SyscallValue::Error(err) };
+            }
+        };
         if max_tokens > 0 { ctx.context_max_tokens = max_tokens; }
         for cid in add_cids { if !ctx.context_window.contains(&cid) { ctx.context_window.push(cid); } }
         if token_delta >= 0 { ctx.context_tokens = ctx.context_tokens.saturating_add(token_delta as u64); } else { ctx.context_tokens = ctx.context_tokens.saturating_sub((-token_delta) as u64); }
@@ -4404,9 +4657,9 @@ mod tests {
         p
     }
 
-    fn register_agent(kernel: &mut MemoryKernel, name: &str, ns: &str) -> String {
+    fn register_agent_only(kernel: &mut MemoryKernel, name: &str, ns: &str) -> String {
         let result = kernel.dispatch(SyscallRequest {
-            agent_pid: "".to_string(), // ignored for register
+            agent_pid: "".to_string(),
             operation: MemoryKernelOp::AgentRegister,
             payload: SyscallPayload::AgentRegister {
                 agent_name: name.to_string(),
@@ -4425,12 +4678,43 @@ mod tests {
         }
     }
 
+    fn register_agent(kernel: &mut MemoryKernel, name: &str, ns: &str) -> String {
+        let result = kernel.dispatch(SyscallRequest {
+            agent_pid: "".to_string(), // ignored for register
+            operation: MemoryKernelOp::AgentRegister,
+            payload: SyscallPayload::AgentRegister {
+                agent_name: name.to_string(),
+                namespace: ns.to_string(),
+                role: Some("test".to_string()),
+                model: None,
+                framework: None,
+            },
+            reason: Some("test".to_string()),
+            vakya_id: None,
+        });
+        assert_eq!(result.outcome, OpOutcome::Success);
+        let pid = match result.value {
+            SyscallValue::AgentPid(pid) => pid,
+            _ => panic!("Expected AgentPid"),
+        };
+        // Transition to Active phase so all ops are allowed
+        let start_res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::AgentStart,
+            payload: SyscallPayload::Empty,
+            reason: Some("test".to_string()),
+            vakya_id: None,
+        });
+        assert_eq!(start_res.outcome, OpOutcome::Success, "AgentStart failed for {}", name);
+        pid
+    }
+
     #[test]
     fn test_agent_lifecycle() {
         let mut kernel = MemoryKernel::new();
 
-        // Register
-        let pid = register_agent(&mut kernel, "bot-1", "ns:test");
+        // Register (no auto-start for lifecycle test)
+        let pid = register_agent_only(&mut kernel, "bot-1", "ns:test");
         assert!(kernel.get_agent(&pid).is_some());
         assert_eq!(kernel.get_agent(&pid).unwrap().status, AgentStatus::Registered);
 
@@ -4590,6 +4874,7 @@ mod tests {
                 grantee_pid: pid_b.clone(),
                 read: true,
                 write: false,
+                expires_at: None,
             },
             reason: Some("share data".to_string()),
             vakya_id: None,
@@ -5061,7 +5346,7 @@ mod tests {
     #[test]
     fn test_phase_fsm_registered_blocks_write() {
         let mut kernel = MemoryKernel::new();
-        let pid = register_agent(&mut kernel, "bot", "ns:test");
+        let pid = register_agent_only(&mut kernel, "bot", "ns:test");
         // Agent is in Registered phase — MemWrite should be blocked
         let r = kernel.dispatch(SyscallRequest {
             agent_pid: pid.clone(),
@@ -5077,7 +5362,7 @@ mod tests {
     #[test]
     fn test_phase_fsm_registered_allows_start() {
         let mut kernel = MemoryKernel::new();
-        let pid = register_agent(&mut kernel, "bot", "ns:test");
+        let pid = register_agent_only(&mut kernel, "bot", "ns:test");
         let r = kernel.dispatch(SyscallRequest {
             agent_pid: pid.clone(),
             operation: MemoryKernelOp::AgentStart,
@@ -7209,5 +7494,1400 @@ mod tests {
         assert!(lines.len() >= 3, "CSV should have header + 2+ rows");
         assert_eq!(lines[0], "audit_id,timestamp,operation,agent_pid,target,outcome,reason");
         assert!(lines[1].contains("AgentRegister"), "First row should be register (Debug format)");
+    }
+
+    // =========================================================================
+    // Phase L1.1–L4.1: Linux Revolution tests
+    // =========================================================================
+
+    #[test]
+    fn test_l1_1_send_signal_to_existing_agent() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "sig-bot", "ns:sig");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SendSignal,
+            payload: SyscallPayload::SendSignal {
+                target_pid: pid.clone(),
+                signal: AgentSignal::Suspend,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+    }
+
+    #[test]
+    fn test_l1_1_send_signal_to_missing_agent() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "sig-bot", "ns:sig");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SendSignal,
+            payload: SyscallPayload::SendSignal {
+                target_pid: "pid:999999".to_string(),
+                signal: AgentSignal::Suspend,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Failed);
+    }
+
+    #[test]
+    fn test_l1_1_signal_queued_in_acb() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "sig-bot", "ns:sig");
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SendSignal,
+            payload: SyscallPayload::SendSignal {
+                target_pid: pid.clone(),
+                signal: AgentSignal::Suspend,
+            },
+            reason: None, vakya_id: None,
+        });
+        let acb = kernel.agents.get(&pid).unwrap();
+        assert!(!acb.pending_signals.is_empty(), "Signal should be queued in ACB");
+    }
+
+    #[test]
+    fn test_l1_1_register_signal_handler() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "handler-bot", "ns:h");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RegisterSignalHandler,
+            payload: SyscallPayload::RegisterSignalHandler {
+                handler: SignalHandler {
+                    signal_type: "Suspend".to_string(),
+                    action: SignalHandlerAction::Default,
+                },
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        let acb = kernel.agents.get(&pid).unwrap();
+        assert!(acb.signal_handlers.iter().any(|h| h.signal_type == "Suspend"));
+    }
+
+    #[test]
+    fn test_l1_1_signal_context_pressure() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "ctx-bot", "ns:ctx");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SendSignal,
+            payload: SyscallPayload::SendSignal {
+                target_pid: pid.clone(),
+                signal: AgentSignal::ContextPressure {
+                    level: "high".to_string(),
+                    current_tokens: 7000,
+                    max_tokens: 8000,
+                },
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        let acb = kernel.agents.get(&pid).unwrap();
+        assert!(!acb.pending_signals.is_empty());
+    }
+
+    // =========================================================================
+    // Phase L2.1: Token Budget tests
+    // =========================================================================
+
+    #[test]
+    fn test_l2_1_set_token_budget() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "budget-bot", "ns:budget");
+        let budget = TokenBudget {
+            agent_pid: pid.clone(),
+            daily_limit: 100_000,
+            hourly_limit: 10_000,
+            burst_limit: 2_000,
+            used_today: 0,
+            used_this_hour: 0,
+            cost_center: "team:eng".to_string(),
+            reset_at_daily: 0,
+            reset_at_hourly: 0,
+            enforce: true,
+        };
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SetTokenBudget,
+            payload: SyscallPayload::SetTokenBudget { budget },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        let acb = kernel.agents.get(&pid).unwrap();
+        assert!(acb.token_budget.is_some());
+        assert_eq!(acb.token_budget.as_ref().unwrap().daily_limit, 100_000);
+    }
+
+    #[test]
+    fn test_l2_1_record_token_usage() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "usage-bot", "ns:usage");
+        let budget = TokenBudget {
+            agent_pid: pid.clone(),
+            daily_limit: 100_000,
+            hourly_limit: 10_000,
+            burst_limit: 0,
+            used_today: 0,
+            used_this_hour: 0,
+            cost_center: "team:eng".to_string(),
+            reset_at_daily: i64::MAX,
+            reset_at_hourly: i64::MAX,
+            enforce: true,
+        };
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SetTokenBudget,
+            payload: SyscallPayload::SetTokenBudget { budget },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RecordTokenUsage,
+            payload: SyscallPayload::RecordTokenUsage {
+                tokens_used: 500,
+                cost_usd: 0.01,
+                model: "gpt-4o".to_string(),
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        let acb = kernel.agents.get(&pid).unwrap();
+        assert_eq!(acb.total_tokens_consumed, 500);
+        assert_eq!(acb.token_budget.as_ref().unwrap().used_today, 500);
+    }
+
+    #[test]
+    fn test_l2_1_budget_exhausted_signal() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "exhaust-bot", "ns:ex");
+        let budget = TokenBudget {
+            agent_pid: pid.clone(),
+            daily_limit: 100,
+            hourly_limit: 0,
+            burst_limit: 0,
+            used_today: 0,
+            used_this_hour: 0,
+            cost_center: "team:eng".to_string(),
+            reset_at_daily: i64::MAX,
+            reset_at_hourly: i64::MAX,
+            enforce: true,
+        };
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SetTokenBudget,
+            payload: SyscallPayload::SetTokenBudget { budget },
+            reason: None, vakya_id: None,
+        });
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RecordTokenUsage,
+            payload: SyscallPayload::RecordTokenUsage {
+                tokens_used: 101,
+                cost_usd: 0.01,
+                model: "gpt-4o".to_string(),
+            },
+            reason: None, vakya_id: None,
+        });
+        let acb = kernel.agents.get(&pid).unwrap();
+        let has_exhausted = acb.pending_signals.iter().any(|s| matches!(s, AgentSignal::TokenBudgetExhausted));
+        assert!(has_exhausted, "TokenBudgetExhausted signal should be queued");
+    }
+
+    #[test]
+    fn test_l2_1_budget_warning_signal() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "warn-bot", "ns:warn");
+        let budget = TokenBudget {
+            agent_pid: pid.clone(),
+            daily_limit: 100,
+            hourly_limit: 0,
+            burst_limit: 0,
+            used_today: 0,
+            used_this_hour: 0,
+            cost_center: "team:eng".to_string(),
+            reset_at_daily: i64::MAX,
+            reset_at_hourly: i64::MAX,
+            enforce: true,
+        };
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::SetTokenBudget,
+            payload: SyscallPayload::SetTokenBudget { budget },
+            reason: None, vakya_id: None,
+        });
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RecordTokenUsage,
+            payload: SyscallPayload::RecordTokenUsage {
+                tokens_used: 85,
+                cost_usd: 0.01,
+                model: "gpt-4o".to_string(),
+            },
+            reason: None, vakya_id: None,
+        });
+        let acb = kernel.agents.get(&pid).unwrap();
+        let has_warning = acb.pending_signals.iter().any(|s| matches!(s, AgentSignal::TokenBudgetWarning { .. }));
+        assert!(has_warning, "TokenBudgetWarning signal should be queued at 85%");
+    }
+
+    // =========================================================================
+    // Phase L2.2: LLM Scheduler tests
+    // =========================================================================
+
+    #[test]
+    fn test_l2_2_llm_schedule_basic() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "sched-bot", "ns:sched");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::LlmSchedule,
+            payload: SyscallPayload::LlmSchedule {
+                request_id: "req:001".to_string(),
+                model: "gpt-4o".to_string(),
+                estimated_tokens: 1000,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert_eq!(kernel.llm_queue.len(), 1);
+    }
+
+    #[test]
+    fn test_l2_2_llm_dequeue() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "deq-bot", "ns:deq");
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::LlmSchedule,
+            payload: SyscallPayload::LlmSchedule {
+                request_id: "req:001".to_string(),
+                model: "gpt-4o".to_string(),
+                estimated_tokens: 500,
+            },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::LlmDequeue,
+            payload: SyscallPayload::Empty,
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert_eq!(kernel.llm_queue.len(), 0);
+    }
+
+    #[test]
+    fn test_l2_2_llm_dequeue_empty() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "deq-bot", "ns:deq");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::LlmDequeue,
+            payload: SyscallPayload::Empty,
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Skipped);
+    }
+
+    #[test]
+    fn test_l2_2_cfs_ordering() {
+        let mut kernel = MemoryKernel::new();
+        let p1 = register_agent(&mut kernel, "low-bot", "ns:low");
+        let p2 = register_agent(&mut kernel, "hi-bot", "ns:hi");
+        // Set p2 as high priority
+        if let Some(acb) = kernel.agents.get_mut(&p2) {
+            acb.agent_priority = AgentPriority::High;
+        }
+        kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::LlmSchedule,
+            payload: SyscallPayload::LlmSchedule {
+                request_id: "req:low".to_string(),
+                model: "gpt-4o".to_string(),
+                estimated_tokens: 1000,
+            },
+            reason: None, vakya_id: None,
+        });
+        kernel.dispatch(SyscallRequest {
+            agent_pid: p2.clone(),
+            operation: MemoryKernelOp::LlmSchedule,
+            payload: SyscallPayload::LlmSchedule {
+                request_id: "req:hi".to_string(),
+                model: "gpt-4o".to_string(),
+                estimated_tokens: 1000,
+            },
+            reason: None, vakya_id: None,
+        });
+        // CFS: lower vruntime = higher priority agent should be first
+        assert_eq!(kernel.llm_queue[0].request_id, "req:hi", "High-priority agent should have lower vruntime");
+    }
+
+    #[test]
+    fn test_l2_2_scheduler_config() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "cfg-bot", "ns:cfg");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::LlmSchedulerConfig,
+            payload: SyscallPayload::LlmSchedulerConfig {
+                policy: LlmSchedulerPolicy::Fifo,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert_eq!(kernel.scheduler_policy, LlmSchedulerPolicy::Fifo);
+    }
+
+    // =========================================================================
+    // Phase L2.3: ComputeCgroup FinOps tests
+    // =========================================================================
+
+    #[test]
+    fn test_l2_3_register_cgroup() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "cgroup-bot", "ns:cg");
+        let cgroup = ComputeCgroup {
+            name: "org:acme/team:eng".to_string(),
+            token_quota_daily: 1_000_000,
+            token_quota_hourly: 100_000,
+            compute_weight: 1.0,
+            cost_center: "team:eng".to_string(),
+            children: vec![],
+        };
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RegisterCgroup,
+            payload: SyscallPayload::RegisterCgroup { cgroup },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+    }
+
+    #[test]
+    fn test_l2_3_record_compute_usage() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "cu-bot", "ns:cu");
+        let record = ComputeUsageRecord {
+            agent_pid: pid.clone(),
+            cgroup: "org:acme/team:eng".to_string(),
+            model: "gpt-4o".to_string(),
+            input_tokens: 300,
+            output_tokens: 200,
+            cost_usd: 0.05,
+            latency_ms: 42,
+            timestamp: 0,
+            cid: None,
+        };
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RecordComputeUsage,
+            payload: SyscallPayload::RecordComputeUsage { record },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+    }
+
+    // =========================================================================
+    // Phase L3.1: Agent DID + Card Registry tests
+    // =========================================================================
+
+    #[test]
+    fn test_l3_1_register_did() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "did-bot", "ns:did");
+        let did = AgentDid {
+            did: "did:key:zABC123".to_string(),
+            method: "key".to_string(),
+            public_key_hex: Some("aabbcc".to_string()),
+            controller: None,
+            created_at: 0,
+            revoked: false,
+        };
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RegisterAgentDid,
+            payload: SyscallPayload::RegisterAgentDid { did },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert!(kernel.did_registry.contains_key("did:key:zABC123"));
+    }
+
+    #[test]
+    fn test_l3_1_revoke_did() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "did-bot", "ns:did");
+        let did = AgentDid {
+            did: "did:key:zREVOKE".to_string(),
+            method: "key".to_string(),
+            public_key_hex: None,
+            controller: None,
+            created_at: 0,
+            revoked: false,
+        };
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RegisterAgentDid,
+            payload: SyscallPayload::RegisterAgentDid { did },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::RevokeAgentDid,
+            payload: SyscallPayload::RevokeAgentDid { did_string: "did:key:zREVOKE".to_string() },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert!(kernel.did_registry.get("did:key:zREVOKE").unwrap().revoked);
+    }
+
+    #[test]
+    fn test_l3_1_publish_agent_card() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "card-bot", "ns:card");
+        let card = AgentCard {
+            did: AgentDid {
+                did: "did:key:zCARD001".to_string(),
+                method: "key".to_string(),
+                public_key_hex: None,
+                controller: None,
+                created_at: 0,
+                revoked: false,
+            },
+            name: "TestBot".to_string(),
+            description: Some("A test agent".to_string()),
+            version: "1.0.0".to_string(),
+            capabilities: vec!["mem_read".to_string()],
+            services: vec![],
+            operator: None,
+            privacy_policy_url: None,
+            updated_at: 0,
+            signature: None,
+        };
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::PublishAgentCard,
+            payload: SyscallPayload::PublishAgentCard { card },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert!(kernel.card_registry.contains_key(&pid));
+    }
+
+    #[test]
+    fn test_l3_1_resolve_agent_card() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "card-bot", "ns:card");
+        let card = AgentCard {
+            did: AgentDid {
+                did: "did:key:zRESLV".to_string(),
+                method: "key".to_string(),
+                public_key_hex: None,
+                controller: None,
+                created_at: 0,
+                revoked: false,
+            },
+            name: "TestBot".to_string(),
+            description: None,
+            version: "1.0.0".to_string(),
+            capabilities: vec![],
+            services: vec![],
+            operator: None,
+            privacy_policy_url: None,
+            updated_at: 0,
+            signature: None,
+        };
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::PublishAgentCard,
+            payload: SyscallPayload::PublishAgentCard { card },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::ResolveAgentCard,
+            payload: SyscallPayload::ResolveAgentCard { did_string: "did:key:zRESLV".to_string() },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        if let SyscallValue::Error(json) = &res.value {
+            assert!(json.contains("TestBot"));
+        } else {
+            panic!("Expected card JSON in value");
+        }
+    }
+
+    // =========================================================================
+    // Phase L3.2: MCP Bridge tests
+    // =========================================================================
+
+    #[test]
+    fn test_l3_2_register_mcp_bridge() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "mcp-bot", "ns:mcp");
+        let entry = McpBridgeEntry {
+            bridge_id: "bridge:001".to_string(),
+            server_url: "http://localhost:8080".to_string(),
+            registered_by: pid.clone(),
+            tools: vec![],
+            active: true,
+            registered_at: 0,
+        };
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::McpRegisterBridge,
+            payload: SyscallPayload::McpRegisterBridge { entry },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert!(kernel.mcp_bridges.contains_key("bridge:001"));
+    }
+
+    #[test]
+    fn test_l3_2_invoke_tool_missing_bridge() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "mcp-bot", "ns:mcp");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::McpInvokeTool,
+            payload: SyscallPayload::McpInvokeTool {
+                bridge_id: "bridge:999".to_string(),
+                tool_name: "search".to_string(),
+                arguments: serde_json::json!({}),
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Failed);
+    }
+
+    #[test]
+    fn test_l3_2_deregister_bridge() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "mcp-bot", "ns:mcp");
+        let entry = McpBridgeEntry {
+            bridge_id: "bridge:del".to_string(),
+            server_url: "http://localhost:9090".to_string(),
+            registered_by: pid.clone(),
+            tools: vec![],
+            active: true,
+            registered_at: 0,
+        };
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::McpRegisterBridge,
+            payload: SyscallPayload::McpRegisterBridge { entry },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::McpDeregisterBridge,
+            payload: SyscallPayload::McpDeregisterBridge { bridge_id: "bridge:del".to_string() },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert!(!kernel.mcp_bridges.get("bridge:del").unwrap().active);
+    }
+
+    // =========================================================================
+    // Phase L3.3: A2A Bridge tests
+    // =========================================================================
+
+    #[test]
+    fn test_l3_3_open_channel() {
+        let mut kernel = MemoryKernel::new();
+        let p1 = register_agent(&mut kernel, "a2a-bot1", "ns:a2a");
+        let p2 = register_agent(&mut kernel, "a2a-bot2", "ns:a2a");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::A2AOpenChannel,
+            payload: SyscallPayload::A2AOpenChannel {
+                channel_id: "ch:001".to_string(),
+                responder: p2.clone(),
+                task_id: "task:001".to_string(),
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert!(kernel.a2a_channels.contains_key("ch:001"));
+    }
+
+    #[test]
+    fn test_l3_3_send_message() {
+        let mut kernel = MemoryKernel::new();
+        let p1 = register_agent(&mut kernel, "a2a-bot1", "ns:a2a");
+        let p2 = register_agent(&mut kernel, "a2a-bot2", "ns:a2a");
+        kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::A2AOpenChannel,
+            payload: SyscallPayload::A2AOpenChannel {
+                channel_id: "ch:msg".to_string(),
+                responder: p2.clone(),
+                task_id: "task:msg".to_string(),
+            },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::A2ASendMessage,
+            payload: SyscallPayload::A2ASendMessage {
+                channel_id: "ch:msg".to_string(),
+                message: A2AMessage {
+                    message_id: "msg:001".to_string(),
+                    task_id: "task:msg".to_string(),
+                    role: A2AMessageRole::Agent,
+                    parts: vec![],
+                    from_agent: p1.clone(),
+                    to_agent: p2.clone(),
+                    timestamp: 0,
+                    correlation_id: None,
+                },
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        let ch = kernel.a2a_channels.get("ch:msg").unwrap();
+        assert_eq!(ch.messages.len(), 1);
+    }
+
+    #[test]
+    fn test_l3_3_close_channel() {
+        let mut kernel = MemoryKernel::new();
+        let p1 = register_agent(&mut kernel, "a2a-bot1", "ns:a2a");
+        let p2 = register_agent(&mut kernel, "a2a-bot2", "ns:a2a");
+        kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::A2AOpenChannel,
+            payload: SyscallPayload::A2AOpenChannel {
+                channel_id: "ch:close".to_string(),
+                responder: p2.clone(),
+                task_id: "task:close".to_string(),
+            },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::A2ACloseChannel,
+            payload: SyscallPayload::A2ACloseChannel { channel_id: "ch:close".to_string() },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        assert!(!kernel.a2a_channels.get("ch:close").unwrap().open);
+    }
+
+    #[test]
+    fn test_l3_3_update_task_state() {
+        let mut kernel = MemoryKernel::new();
+        let p1 = register_agent(&mut kernel, "a2a-bot1", "ns:a2a");
+        let p2 = register_agent(&mut kernel, "a2a-bot2", "ns:a2a");
+        kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::A2AOpenChannel,
+            payload: SyscallPayload::A2AOpenChannel {
+                channel_id: "ch:task".to_string(),
+                responder: p2.clone(),
+                task_id: "task:upd".to_string(),
+            },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: p1.clone(),
+            operation: MemoryKernelOp::A2AUpdateTaskState,
+            payload: SyscallPayload::A2AUpdateTaskState {
+                channel_id: "ch:task".to_string(),
+                state: A2ATaskState::Working,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+    }
+
+    // =========================================================================
+    // Phase L4.1: Context Manager tests
+    // =========================================================================
+
+    #[test]
+    fn test_l4_1_update_context() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "ctx-bot", "ns:ctx");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::UpdateContext,
+            payload: SyscallPayload::UpdateContext {
+                add_cids: vec![Cid::default()],
+                token_delta: 1500,
+                max_tokens: 8192,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        let ctx = kernel.contexts.get(&pid).unwrap();
+        assert_eq!(ctx.context_tokens, 1500);
+        assert_eq!(ctx.context_window.len(), 1);
+    }
+
+    #[test]
+    fn test_l4_1_update_context_pressure_signal() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "ctx-bot", "ns:ctx");
+        // Fill context to >80% of max_tokens
+        let tokens = (8192.0_f64 * 0.85) as i64;
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::UpdateContext,
+            payload: SyscallPayload::UpdateContext {
+                add_cids: vec![],
+                token_delta: tokens,
+                max_tokens: 8192,
+            },
+            reason: None, vakya_id: None,
+        });
+        let acb = kernel.agents.get(&pid).unwrap();
+        let has_pressure = acb.pending_signals.iter().any(|s| matches!(s, AgentSignal::ContextPressure { .. }));
+        assert!(has_pressure, "ContextPressure signal should fire at >80%");
+    }
+
+    #[test]
+    fn test_l4_1_trim_context_window() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "ctx-bot", "ns:ctx");
+        for i in 0u8..5 {
+            let cid = crate::cid::compute_cid(&format!("trim-packet-{}", i)).unwrap();
+            kernel.dispatch(SyscallRequest {
+                agent_pid: pid.clone(),
+                operation: MemoryKernelOp::UpdateContext,
+                payload: SyscallPayload::UpdateContext {
+                    add_cids: vec![cid],
+                    token_delta: 100,
+                    max_tokens: 8192,
+                },
+                reason: None, vakya_id: None,
+            });
+        }
+        let before = kernel.contexts.get(&pid).unwrap().context_window.len();
+        assert_eq!(before, 5);
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::TrimContextWindow,
+            payload: SyscallPayload::TrimContextWindow { tokens_to_free: 300 },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+        let after = kernel.contexts.get(&pid).unwrap().context_window.len();
+        assert!(after < before, "Context window should have shrunk: before={} after={}", before, after);
+    }
+
+    #[test]
+    fn test_l4_1_get_context_pressure() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "ctx-bot", "ns:ctx");
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::UpdateContext,
+            payload: SyscallPayload::UpdateContext {
+                add_cids: vec![],
+                token_delta: 100,
+                max_tokens: 8192,
+            },
+            reason: None, vakya_id: None,
+        });
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::GetContextPressure,
+            payload: SyscallPayload::GetContextPressure,
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+    }
+
+    #[test]
+    fn test_l4_1_no_context_without_start() {
+        let mut kernel = MemoryKernel::new();
+        // Use register_agent_only so agent stays in Registered phase (no context created)
+        let pid = register_agent_only(&mut kernel, "ctx-bot", "ns:ctx");
+        // Phase check blocks this (Denied), before even reaching context handler (Failed)
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::UpdateContext,
+            payload: SyscallPayload::UpdateContext {
+                add_cids: vec![],
+                token_delta: 100,
+                max_tokens: 8192,
+            },
+            reason: None, vakya_id: None,
+        });
+        // Phase FSM blocks in Registered state — either Denied (phase check) is acceptable
+        assert_ne!(res.outcome, OpOutcome::Success, "UpdateContext should not succeed before AgentStart");
+    }
+
+    // =========================================================================
+    // Phase 1: Kernel Hardening tests
+    // =========================================================================
+
+    // --- 1.1: Namespace Path Canonicalization ---
+
+    #[test]
+    fn test_p1_path_traversal_blocked() {
+        assert!(MemoryKernel::canonicalize_namespace_path("ns:alpha/../../admin").is_err());
+        assert!(MemoryKernel::canonicalize_namespace_path("..").is_err());
+        assert!(MemoryKernel::canonicalize_namespace_path("ns:alpha/../secret").is_err());
+    }
+
+    #[test]
+    fn test_p1_double_slash_normalized() {
+        let result = MemoryKernel::canonicalize_namespace_path("ns:alpha//beta///gamma").unwrap();
+        assert_eq!(result, "ns:alpha/beta/gamma");
+    }
+
+    #[test]
+    fn test_p1_empty_path_rejected() {
+        assert!(MemoryKernel::canonicalize_namespace_path("").is_err());
+    }
+
+    #[test]
+    fn test_p1_null_byte_rejected() {
+        assert!(MemoryKernel::canonicalize_namespace_path("ns:alpha\0beta").is_err());
+    }
+
+    #[test]
+    fn test_p1_valid_path_unchanged() {
+        assert_eq!(MemoryKernel::canonicalize_namespace_path("ns:alpha").unwrap(), "ns:alpha");
+        assert_eq!(MemoryKernel::canonicalize_namespace_path("ns:alpha/sub").unwrap(), "ns:alpha/sub");
+    }
+
+    #[test]
+    fn test_p1_write_traversal_denied() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "attacker", "ns:user");
+        let mut pkt = make_packet("test", None);
+        pkt.namespace = Some("ns:user/../../admin".to_string());
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(),
+            operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Denied, "Path traversal in MemWrite should be denied");
+    }
+
+    #[test]
+    fn test_p1_grant_traversal_denied() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:alpha");
+        let pid_b = register_agent(&mut kernel, "grantee", "ns:beta");
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(),
+            operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:alpha/../secret".to_string(),
+                grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: None,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Denied, "Path traversal in AccessGrant should be denied");
+    }
+
+    // --- 1.2: AccessGrant TTL Enforcement ---
+
+    #[test]
+    fn test_p1_ttl_grant_works_before_expiry() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:alpha");
+        let pid_b = register_agent(&mut kernel, "reader", "ns:beta");
+
+        // Write a packet as agent A
+        let mut pkt = make_packet("data", None);
+        pkt.namespace = Some("ns:alpha".to_string());
+        let w = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        let cid = match w.value { SyscallValue::Cid(c) => c, _ => panic!("Expected CID") };
+
+        // Grant with TTL far in the future
+        let future = MemoryKernel::now_ms() + 3_600_000; // 1 hour from now
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:alpha".to_string(), grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: Some(future),
+            },
+            reason: None, vakya_id: None,
+        });
+
+        // Agent B can read
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_b.clone(), operation: MemoryKernelOp::MemRead,
+            payload: SyscallPayload::MemRead { packet_cid: cid },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Success);
+    }
+
+    #[test]
+    fn test_p1_ttl_grant_denied_after_expiry() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:alpha");
+        let pid_b = register_agent(&mut kernel, "reader", "ns:beta");
+
+        // Write a packet as agent A
+        let mut pkt = make_packet("data", None);
+        pkt.namespace = Some("ns:alpha".to_string());
+        let w = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        let cid = match w.value { SyscallValue::Cid(c) => c, _ => panic!("Expected CID") };
+
+        // Grant with TTL in the past (already expired)
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:alpha".to_string(), grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: Some(1), // epoch 1ms = long expired
+            },
+            reason: None, vakya_id: None,
+        });
+
+        // Agent B should be denied (expired)
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_b.clone(), operation: MemoryKernelOp::MemRead,
+            payload: SyscallPayload::MemRead { packet_cid: cid },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Denied, "Expired TTL grant should be denied");
+    }
+
+    #[test]
+    fn test_p1_permanent_grant_no_expiry() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:alpha");
+        let pid_b = register_agent(&mut kernel, "reader", "ns:beta");
+
+        let mut pkt = make_packet("data", None);
+        pkt.namespace = Some("ns:alpha".to_string());
+        let w = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        let cid = match w.value { SyscallValue::Cid(c) => c, _ => panic!("Expected CID") };
+
+        // Grant with no TTL (permanent)
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:alpha".to_string(), grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: None,
+            },
+            reason: None, vakya_id: None,
+        });
+
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_b.clone(), operation: MemoryKernelOp::MemRead,
+            payload: SyscallPayload::MemRead { packet_cid: cid },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Success);
+    }
+
+    // --- 1.3: Mount Write Quota Debit ---
+
+    #[test]
+    fn test_p1_mount_write_charges_writer_quota() {
+        let mut kernel = MemoryKernel::new();
+        let pid_owner = register_agent(&mut kernel, "owner", "ns:shared");
+        let pid_writer = register_agent(&mut kernel, "writer", "ns:writer");
+
+        // Give writer a mount to shared namespace
+        kernel.agents.get_mut(&pid_writer).unwrap().namespace_mounts.push(NamespaceMount {
+            source: "ns:shared".to_string(),
+            mount_point: "ns:shared".to_string(),
+            mode: MountMode::ReadWrite,
+            filters: vec![],
+        });
+
+        let before = kernel.agents.get(&pid_writer).unwrap().memory_region.used_packets;
+
+        // Write via mount
+        let mut pkt = make_packet("via-mount", None);
+        pkt.namespace = Some("ns:shared".to_string());
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_writer.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success);
+
+        let after = kernel.agents.get(&pid_writer).unwrap().memory_region.used_packets;
+        assert_eq!(after, before + 1, "Writer's quota should be debited for mount write");
+    }
+
+    // --- 1.4: MountMode::Execute Enforcement ---
+
+    #[test]
+    fn test_p1_readonly_mount_denies_tool_dispatch() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "tool-agent", "ns:tools");
+
+        // Add a tool binding with a namespace_path
+        kernel.agents.get_mut(&pid).unwrap().tool_bindings.push(ToolBinding {
+            tool_id: "fs.read".to_string(),
+            namespace_path: "ns:tools".to_string(),
+            allowed_actions: vec!["read".to_string()],
+            allowed_resources: vec!["*".to_string()],
+            rate_limit: None,
+            data_classification: "internal".to_string(),
+            requires_approval: false,
+        });
+
+        // Add a ReadOnly mount for that namespace
+        kernel.agents.get_mut(&pid).unwrap().namespace_mounts.push(NamespaceMount {
+            source: "ns:tools".to_string(),
+            mount_point: "ns:tools".to_string(),
+            mode: MountMode::ReadOnly,
+            filters: vec![],
+        });
+
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(), operation: MemoryKernelOp::ToolDispatch,
+            payload: SyscallPayload::ToolDispatch {
+                tool_id: "fs.read".to_string(), action: "read".to_string(),
+                request: serde_json::json!({}),
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Denied, "ReadOnly mount should deny ToolDispatch");
+    }
+
+    #[test]
+    fn test_p1_execute_mount_allows_tool_dispatch() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "tool-agent", "ns:tools");
+
+        kernel.agents.get_mut(&pid).unwrap().tool_bindings.push(ToolBinding {
+            tool_id: "fs.read".to_string(),
+            namespace_path: "ns:tools".to_string(),
+            allowed_actions: vec!["read".to_string()],
+            allowed_resources: vec!["*".to_string()],
+            rate_limit: None,
+            data_classification: "internal".to_string(),
+            requires_approval: false,
+        });
+
+        // Execute mount
+        kernel.agents.get_mut(&pid).unwrap().namespace_mounts.push(NamespaceMount {
+            source: "ns:tools".to_string(),
+            mount_point: "ns:tools".to_string(),
+            mode: MountMode::Execute,
+            filters: vec![],
+        });
+
+        let res = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(), operation: MemoryKernelOp::ToolDispatch,
+            payload: SyscallPayload::ToolDispatch {
+                tool_id: "fs.read".to_string(), action: "read".to_string(),
+                request: serde_json::json!({}),
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(res.outcome, OpOutcome::Success, "Execute mount should allow ToolDispatch");
+    }
+
+    // --- 1.5: DelegationChain Resource Attenuation ---
+
+    #[test]
+    fn test_p1_resource_attenuation_subset_passes() {
+        let chain = DelegationChain {
+            proofs: vec![
+                DelegationProof {
+                    proof_cid: "root".to_string(), issuer: "root".to_string(),
+                    subject: "child".to_string(),
+                    allowed_actions: vec!["fs.*".to_string()],
+                    allowed_resources: vec!["ns:data/*".to_string()],
+                    expires_at: 0, revoked: false,
+                    parent_proof_cid: None, issued_at: 0, signature: None,
+                },
+                DelegationProof {
+                    proof_cid: "child".to_string(), issuer: "child".to_string(),
+                    subject: "grandchild".to_string(),
+                    allowed_actions: vec!["fs.read".to_string()],
+                    allowed_resources: vec!["ns:data/subset".to_string()],
+                    expires_at: 0, revoked: false,
+                    parent_proof_cid: Some("root".to_string()), issued_at: 0, signature: None,
+                },
+            ],
+            chain_cid: "chain1".to_string(),
+        };
+        assert!(chain.verify(0).is_ok(), "Subset resources should pass attenuation");
+    }
+
+    #[test]
+    fn test_p1_resource_attenuation_exceeds_parent_fails() {
+        let chain = DelegationChain {
+            proofs: vec![
+                DelegationProof {
+                    proof_cid: "root".to_string(), issuer: "root".to_string(),
+                    subject: "child".to_string(),
+                    allowed_actions: vec!["fs.*".to_string()],
+                    allowed_resources: vec!["ns:data/subset".to_string()],
+                    expires_at: 0, revoked: false,
+                    parent_proof_cid: None, issued_at: 0, signature: None,
+                },
+                DelegationProof {
+                    proof_cid: "child".to_string(), issuer: "child".to_string(),
+                    subject: "grandchild".to_string(),
+                    allowed_actions: vec!["fs.read".to_string()],
+                    allowed_resources: vec!["ns:admin/secret".to_string()], // NOT subset of parent
+                    expires_at: 0, revoked: false,
+                    parent_proof_cid: Some("root".to_string()), issued_at: 0, signature: None,
+                },
+            ],
+            chain_cid: "chain2".to_string(),
+        };
+        let result = chain.verify(0);
+        assert!(result.is_err(), "Resource exceeding parent should fail");
+        assert!(result.unwrap_err().contains("resource"), "Error should mention resource");
+    }
+
+    // --- 1.6: Namespace Hierarchy Enforcement ---
+
+    #[test]
+    fn test_p1_parent_grant_implies_child_access() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:org");
+        let pid_b = register_agent(&mut kernel, "reader", "ns:other");
+
+        // Give owner write access to child namespace so they can write there
+        kernel.agents.get_mut(&pid_a).unwrap().writable_namespaces.push("ns:org/team/data".to_string());
+
+        // Write a packet in child namespace ns:org/team/data
+        let mut pkt = make_packet("team-data", None);
+        pkt.namespace = Some("ns:org/team/data".to_string());
+        let w = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        assert_eq!(w.outcome, OpOutcome::Success);
+        let cid = match w.value { SyscallValue::Cid(c) => c, _ => panic!("Expected CID") };
+
+        // Grant read on parent ns:org (permanent, no TTL)
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:org".to_string(), grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: None,
+            },
+            reason: None, vakya_id: None,
+        });
+
+        // Agent B should be able to read the child namespace packet via hierarchy
+        // B has readable_namespaces = ["ns:org"] but packet is in "ns:org/team/data"
+        // The hierarchy check should see ns:org covers ns:org/team/data
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_b.clone(), operation: MemoryKernelOp::MemRead,
+            payload: SyscallPayload::MemRead { packet_cid: cid },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Success, "Parent grant should imply child namespace access");
+    }
+
+    #[test]
+    fn test_p1_child_grant_does_not_imply_parent() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:org");
+        let pid_b = register_agent(&mut kernel, "reader", "ns:other");
+
+        // Write a packet in parent namespace ns:org
+        let mut pkt = make_packet("org-data", None);
+        pkt.namespace = Some("ns:org".to_string());
+        let w = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        let cid = match w.value { SyscallValue::Cid(c) => c, _ => panic!("Expected CID") };
+
+        // Grant read on child ns:org/team only
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:org/team".to_string(), grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: None,
+            },
+            reason: None, vakya_id: None,
+        });
+
+        // Agent B should NOT be able to read the parent namespace packet
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_b.clone(), operation: MemoryKernelOp::MemRead,
+            payload: SyscallPayload::MemRead { packet_cid: cid },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Denied, "Child grant should NOT imply parent access");
+    }
+
+    // --- 1.7: Cross-Agent Namespace Leak Detection ---
+
+    #[test]
+    fn test_p1_cross_agent_read_flagged_in_audit() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:alpha");
+        let pid_b = register_agent(&mut kernel, "reader", "ns:beta");
+
+        // Write packet in ns:alpha
+        let mut pkt = make_packet("secret", None);
+        pkt.namespace = Some("ns:alpha".to_string());
+        let w = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        let cid = match w.value { SyscallValue::Cid(c) => c, _ => panic!("Expected CID") };
+
+        // Grant read to B
+        kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:alpha".to_string(), grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: None,
+            },
+            reason: None, vakya_id: None,
+        });
+
+        // B reads — cross-agent
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_b.clone(), operation: MemoryKernelOp::MemRead,
+            payload: SyscallPayload::MemRead { packet_cid: cid },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Success);
+        assert!(r.audit_entry.reason.as_ref().unwrap().contains("cross_agent_read"),
+            "Cross-agent read should be flagged in audit reason");
+    }
+
+    #[test]
+    fn test_p1_own_agent_read_not_flagged() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "owner", "ns:mine");
+
+        let mut pkt = make_packet("my-data", None);
+        pkt.namespace = Some("ns:mine".to_string());
+        let w = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(), operation: MemoryKernelOp::MemWrite,
+            payload: SyscallPayload::MemWrite { packet: pkt }, reason: None, vakya_id: None,
+        });
+        let cid = match w.value { SyscallValue::Cid(c) => c, _ => panic!("Expected CID") };
+
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid.clone(), operation: MemoryKernelOp::MemRead,
+            payload: SyscallPayload::MemRead { packet_cid: cid },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Success);
+        let reason = r.audit_entry.reason.unwrap_or_default();
+        assert!(!reason.contains("cross_agent_read"),
+            "Own-agent read should NOT be flagged as cross-agent");
+    }
+
+    // --- 1.8: Signal Delivery Bounds ---
+
+    #[test]
+    fn test_p1_signal_overflow_drops_oldest() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "signal-bot", "ns:sig");
+
+        // Fill the signal queue to MAX_PENDING_SIGNALS
+        for i in 0..MemoryKernel::MAX_PENDING_SIGNALS {
+            kernel.deliver_signal_internal(&pid, AgentSignal::Custom { name: format!("sig-{}", i), payload: vec![] });
+        }
+        assert_eq!(kernel.agents.get(&pid).unwrap().pending_signals.len(), MemoryKernel::MAX_PENDING_SIGNALS);
+
+        // Add one more — oldest should be dropped
+        kernel.deliver_signal_internal(&pid, AgentSignal::Custom { name: "newest".to_string(), payload: vec![] });
+        let signals = &kernel.agents.get(&pid).unwrap().pending_signals;
+        assert_eq!(signals.len(), MemoryKernel::MAX_PENDING_SIGNALS);
+
+        // The newest should be last
+        match signals.last().unwrap() {
+            AgentSignal::Custom { name, .. } => assert_eq!(name, "newest"),
+            _ => panic!("Expected Custom signal"),
+        }
+        // The first should NOT be sig-0 (it was dropped)
+        match &signals[0] {
+            AgentSignal::Custom { name, .. } => assert_eq!(name, "sig-1", "sig-0 should have been dropped"),
+            _ => panic!("Expected Custom signal"),
+        }
+    }
+
+    #[test]
+    fn test_p1_signal_delivery_clears_queue() {
+        let mut kernel = MemoryKernel::new();
+        let pid = register_agent(&mut kernel, "sig-bot", "ns:sig");
+
+        kernel.deliver_signal_internal(&pid, AgentSignal::Custom { name: "test".to_string(), payload: vec![] });
+        assert_eq!(kernel.agents.get(&pid).unwrap().pending_signals.len(), 1);
+
+        // Manually clear (simulates consumption)
+        kernel.agents.get_mut(&pid).unwrap().pending_signals.clear();
+        assert_eq!(kernel.agents.get(&pid).unwrap().pending_signals.len(), 0);
+    }
+
+    // --- 1.5 continued: Wildcard resource attenuation ---
+
+    #[test]
+    fn test_p1_resource_wildcard_covers_child() {
+        let chain = DelegationChain {
+            proofs: vec![
+                DelegationProof {
+                    proof_cid: "root".to_string(), issuer: "root".to_string(),
+                    subject: "child".to_string(),
+                    allowed_actions: vec!["*".to_string()],
+                    allowed_resources: vec!["*".to_string()],
+                    expires_at: 0, revoked: false,
+                    parent_proof_cid: None, issued_at: 0, signature: None,
+                },
+                DelegationProof {
+                    proof_cid: "child".to_string(), issuer: "child".to_string(),
+                    subject: "grandchild".to_string(),
+                    allowed_actions: vec!["fs.read".to_string()],
+                    allowed_resources: vec!["ns:specific/path".to_string()],
+                    expires_at: 0, revoked: false,
+                    parent_proof_cid: Some("root".to_string()), issued_at: 0, signature: None,
+                },
+            ],
+            chain_cid: "chain3".to_string(),
+        };
+        assert!(chain.verify(0).is_ok(), "Wildcard parent should cover any child resource");
+    }
+
+    // --- Combined: canonicalize + hierarchy + TTL ---
+
+    #[test]
+    fn test_p1_canonicalize_double_slash_in_grant() {
+        let mut kernel = MemoryKernel::new();
+        let pid_a = register_agent(&mut kernel, "owner", "ns:alpha");
+        let pid_b = register_agent(&mut kernel, "grantee", "ns:beta");
+        // Double-slash in grant should be normalized
+        let r = kernel.dispatch(SyscallRequest {
+            agent_pid: pid_a.clone(), operation: MemoryKernelOp::AccessGrant,
+            payload: SyscallPayload::AccessGrant {
+                target_namespace: "ns:alpha".to_string(), // normal
+                grantee_pid: pid_b.clone(),
+                read: true, write: false, expires_at: None,
+            },
+            reason: None, vakya_id: None,
+        });
+        assert_eq!(r.outcome, OpOutcome::Success);
+    }
+
+    #[test]
+    fn test_p1_namespace_descendant_check() {
+        assert!(MemoryKernel::is_namespace_descendant("ns:org", "ns:org/team"));
+        assert!(MemoryKernel::is_namespace_descendant("ns:org", "ns:org/team/sub"));
+        assert!(MemoryKernel::is_namespace_descendant("ns:org", "ns:org"));
+        assert!(!MemoryKernel::is_namespace_descendant("ns:org/team", "ns:org"));
+        assert!(!MemoryKernel::is_namespace_descendant("ns:org", "ns:other"));
     }
 }

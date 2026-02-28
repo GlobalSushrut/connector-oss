@@ -3,8 +3,10 @@
 //! Runs as a `tokio::spawn` task, subscribes to the cluster replication topic,
 //! and applies incoming events to the local store.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
+use ed25519_dalek::VerifyingKey;
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
 
@@ -14,6 +16,41 @@ use vac_core::types::KernelAuditEntry;
 
 use crate::cell::Cell;
 use crate::error::ClusterError;
+
+/// Registry of known peer public keys for signature verification.
+///
+/// Maps cell_id → Ed25519 VerifyingKey. Only events from registered peers
+/// with valid signatures are accepted.
+#[derive(Clone, Default)]
+pub struct PeerRegistry {
+    peers: HashMap<String, VerifyingKey>,
+}
+
+impl PeerRegistry {
+    pub fn new() -> Self {
+        Self { peers: HashMap::new() }
+    }
+
+    /// Register a peer's public key.
+    pub fn register(&mut self, cell_id: impl Into<String>, key: VerifyingKey) {
+        self.peers.insert(cell_id.into(), key);
+    }
+
+    /// Look up a peer's public key.
+    pub fn get(&self, cell_id: &str) -> Option<&VerifyingKey> {
+        self.peers.get(cell_id)
+    }
+
+    /// Number of registered peers.
+    pub fn len(&self) -> usize {
+        self.peers.len()
+    }
+
+    /// Whether the registry is empty.
+    pub fn is_empty(&self) -> bool {
+        self.peers.is_empty()
+    }
+}
 
 /// Statistics for the replication receiver.
 #[derive(Debug, Default, Clone)]
@@ -28,7 +65,7 @@ pub struct ReceiverStats {
     pub events_rejected: u64,
 }
 
-/// Start the replication receiver loop.
+/// Start the replication receiver loop (no signature verification).
 ///
 /// This subscribes to the given topic on the bus and applies incoming
 /// replication events to the local store. Events from this cell are skipped.
@@ -39,6 +76,43 @@ pub async fn start_replication_loop<S, B>(
     bus: Arc<B>,
     cell: Arc<Cell>,
     topic: &str,
+) -> Result<(tokio::task::JoinHandle<()>, Arc<Mutex<ReceiverStats>>), ClusterError>
+where
+    S: KernelStore + Send + 'static,
+    B: EventBus,
+{
+    start_replication_loop_inner(local_store, bus, cell, topic, None).await
+}
+
+/// Start the replication receiver loop **with** Ed25519 signature verification.
+///
+/// Every event from a remote cell must:
+/// 1. Have a non-empty signature
+/// 2. Come from a cell registered in the `PeerRegistry`
+/// 3. Pass Ed25519 verification against that cell's public key
+///
+/// Events that fail any check are rejected and counted in `events_rejected`.
+pub async fn start_verified_replication_loop<S, B>(
+    local_store: Arc<Mutex<S>>,
+    bus: Arc<B>,
+    cell: Arc<Cell>,
+    topic: &str,
+    peers: PeerRegistry,
+) -> Result<(tokio::task::JoinHandle<()>, Arc<Mutex<ReceiverStats>>), ClusterError>
+where
+    S: KernelStore + Send + 'static,
+    B: EventBus,
+{
+    start_replication_loop_inner(local_store, bus, cell, topic, Some(peers)).await
+}
+
+/// Inner implementation shared by both verified and unverified loops.
+async fn start_replication_loop_inner<S, B>(
+    local_store: Arc<Mutex<S>>,
+    bus: Arc<B>,
+    cell: Arc<Cell>,
+    topic: &str,
+    peers: Option<PeerRegistry>,
 ) -> Result<(tokio::task::JoinHandle<()>, Arc<Mutex<ReceiverStats>>), ClusterError>
 where
     S: KernelStore + Send + 'static,
@@ -61,6 +135,44 @@ where
             if event.cell_id == cell_id {
                 stats.events_skipped_self += 1;
                 continue;
+            }
+
+            // === Signature verification (if PeerRegistry provided) ===
+            if let Some(ref registry) = peers {
+                // 1. Must be signed
+                if !event.is_signed() {
+                    stats.events_rejected += 1;
+                    warn!(
+                        from_cell = %event.cell_id,
+                        seq = event.seq,
+                        "Rejected unsigned event"
+                    );
+                    continue;
+                }
+                // 2. Must be from a known peer
+                let peer_key = match registry.get(&event.cell_id) {
+                    Some(k) => k,
+                    None => {
+                        stats.events_rejected += 1;
+                        warn!(
+                            from_cell = %event.cell_id,
+                            seq = event.seq,
+                            "Rejected event from unknown peer"
+                        );
+                        continue;
+                    }
+                };
+                // 3. Signature must be valid
+                if let Err(reason) = event.verify(peer_key) {
+                    stats.events_rejected += 1;
+                    warn!(
+                        from_cell = %event.cell_id,
+                        seq = event.seq,
+                        reason = %reason,
+                        "Rejected event with invalid signature"
+                    );
+                    continue;
+                }
             }
 
             debug!(
@@ -196,6 +308,11 @@ fn apply_op<S: KernelStore>(store: &mut S, op: &ReplicationOp) -> Result<(), Clu
         | ReplicationOp::ApprovalRequest { .. }
         | ReplicationOp::ApprovalResponse { .. } => {
             debug!(op = %op.op_type(), "AAPI op — handled by ClusterGateway");
+            Ok(())
+        }
+
+        ReplicationOp::SignalDeliver { .. } => {
+            debug!(op = %op.op_type(), "Signal delivery — handled by kernel signal dispatch");
             Ok(())
         }
     }

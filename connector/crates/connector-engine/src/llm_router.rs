@@ -286,6 +286,16 @@ impl LlmRouter {
             .block_on(self.complete(input, system))
     }
 
+    /// Synchronous chat with full message history (blocks current thread).
+    ///
+    /// Use this for multi-turn conversations where you need to pass
+    /// system + history + user messages as a Vec<ChatMessage>.
+    pub fn chat_sync(&self, messages: Vec<ChatMessage>) -> Result<LlmResponse, LlmError> {
+        tokio::runtime::Runtime::new()
+            .map_err(|e| LlmError { message: e.to_string(), status: None, provider: "router".to_string() })?
+            .block_on(self.chat(messages))
+    }
+
     /// Get cost summary for all providers.
     pub fn cost_summary(&self) -> HashMap<String, ProviderCost> {
         self.costs.lock().unwrap().clone()

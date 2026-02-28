@@ -13,7 +13,7 @@
 use vac_core::kernel::MemoryKernel;
 use vac_core::types::*;
 use vac_core::knot::{KnotEngine, KnotQuery, FusedResult};
-use vac_core::interference::{self, StateVector, InterferenceEdge, StateDelta};
+use vac_core::interference::{self, StateVector, InterferenceEdge};
 use crate::grounding::GroundingTable;
 use crate::rag::{RagEngine, RetrievalContext};
 use serde::{Deserialize, Serialize};

@@ -126,11 +126,11 @@ impl BehaviorAnalyzer {
 
     fn now_ms() -> i64 { chrono::Utc::now().timestamp_millis() }
 
-    fn profile(&mut self, agent_pid: &str) -> &mut AgentProfile {
+    fn _profile(&mut self, agent_pid: &str) -> &mut AgentProfile {
         self.profiles.entry(agent_pid.to_string()).or_default()
     }
 
-    fn alert(&mut self, level: AlertLevel, category: &str, agent_pid: &str, message: &str,
+    fn _alert(&mut self, level: AlertLevel, category: &str, agent_pid: &str, message: &str,
              metric_name: &str, metric_value: f64, threshold: f64) {
         self.alerts.push(BehaviorAlert {
             level,
@@ -147,7 +147,7 @@ impl BehaviorAnalyzer {
     // ── Record events ────────────────────────────────────────
 
     /// Record an action by an agent. Returns any alerts triggered.
-    pub fn record_action(&mut self, agent_pid: &str, action: &str, data_bytes: u64) -> Vec<BehaviorAlert> {
+    pub fn record_action(&mut self, agent_pid: &str, _action: &str, data_bytes: u64) -> Vec<BehaviorAlert> {
         let now = Self::now_ms();
         let window_start = now - self.config.window_ms;
         let mut new_alerts = Vec::new();

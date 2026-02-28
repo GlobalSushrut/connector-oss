@@ -357,6 +357,43 @@ impl ActionEngine {
         self.capabilities.len()
     }
 
+    // ── Tool Registration ──
+
+    /// Register a tool definition so it appears in agent capabilities.
+    /// This makes shorthand `tools: {name: "desc"}` actually register
+    /// the tool in the engine, not just parse config.
+    pub fn register_tool(&mut self, name: &str, description: &str) {
+        // Issue a capability for "system" to use this tool
+        self.issue_capability(
+            "system",
+            "system",
+            vec![format!("tool.{}", name), format!("tool.{}.execute", name)],
+            vec![format!("tool://{}", name)],
+            8760, // 1 year TTL
+        );
+        // Record the registration as an action for audit trail
+        self.record_action(
+            &format!("Register tool: {}", name),
+            "tool.register",
+            &format!("tool://{}", name),
+            "system",
+            "registered",
+            vec![],
+            Some(1.0),
+            vec![],
+        );
+        // Store description in an interaction log entry
+        self.log_interaction(
+            "system",
+            "tool_registration",
+            &format!("tool://{}", name),
+            &format!("register:{}", description),
+            "success",
+            0,
+            None, None,
+        );
+    }
+
     // ── Action Records (audit trail) ──
 
     pub fn record_action(

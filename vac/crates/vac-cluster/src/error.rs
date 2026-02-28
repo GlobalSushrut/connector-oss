@@ -21,6 +21,15 @@ pub enum ClusterError {
 
     #[error("CID mismatch: expected {expected}, got {actual}")]
     CidMismatch { expected: String, actual: String },
+
+    #[error("signature missing: event from {cell_id} is unsigned")]
+    SignatureMissing { cell_id: String },
+
+    #[error("signature invalid: event from {cell_id}: {reason}")]
+    SignatureInvalid { cell_id: String, reason: String },
+
+    #[error("unknown peer: no public key registered for cell {cell_id}")]
+    UnknownPeer { cell_id: String },
 }
 
 pub type ClusterResult<T> = Result<T, ClusterError>;

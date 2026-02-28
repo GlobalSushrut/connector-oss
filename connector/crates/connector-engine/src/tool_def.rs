@@ -10,6 +10,14 @@
 //! - **Layer 2**: Add `.data_class("phi").require_approval().allowed_roles(&["doctor"])` for enterprise
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::collections::HashMap;
+
+// ─── ToolHandler ─────────────────────────────────────────────────
+
+/// Tool handler — the actual function that runs when a tool is called.
+/// Takes JSON params, returns JSON result or error string.
+pub type ToolHandler = Arc<dyn Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync>;
 
 // ─── ParamType ───────────────────────────────────────────────────
 
@@ -221,6 +229,17 @@ impl Tool {
                 "description": self.description,
                 "parameters": self.params_to_json_schema(),
             }
+        })
+    }
+
+    // ─── Export: Anthropic Tool Definition ────────────────────────
+
+    /// Export as Anthropic Claude tool definition.
+    pub fn to_anthropic_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "name": self.name,
+            "description": self.description,
+            "input_schema": self.params_to_json_schema(),
         })
     }
 
@@ -483,6 +502,149 @@ impl std::fmt::Display for ToolResult {
             ToolResult::Error(e) => write!(f, "💥 Error: {}", e),
             ToolResult::PendingApproval(r) => write!(f, "⏳ Pending: {}", r),
         }
+    }
+}
+
+// ─── ExecutableTool ──────────────────────────────────────────────
+
+/// A tool paired with its executable handler.
+/// `Tool` is serializable (for schemas/config). `ExecutableTool` adds the runtime handler.
+pub struct ExecutableTool {
+    pub tool: Tool,
+    pub handler: Option<ToolHandler>,
+}
+
+impl ExecutableTool {
+    /// Create an executable tool from a Tool definition (no handler).
+    pub fn from_def(tool: Tool) -> Self {
+        Self { tool, handler: None }
+    }
+
+    /// Create an executable tool with a handler.
+    pub fn with_handler<F>(tool: Tool, handler: F) -> Self
+    where
+        F: Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync + 'static,
+    {
+        Self { tool, handler: Some(Arc::new(handler)) }
+    }
+
+    /// Execute the tool handler with the given params.
+    /// Returns Err if no handler is registered.
+    pub fn execute(&self, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        match &self.handler {
+            Some(h) => h(params),
+            None => Err(format!("No handler registered for tool '{}'", self.tool.name)),
+        }
+    }
+
+    /// Check if this tool has an executable handler.
+    pub fn has_handler(&self) -> bool {
+        self.handler.is_some()
+    }
+}
+
+impl std::fmt::Debug for ExecutableTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExecutableTool")
+            .field("tool", &self.tool)
+            .field("has_handler", &self.handler.is_some())
+            .finish()
+    }
+}
+
+// ─── ToolRegistry ────────────────────────────────────────────────
+
+/// Shared tool registry — register tools once, use across all agents.
+///
+/// Supports three tiers:
+/// - **Metadata-only**: Tool definition with schema but no handler
+/// - **Executable**: Tool with a handler closure that runs on tool_call
+/// - **MCP**: Tool definitions loaded from an MCP server (stub)
+pub struct ToolRegistry {
+    tools: HashMap<String, ExecutableTool>,
+}
+
+impl ToolRegistry {
+    /// Create a new empty registry.
+    pub fn new() -> Self {
+        Self { tools: HashMap::new() }
+    }
+
+    /// Register a tool definition (no handler).
+    pub fn register(&mut self, tool: Tool) {
+        let name = tool.name.clone();
+        self.tools.insert(name, ExecutableTool::from_def(tool));
+    }
+
+    /// Register a tool with an executable handler.
+    pub fn register_with_handler<F>(&mut self, tool: Tool, handler: F)
+    where
+        F: Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync + 'static,
+    {
+        let name = tool.name.clone();
+        self.tools.insert(name, ExecutableTool::with_handler(tool, handler));
+    }
+
+    /// Look up a tool by name.
+    pub fn get(&self, name: &str) -> Option<&ExecutableTool> {
+        self.tools.get(name)
+    }
+
+    /// Execute a tool by name with given params.
+    pub fn execute(&self, name: &str, params: serde_json::Value) -> Result<serde_json::Value, String> {
+        match self.tools.get(name) {
+            Some(t) => t.execute(params),
+            None => Err(format!("Tool '{}' not found in registry", name)),
+        }
+    }
+
+    /// List all registered tool names.
+    pub fn tool_names(&self) -> Vec<&str> {
+        self.tools.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// Get all tool definitions (for schema export).
+    pub fn tool_defs(&self) -> Vec<&Tool> {
+        self.tools.values().map(|et| &et.tool).collect()
+    }
+
+    /// Export all tools as OpenAI function calling schemas.
+    pub fn to_openai_schemas(&self) -> Vec<serde_json::Value> {
+        self.tools.values().map(|et| et.tool.to_openai_schema()).collect()
+    }
+
+    /// Export all tools as Anthropic tool definitions.
+    pub fn to_anthropic_schemas(&self) -> Vec<serde_json::Value> {
+        self.tools.values().map(|et| et.tool.to_anthropic_schema()).collect()
+    }
+
+    /// Export all tools as MCP tool definitions.
+    pub fn to_mcp_tools(&self) -> Vec<serde_json::Value> {
+        self.tools.values().map(|et| et.tool.to_mcp_tool()).collect()
+    }
+
+    /// Number of registered tools.
+    pub fn len(&self) -> usize {
+        self.tools.len()
+    }
+
+    /// Whether the registry is empty.
+    pub fn is_empty(&self) -> bool {
+        self.tools.is_empty()
+    }
+
+    /// Check if a tool has an executable handler.
+    pub fn has_handler(&self, name: &str) -> bool {
+        self.tools.get(name).map(|t| t.has_handler()).unwrap_or(false)
+    }
+}
+
+impl std::fmt::Debug for ToolRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ToolRegistry")
+            .field("count", &self.tools.len())
+            .field("tools", &self.tool_names())
+            .finish()
     }
 }
 
@@ -762,5 +924,136 @@ mod tests {
         assert!(display.contains("pharmacy.prescribe"));
         assert!(display.contains("phi"));
         assert!(display.contains("approval"));
+    }
+
+    // ─── New tests: ExecutableTool, ToolRegistry, Anthropic schema ──
+
+    #[test]
+    fn test_anthropic_schema_export() {
+        let tool = Tool::new("search", "Search the web")
+            .param("query", ParamType::String, "Search query")
+            .build();
+
+        let schema = tool.to_anthropic_schema();
+        assert_eq!(schema["name"], "search");
+        assert_eq!(schema["description"], "Search the web");
+        assert_eq!(schema["input_schema"]["type"], "object");
+        assert_eq!(schema["input_schema"]["properties"]["query"]["type"], "string");
+    }
+
+    #[test]
+    fn test_executable_tool_no_handler() {
+        let tool = Tool::new("search", "Search").build();
+        let exec = ExecutableTool::from_def(tool);
+        assert!(!exec.has_handler());
+        assert!(exec.execute(serde_json::json!({})).is_err());
+    }
+
+    #[test]
+    fn test_executable_tool_with_handler() {
+        let tool = Tool::new("add", "Add two numbers")
+            .param("a", ParamType::Integer, "First number")
+            .param("b", ParamType::Integer, "Second number")
+            .build();
+
+        let exec = ExecutableTool::with_handler(tool, |params| {
+            let a = params["a"].as_i64().unwrap_or(0);
+            let b = params["b"].as_i64().unwrap_or(0);
+            Ok(serde_json::json!({"result": a + b}))
+        });
+
+        assert!(exec.has_handler());
+        let result = exec.execute(serde_json::json!({"a": 3, "b": 4})).unwrap();
+        assert_eq!(result["result"], 7);
+    }
+
+    #[test]
+    fn test_executable_tool_handler_error() {
+        let tool = Tool::new("fail", "Always fails").build();
+        let exec = ExecutableTool::with_handler(tool, |_| {
+            Err("Something went wrong".to_string())
+        });
+
+        let result = exec.execute(serde_json::json!({}));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Something went wrong"));
+    }
+
+    #[test]
+    fn test_tool_registry_register_and_lookup() {
+        let mut reg = ToolRegistry::new();
+        assert!(reg.is_empty());
+
+        reg.register(Tool::new("search", "Search the web").build());
+        reg.register(Tool::new("calc", "Calculate").build());
+
+        assert_eq!(reg.len(), 2);
+        assert!(!reg.is_empty());
+        assert!(reg.get("search").is_some());
+        assert!(reg.get("calc").is_some());
+        assert!(reg.get("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_tool_registry_execute() {
+        let mut reg = ToolRegistry::new();
+
+        let tool = Tool::new("double", "Double a number")
+            .param("n", ParamType::Integer, "Number")
+            .build();
+
+        reg.register_with_handler(tool, |params| {
+            let n = params["n"].as_i64().unwrap_or(0);
+            Ok(serde_json::json!({"result": n * 2}))
+        });
+
+        assert!(reg.has_handler("double"));
+        let result = reg.execute("double", serde_json::json!({"n": 5})).unwrap();
+        assert_eq!(result["result"], 10);
+
+        // Non-existent tool
+        assert!(reg.execute("nope", serde_json::json!({})).is_err());
+    }
+
+    #[test]
+    fn test_tool_registry_schema_export() {
+        let mut reg = ToolRegistry::new();
+        reg.register(Tool::new("search", "Search the web")
+            .param("query", ParamType::String, "Query")
+            .build());
+        reg.register(Tool::new("calc", "Calculate")
+            .param("expr", ParamType::String, "Expression")
+            .build());
+
+        let openai = reg.to_openai_schemas();
+        assert_eq!(openai.len(), 2);
+        assert!(openai.iter().any(|s| s["function"]["name"] == "search"));
+
+        let anthropic = reg.to_anthropic_schemas();
+        assert_eq!(anthropic.len(), 2);
+        assert!(anthropic.iter().any(|s| s["name"] == "calc"));
+
+        let mcp = reg.to_mcp_tools();
+        assert_eq!(mcp.len(), 2);
+    }
+
+    #[test]
+    fn test_tool_registry_metadata_only() {
+        let mut reg = ToolRegistry::new();
+        reg.register(Tool::new("search", "Search").build());
+
+        // Metadata-only tool has no handler
+        assert!(!reg.has_handler("search"));
+        assert!(reg.execute("search", serde_json::json!({})).is_err());
+    }
+
+    #[test]
+    fn test_tool_registry_debug() {
+        let mut reg = ToolRegistry::new();
+        reg.register(Tool::new("a", "A").build());
+        reg.register(Tool::new("b", "B").build());
+        let debug = format!("{:?}", reg);
+        assert!(debug.contains("ToolRegistry"));
+        assert!(debug.contains("count: 2"));
     }
 }

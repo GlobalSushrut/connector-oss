@@ -118,6 +118,8 @@ struct Connector {
     knot: Arc<Mutex<KnotEngine>>,
     binding: Arc<Mutex<BindingEngine>>,
     aapi: Arc<Mutex<ActionEngine>>,
+    engine_store: Arc<Mutex<Box<dyn connector_engine::engine_store::EngineStore + Send>>>,
+    storage_layout: connector_engine::storage_zone::StorageLayout,
 }
 
 impl Connector {
@@ -146,13 +148,21 @@ impl Connector {
         } else {
             builder
         };
+        Self::_build(builder.build())
+    }
+
+    fn _build(inner: connector_api::Connector) -> Self {
+        let es: Box<dyn connector_engine::engine_store::EngineStore + Send> =
+            Box::new(connector_engine::engine_store::InMemoryEngineStore::new());
         Self {
-            inner: builder.build(),
+            inner,
             kernel: Arc::new(Mutex::new(MemoryKernel::new())),
             grounding: Arc::new(Mutex::new(None)),
             knot: Arc::new(Mutex::new(KnotEngine::new())),
             binding: Arc::new(Mutex::new(BindingEngine::new())),
             aapi: Arc::new(Mutex::new(ActionEngine::new())),
+            engine_store: Arc::new(Mutex::new(es)),
+            storage_layout: connector_engine::storage_zone::StorageLayout::default_for_cell("cell_local"),
         }
     }
 }
@@ -167,38 +177,17 @@ impl Connector {
         } else {
             connector_api::Connector::new().llm(provider, model, api_key)
         };
-        Self {
-            inner: builder.build(),
-            kernel: Arc::new(Mutex::new(MemoryKernel::new())),
-            grounding: Arc::new(Mutex::new(None)),
-            knot: Arc::new(Mutex::new(KnotEngine::new())),
-            binding: Arc::new(Mutex::new(BindingEngine::new())),
-            aapi: Arc::new(Mutex::new(ActionEngine::new())),
-        }
+        Self::_build(builder.build())
     }
 
     #[staticmethod]
     fn from_env() -> Self {
-        Self {
-            inner: connector_api::Connector::new().llm_from_env().build(),
-            kernel: Arc::new(Mutex::new(MemoryKernel::new())),
-            grounding: Arc::new(Mutex::new(None)),
-            knot: Arc::new(Mutex::new(KnotEngine::new())),
-            binding: Arc::new(Mutex::new(BindingEngine::new())),
-            aapi: Arc::new(Mutex::new(ActionEngine::new())),
-        }
+        Self::_build(connector_api::Connector::new().llm_from_env().build())
     }
 
     #[staticmethod]
     fn custom(endpoint: &str, model: &str, token: &str) -> Self {
-        Self {
-            inner: connector_api::Connector::new().llm_custom(endpoint, model, token).build(),
-            kernel: Arc::new(Mutex::new(MemoryKernel::new())),
-            grounding: Arc::new(Mutex::new(None)),
-            knot: Arc::new(Mutex::new(KnotEngine::new())),
-            binding: Arc::new(Mutex::new(BindingEngine::new())),
-            aapi: Arc::new(Mutex::new(ActionEngine::new())),
-        }
+        Self::_build(connector_api::Connector::new().llm_custom(endpoint, model, token).build())
     }
 
     /// Load a Connector from a connector.yaml file path.
@@ -323,6 +312,7 @@ impl Connector {
                 grantee_pid: grantee_pid.to_string(),
                 read: true,
                 write: false,
+                expires_at: None,
             },
             reason: Some("explicit access grant".to_string()),
             vakya_id: None,
@@ -1490,6 +1480,101 @@ impl Connector {
         ops.export_json(audit_tail_limit)
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // Custom Folders — Dynamic Namespaced Storage (like mkdir)
+    // ═══════════════════════════════════════════════════════════
+
+    /// Create a storage folder for an agent. Like `mkdir /agent:{pid}/{name}`.
+    fn create_agent_folder(&self, agent_pid: &str, folder_name: &str, description: &str) -> PyResult<()> {
+        let namespace = format!("agent:{}/{}", agent_pid, folder_name);
+        let owner = connector_engine::engine_store::FolderOwner::Agent(agent_pid.to_string());
+        let mut es = self.engine_store.lock().unwrap();
+        es.create_folder(&namespace, &owner, description)
+            .map_err(|e| PyRuntimeError::new_err(e.message))
+    }
+
+    /// Create a storage folder for a tool. Like `mkdir /tool:{name}/{folder}`.
+    fn create_tool_folder(&self, tool_name: &str, folder_name: &str, description: &str) -> PyResult<()> {
+        let namespace = format!("tool:{}/{}", tool_name, folder_name);
+        let owner = connector_engine::engine_store::FolderOwner::Tool(tool_name.to_string());
+        let mut es = self.engine_store.lock().unwrap();
+        es.create_folder(&namespace, &owner, description)
+            .map_err(|e| PyRuntimeError::new_err(e.message))
+    }
+
+    /// Write a key-value pair to a folder. Auto-creates folder if needed.
+    fn folder_put(&self, namespace: &str, key: &str, value: &str) -> PyResult<()> {
+        let v: serde_json::Value = serde_json::from_str(value)
+            .unwrap_or_else(|_| serde_json::Value::String(value.to_string()));
+        let mut es = self.engine_store.lock().unwrap();
+        es.folder_put(namespace, key, &v)
+            .map_err(|e| PyRuntimeError::new_err(e.message))
+    }
+
+    /// Read a value from a folder by key. Returns JSON string or None.
+    fn folder_get(&self, namespace: &str, key: &str) -> PyResult<Option<String>> {
+        let es = self.engine_store.lock().unwrap();
+        es.folder_get(namespace, key)
+            .map(|opt| opt.map(|v| serde_json::to_string(&v).unwrap_or_default()))
+            .map_err(|e| PyRuntimeError::new_err(e.message))
+    }
+
+    /// Delete a key from a folder.
+    fn folder_delete(&self, namespace: &str, key: &str) -> PyResult<()> {
+        let mut es = self.engine_store.lock().unwrap();
+        es.folder_delete(namespace, key)
+            .map_err(|e| PyRuntimeError::new_err(e.message))
+    }
+
+    /// List all keys in a folder. Optional prefix filter.
+    #[pyo3(signature = (namespace, prefix=None))]
+    fn folder_keys(&self, namespace: &str, prefix: Option<&str>) -> PyResult<Vec<String>> {
+        let es = self.engine_store.lock().unwrap();
+        es.folder_keys(namespace, prefix)
+            .map_err(|e| PyRuntimeError::new_err(e.message))
+    }
+
+    /// Delete an entire folder and all its data.
+    fn delete_folder(&self, namespace: &str) -> PyResult<()> {
+        let mut es = self.engine_store.lock().unwrap();
+        es.delete_folder(namespace)
+            .map_err(|e| PyRuntimeError::new_err(e.message))
+    }
+
+    /// List all folders. Returns list of dicts with namespace, owner, description, entry_count.
+    fn list_folders(&self, py: Python<'_>) -> PyResult<Vec<std::collections::HashMap<String, PyObject>>> {
+        let es = self.engine_store.lock().unwrap();
+        let folders = es.list_folders(None)
+            .map_err(|e| PyRuntimeError::new_err(e.message))?;
+        Ok(folders.iter().map(|f| {
+            let mut m = std::collections::HashMap::new();
+            m.insert("namespace".into(), f.namespace.clone().into_py(py));
+            m.insert("owner".into(), format!("{:?}", f.owner).into_py(py));
+            m.insert("description".into(), f.description.clone().into_py(py));
+            m.insert("entry_count".into(), f.entry_count.into_py(py));
+            m.insert("created_at".into(), f.created_at.into_py(py));
+            m
+        }).collect())
+    }
+
+    /// Engine store statistics: folder count, tool count, policy count.
+    fn engine_stats(&self, py: Python<'_>) -> std::collections::HashMap<String, PyObject> {
+        let es = self.engine_store.lock().unwrap();
+        let folder_count = es.list_folders(None).map(|f| f.len()).unwrap_or(0);
+        let tool_count = es.load_tool_defs().map(|t| t.len()).unwrap_or(0);
+        let policy_count = es.load_policies().map(|p| p.len()).unwrap_or(0);
+        let mut m = std::collections::HashMap::new();
+        m.insert("folders".into(), folder_count.into_py(py));
+        m.insert("tools".into(), tool_count.into_py(py));
+        m.insert("policies".into(), policy_count.into_py(py));
+        m
+    }
+
+    /// Print the storage zone layout as a tree string.
+    fn storage_tree(&self) -> String {
+        self.storage_layout.to_tree()
+    }
+
     fn __repr__(&self) -> String {
         let llm = self.inner.llm_config()
             .map(|c| format!("{}:{}", c.provider, c.model))
@@ -1498,9 +1583,11 @@ impl Connector {
         let knot = self.knot.lock().unwrap();
         let binding = self.binding.lock().unwrap();
         let aapi = self.aapi.lock().unwrap();
-        format!("Connector(llm='{}', packets={}, agents={}, audit={}, entities={}, cycles={}, policies={}, capabilities={})",
+        let es = self.engine_store.lock().unwrap();
+        let folders = es.list_folders(None).map(|f| f.len()).unwrap_or(0);
+        format!("Connector(llm='{}', packets={}, agents={}, audit={}, entities={}, cycles={}, policies={}, capabilities={}, folders={})",
             llm, k.packet_count(), k.agents().len(), k.audit_log().len(), knot.node_count(),
-            binding.cycle_count(), aapi.policy_count(), aapi.capability_count())
+            binding.cycle_count(), aapi.policy_count(), aapi.capability_count(), folders)
     }
 }
 

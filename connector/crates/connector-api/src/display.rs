@@ -167,6 +167,7 @@ mod tests {
             ],
             warnings: vec![],
             errors: vec![],
+            run_trace: None,
         }
     }
 
@@ -257,19 +258,23 @@ mod tests {
         let output = make_test_output();
         let display = format!("{}", output);
 
-        // Should contain box-drawing
-        assert!(display.contains("╔"));
-        assert!(display.contains("╚"));
+        // Should show clean status badge
+        assert!(display.contains("✅"), "missing status icon: {}", display);
+        assert!(display.contains("Agent complete"), "missing status: {}", display);
         // Should show trust
-        assert!(display.contains("91/100"));
-        // Should show dashboard
-        assert!(display.contains("Dashboard"));
-        assert!(display.contains("kernel-verified"));
+        assert!(display.contains("91/100"), "missing trust: {}", display);
+        // Should show response
+        assert!(display.contains("Patient classified"), "missing response: {}", display);
+        // Should show stats
+        assert!(display.contains("agent"), "missing agent count: {}", display);
+        assert!(display.contains("245ms"), "missing duration: {}", display);
+        // Should show compliance
+        assert!(display.contains("HIPAA ✓"), "missing hipaa: {}", display);
         // Should show provenance
-        assert!(display.contains("Provenance"));
-        assert!(display.contains("zero-fake"));
-        // Should show trace info
-        assert!(display.contains("Trace"));
+        assert!(display.contains("zero-fake"), "missing provenance: {}", display);
+        assert!(display.contains("verified"), "missing verified: {}", display);
+        // Should show progressive disclosure hint
+        assert!(display.contains(".dashboard()"), "missing hint: {}", display);
     }
 
     #[test]
@@ -331,10 +336,8 @@ mod tests {
         output.errors = vec!["Access denied".to_string()];
 
         let display = format!("{}", output);
-        assert!(display.contains("Warnings (1)"));
-        assert!(display.contains("Tool requires approval"));
-        assert!(display.contains("Errors (1)"));
-        assert!(display.contains("Access denied"));
+        assert!(display.contains("⚠ Tool requires approval"), "missing warning: {}", display);
+        assert!(display.contains("✗ Access denied"), "missing error: {}", display);
     }
 
     #[test]

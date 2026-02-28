@@ -21,6 +21,13 @@ pub mod knot;
 pub mod audit_export;
 pub mod store;
 pub mod integration;
+pub mod extensions;
+pub mod adaptive_scheduler;
+pub mod self_healing;
+pub mod namespace_types;
+pub mod guard;
+pub mod cgroup_controllers;
+pub mod port_security;
 
 pub use types::*;
 pub use cid::*;

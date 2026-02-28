@@ -13,6 +13,8 @@ path = "src/main.rs"
 # Connector
 connector-api = { path = "../connector-api" }
 connector-engine = { path = "../connector-engine" }
+connector-protocol = { path = "../connector-protocol" }
+connector-protocols = { path = "../connector-protocols" }
 
 # VAC kernel
 vac-core = { path = "../../../vac/crates/vac-core" }

@@ -8,7 +8,7 @@
 //! Source: KERNEL_SCALABILITY_ARCH §6.4, CHECKLIST Phase 1.3
 
 use vac_core::kernel::MemoryKernel;
-use vac_core::store::{KernelStore, StoreResult};
+use vac_core::store::KernelStore;
 use vac_core::types::MemPacket;
 
 use crate::error::{EngineError, EngineResult};

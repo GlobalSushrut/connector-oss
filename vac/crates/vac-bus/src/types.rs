@@ -1,5 +1,6 @@
 //! Core types for the event bus.
 
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
 /// A replication event transmitted between cells via the event bus.
@@ -49,6 +50,47 @@ impl ReplicationEvent {
     /// Returns true if this event has a non-empty signature.
     pub fn is_signed(&self) -> bool {
         !self.signature.is_empty()
+    }
+
+    /// Produce the canonical bytes that are signed/verified.
+    ///
+    /// Canonical form: JSON of `{"cell_id":...,"seq":...,"ts":...,"op":...}`
+    /// The signature field is excluded.
+    pub fn signable_bytes(&self) -> Vec<u8> {
+        let canonical = serde_json::json!({
+            "cell_id": self.cell_id,
+            "seq": self.seq,
+            "ts": self.ts,
+            "op": serde_json::to_value(&self.op).unwrap_or_default(),
+        });
+        serde_json::to_vec(&canonical).unwrap_or_default()
+    }
+
+    /// Sign this event with the cell's Ed25519 signing key.
+    pub fn sign(&mut self, signing_key: &SigningKey) {
+        let bytes = self.signable_bytes();
+        let sig = signing_key.sign(&bytes);
+        self.signature = sig.to_bytes().to_vec();
+    }
+
+    /// Verify this event's signature against a peer's public key.
+    ///
+    /// Returns `Ok(())` if valid, `Err(reason)` if invalid or missing.
+    pub fn verify(&self, verifying_key: &VerifyingKey) -> Result<(), String> {
+        if self.signature.is_empty() {
+            return Err("event is unsigned".to_string());
+        }
+        if self.signature.len() != 64 {
+            return Err(format!("invalid signature length: {} (expected 64)", self.signature.len()));
+        }
+        let sig_bytes: [u8; 64] = self.signature[..64]
+            .try_into()
+            .map_err(|_| "signature conversion failed".to_string())?;
+        let sig = Signature::from_bytes(&sig_bytes);
+        let bytes = self.signable_bytes();
+        verifying_key
+            .verify(&bytes, &sig)
+            .map_err(|e| format!("signature verification failed: {}", e))
     }
 }
 

@@ -218,6 +218,29 @@ pub fn op_to_human(op: &MemoryKernelOp) -> &'static str {
         MemoryKernelOp::PortReceive => "Received message",
         MemoryKernelOp::PortClose => "Closed port",
         MemoryKernelOp::PortDelegate => "Delegated via port",
+        MemoryKernelOp::SendSignal => "Sent signal",
+        MemoryKernelOp::RegisterSignalHandler => "Registered signal handler",
+        MemoryKernelOp::SetTokenBudget => "Set token budget",
+        MemoryKernelOp::RecordTokenUsage => "Recorded token usage",
+        MemoryKernelOp::RegisterCgroup => "Registered compute group",
+        MemoryKernelOp::RecordComputeUsage => "Recorded compute usage",
+        MemoryKernelOp::LlmSchedule => "Scheduled LLM call",
+        MemoryKernelOp::LlmDequeue => "Dequeued LLM call",
+        MemoryKernelOp::LlmSchedulerConfig => "Configured LLM scheduler",
+        MemoryKernelOp::RegisterAgentDid => "Registered agent DID",
+        MemoryKernelOp::RevokeAgentDid => "Revoked agent DID",
+        MemoryKernelOp::PublishAgentCard => "Published agent card",
+        MemoryKernelOp::ResolveAgentCard => "Resolved agent card",
+        MemoryKernelOp::McpRegisterBridge => "Registered MCP bridge",
+        MemoryKernelOp::McpInvokeTool => "Invoked MCP tool",
+        MemoryKernelOp::McpDeregisterBridge => "Deregistered MCP bridge",
+        MemoryKernelOp::A2AOpenChannel => "Opened A2A channel",
+        MemoryKernelOp::A2ASendMessage => "Sent A2A message",
+        MemoryKernelOp::A2AUpdateTaskState => "Updated A2A task state",
+        MemoryKernelOp::A2ACloseChannel => "Closed A2A channel",
+        MemoryKernelOp::UpdateContext => "Updated context",
+        MemoryKernelOp::TrimContextWindow => "Trimmed context window",
+        MemoryKernelOp::GetContextPressure => "Checked context pressure",
     }
 }
 
@@ -255,6 +278,29 @@ pub fn op_to_llm(op: &MemoryKernelOp) -> &'static str {
         MemoryKernelOp::PortReceive => "message_received",
         MemoryKernelOp::PortClose => "port_closed",
         MemoryKernelOp::PortDelegate => "port_delegated",
+        MemoryKernelOp::SendSignal => "signal_sent",
+        MemoryKernelOp::RegisterSignalHandler => "signal_handler_registered",
+        MemoryKernelOp::SetTokenBudget => "token_budget_set",
+        MemoryKernelOp::RecordTokenUsage => "token_usage_recorded",
+        MemoryKernelOp::RegisterCgroup => "cgroup_registered",
+        MemoryKernelOp::RecordComputeUsage => "compute_usage_recorded",
+        MemoryKernelOp::LlmSchedule => "llm_scheduled",
+        MemoryKernelOp::LlmDequeue => "llm_dequeued",
+        MemoryKernelOp::LlmSchedulerConfig => "llm_scheduler_configured",
+        MemoryKernelOp::RegisterAgentDid => "agent_did_registered",
+        MemoryKernelOp::RevokeAgentDid => "agent_did_revoked",
+        MemoryKernelOp::PublishAgentCard => "agent_card_published",
+        MemoryKernelOp::ResolveAgentCard => "agent_card_resolved",
+        MemoryKernelOp::McpRegisterBridge => "mcp_bridge_registered",
+        MemoryKernelOp::McpInvokeTool => "mcp_tool_invoked",
+        MemoryKernelOp::McpDeregisterBridge => "mcp_bridge_deregistered",
+        MemoryKernelOp::A2AOpenChannel => "a2a_channel_opened",
+        MemoryKernelOp::A2ASendMessage => "a2a_message_sent",
+        MemoryKernelOp::A2AUpdateTaskState => "a2a_task_state_updated",
+        MemoryKernelOp::A2ACloseChannel => "a2a_channel_closed",
+        MemoryKernelOp::UpdateContext => "context_updated",
+        MemoryKernelOp::TrimContextWindow => "context_trimmed",
+        MemoryKernelOp::GetContextPressure => "context_pressure_checked",
     }
 }
 
@@ -299,6 +345,26 @@ pub fn op_to_span_type(op: &MemoryKernelOp) -> SpanType {
         MemoryKernelOp::PortCreate | MemoryKernelOp::PortBind |
         MemoryKernelOp::PortSend | MemoryKernelOp::PortReceive |
         MemoryKernelOp::PortClose | MemoryKernelOp::PortDelegate => SpanType::Handoff,
+
+        MemoryKernelOp::SendSignal | MemoryKernelOp::RegisterSignalHandler => SpanType::Lifecycle,
+
+        MemoryKernelOp::SetTokenBudget | MemoryKernelOp::RecordTokenUsage |
+        MemoryKernelOp::RegisterCgroup | MemoryKernelOp::RecordComputeUsage => SpanType::Maintenance,
+
+        MemoryKernelOp::LlmSchedule | MemoryKernelOp::LlmDequeue |
+        MemoryKernelOp::LlmSchedulerConfig => SpanType::Generation,
+
+        MemoryKernelOp::RegisterAgentDid | MemoryKernelOp::RevokeAgentDid |
+        MemoryKernelOp::PublishAgentCard | MemoryKernelOp::ResolveAgentCard => SpanType::Security,
+
+        MemoryKernelOp::McpRegisterBridge | MemoryKernelOp::McpInvokeTool |
+        MemoryKernelOp::McpDeregisterBridge => SpanType::ToolCall,
+
+        MemoryKernelOp::A2AOpenChannel | MemoryKernelOp::A2ASendMessage |
+        MemoryKernelOp::A2AUpdateTaskState | MemoryKernelOp::A2ACloseChannel => SpanType::Handoff,
+
+        MemoryKernelOp::UpdateContext | MemoryKernelOp::TrimContextWindow |
+        MemoryKernelOp::GetContextPressure => SpanType::Session,
     }
 }
 
@@ -774,6 +840,7 @@ fn status_icon(auth: &str) -> &'static str {
 mod tests {
     use super::*;
     use vac_core::kernel::{SyscallRequest, SyscallPayload, SyscallValue};
+    use vac_core::types::TelemetrySeverity;
 
     fn setup_kernel_with_agent() -> (MemoryKernel, String) {
         let mut kernel = MemoryKernel::new();
@@ -986,6 +1053,12 @@ mod tests {
             after_hash: None,
             merkle_root: None,
             scitt_receipt_cid: None,
+            natural_language: None,
+            business_impact: None,
+            remediation_hint: None,
+            causal_chain: Vec::new(),
+            severity: TelemetrySeverity::default(),
+            gen_ai_attrs: None,
         };
 
         let span = TraceBuilder::entry_to_span(&entry, "trace_cid", 0);

@@ -32,3 +32,5 @@ nats = ["async-nats", "futures"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full", "test-util"] }
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }

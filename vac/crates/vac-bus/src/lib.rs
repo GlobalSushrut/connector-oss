@@ -16,7 +16,7 @@ pub use error::*;
 pub use traits::*;
 pub use in_process::*;
 #[cfg(feature = "nats")]
-pub use nats_bus::*;
+pub use nats_bus::{NatsBus, NatsConfig};
 
 #[cfg(test)]
 mod tests;

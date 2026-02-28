@@ -1,0 +1,34 @@
+# Level 5: Database — persistent engine storage with custom folders
+#
+# Enables SQLite-backed engine store for agents and tools to create
+# their own namespaced storage (like mkdir). Data survives restarts.
+#
+# Usage:
+#   from connector import Connector
+#   c = Connector.from_config("level5_database.yaml")
+#   c.create_agent_folder("nurse", "notes", "Patient notes")
+#   c.folder_put("agent:nurse/notes", "patient_123", '{"bp": "140/90"}')
+
+connector:
+  provider: deepseek
+  model: deepseek-chat
+  api_key: ${DEEPSEEK_API_KEY}
+  storage: sqlite:./connector.db
+
+  # Cell identity for this node (used in storage zone paths)
+  # cell_id: cell_local
+
+agents:
+  nurse:
+    instructions: "You are a triage nurse. Record patient vitals and symptoms."
+    tools: [lookup_patient, record_vitals]
+  doctor:
+    instructions: "You are an ER doctor. Diagnose based on triage notes."
+    memory_from: [nurse]
+
+# Engine storage enables:
+#   - Custom folders: agent:nurse/notes, tool:search/cache
+#   - Persistent tool definitions
+#   - Persistent policies
+#   - 18 storage zones with durability/retention policies
+#   - Implicit mkdir on folder_put()

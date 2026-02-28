@@ -5,7 +5,7 @@
 use cid::Cid;
 use multihash::Multihash;
 use serde::Serialize;
-use sha2::{Sha256, Digest};
+use sha2::Digest;
 
 use crate::error::{VacError, VacResult};
 

@@ -81,6 +81,13 @@ pub struct ConnectorConfig {
     pub cognitive: Option<CognitiveConfig>,
     pub tracing_config: Option<TracingConfig>,
     pub observability: Option<ObservabilityConfig>,
+
+    // ── Tier 3: Military-Grade (absent = standard crypto, present = hardened) ──
+    pub crypto: Option<CryptoConfig>,
+    pub consensus: Option<ConsensusConfig>,
+    pub watchdog: Option<WatchdogConfig>,
+    pub formal_verify: Option<FormalVerifyConfig>,
+    pub negotiation: Option<NegotiationConfig>,
 }
 
 // ── Global / connector: ───────────────────────────────────────────────────────
@@ -359,6 +366,12 @@ pub struct AgentConfig {
     /// Agent-level security overrides (inherits from connector.security if not set)
     pub security: Option<SecurityConfig>,
     pub llm: Option<LlmFallbackConfig>,
+    /// Contract: SLA, escrow, capabilities, pricing
+    pub contract: Option<ContractConfig>,
+    /// MAC clearance level: public | internal | confidential | secret | top_secret
+    pub clearance: Option<ClearanceConfig>,
+    /// Watchdog rules specific to this agent
+    pub watchdog: Option<WatchdogConfig>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -929,6 +942,182 @@ pub struct ObservabilityConfig {
     /// Additional resource attributes (key-value pairs)
     #[serde(default)]
     pub resource_attrs: HashMap<String, String>,
+}
+
+// ── Contracts / SLA / Economy ─────────────────────────────────────────────────
+
+/// Agent service contracts — SLA, escrow, capabilities, pricing.
+/// Defined per-agent or at pipeline level.
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct ContractConfig {
+    /// SLA constraints for this agent
+    pub sla: Option<SlaConfig>,
+    /// Escrow for trustless payment
+    pub escrow: Option<EscrowConfig>,
+    /// Capabilities this agent provides
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+    /// Capabilities this agent is denied
+    #[serde(default)]
+    pub deny_capabilities: Vec<String>,
+    /// Pricing model: free | per_call | per_token | subscription
+    pub pricing: Option<String>,
+    /// Price per unit (interpretation depends on pricing model)
+    pub price_per_unit: Option<f64>,
+    /// Currency: credits | usd | tokens
+    pub currency: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SlaConfig {
+    /// Max latency in milliseconds
+    pub max_latency_ms: Option<u64>,
+    /// Required uptime percentage (e.g., 99.9)
+    pub uptime_pct: Option<f64>,
+    /// Max error rate as percentage
+    pub max_error_rate: Option<f64>,
+    /// Max retries before SLA breach
+    pub max_retries: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct EscrowConfig {
+    /// Amount to lock in escrow
+    pub amount: Option<u64>,
+    /// Currency: credits | usd
+    pub currency: Option<String>,
+    /// Auto-release after successful completion
+    #[serde(default = "default_true")]
+    pub auto_release: bool,
+    /// Slash on failure
+    #[serde(default)]
+    pub slash_on_failure: bool,
+    /// Dispute window in milliseconds
+    pub dispute_window_ms: Option<i64>,
+}
+
+/// Negotiation config for multi-agent economy
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct NegotiationConfig {
+    /// Max negotiation rounds before timeout
+    pub max_rounds: Option<u32>,
+    /// TTL for negotiation sessions in milliseconds
+    pub ttl_ms: Option<i64>,
+    /// Auto-accept if price is below threshold
+    pub auto_accept_below: Option<f64>,
+}
+
+// ── Crypto / Military-Grade (Tier 3 — optional-revoke) ───────────────────────
+
+/// Cryptographic hardening config. Absent = standard crypto (Ed25519 + AES-256-GCM).
+/// Present = military-grade crypto activated.
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct CryptoConfig {
+    /// Enable FIPS 140-3 crypto module (uses NIST-approved algorithms only)
+    #[serde(default)]
+    pub fips: bool,
+    /// Enable post-quantum cryptography (ML-DSA-65 hybrid signatures)
+    #[serde(default)]
+    pub post_quantum: bool,
+    /// Enable Noise_IK encrypted channels for inter-agent communication
+    #[serde(default)]
+    pub noise_channels: bool,
+    /// Enable encryption at rest (AES-256-GCM) for all stored packets
+    #[serde(default)]
+    pub encryption_at_rest: bool,
+    /// Encryption key (use ${ENCRYPTION_KEY} — 32 bytes hex-encoded)
+    pub encryption_key: Option<String>,
+    /// HMAC audit chain (tamper-evident audit log)
+    #[serde(default)]
+    pub hmac_audit_chain: bool,
+}
+
+// ── Consensus / BFT (Tier 3 — optional-revoke) ──────────────────────────────
+
+/// Byzantine fault tolerance consensus. Absent = no BFT.
+/// Present = BFT consensus activated for multi-cell coordination.
+#[derive(Debug, Deserialize, Clone)]
+pub struct ConsensusConfig {
+    /// Consensus type: bft | raft (default: bft)
+    #[serde(default = "default_bft")]
+    pub r#type: String,
+    /// Validator cell IDs
+    #[serde(default)]
+    pub validators: Vec<String>,
+    /// Proposal timeout in milliseconds
+    pub proposal_timeout_ms: Option<u64>,
+    /// Enable formal verification of consensus state
+    #[serde(default)]
+    pub formal_verify: bool,
+}
+
+fn default_bft() -> String { "bft".to_string() }
+
+// ── Watchdog (Tier 3 — optional-revoke) ──────────────────────────────────────
+
+/// System watchdog rules. Absent = default watchdog (threat + budget rules).
+/// Present = custom watchdog configuration.
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct WatchdogConfig {
+    /// Use default watchdog rules (ThreatScoreElevated, TokenBudgetExhausted)
+    #[serde(default = "default_true")]
+    pub defaults: bool,
+    /// Custom watchdog rules
+    #[serde(default)]
+    pub rules: Vec<WatchdogRuleConfig>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct WatchdogRuleConfig {
+    /// Rule name (for logging)
+    pub name: String,
+    /// Condition: cell_heartbeat_missed | agent_error_rate_high | token_budget_exhausted
+    ///          | memory_quota_exceeded | cluster_partition | trust_score_low | threat_elevated
+    pub condition: String,
+    /// Action: restart_agent | suspend_agent | evict_to_tier | trigger_sync
+    ///       | send_signal | notify_human | execute_vakya
+    pub action: String,
+    /// Cooldown between triggers in milliseconds
+    pub cooldown_ms: Option<i64>,
+    /// Agent pattern (* = all agents)
+    pub agent_pattern: Option<String>,
+}
+
+// ── Agent Clearance (MAC security levels) ────────────────────────────────────
+
+/// Mandatory Access Control clearance levels for agents.
+/// Maps to Bell-LaPadula (confidentiality) + Biba (integrity) in the kernel.
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct ClearanceConfig {
+    /// Confidentiality level: public | internal | confidential | secret | top_secret
+    pub level: Option<String>,
+    /// Integrity level: low | medium | high | critical
+    pub integrity: Option<String>,
+    /// Guard mode: mac | rbac | none (default: mac)
+    pub guard: Option<String>,
+}
+
+// ── Formal Verification (Tier 3 — optional-revoke) ──────────────────────────
+
+/// Runtime formal verification. Absent = no verification.
+/// Present = invariant checking activated.
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct FormalVerifyConfig {
+    /// Enable runtime invariant checking
+    #[serde(default)]
+    pub enabled: bool,
+    /// Check lifecycle invariants (agent state transitions)
+    #[serde(default = "default_true")]
+    pub lifecycle: bool,
+    /// Check namespace isolation invariants
+    #[serde(default = "default_true")]
+    pub namespace_isolation: bool,
+    /// Check budget invariants (no overspend)
+    #[serde(default = "default_true")]
+    pub budget: bool,
+    /// Check audit completeness (every op has audit entry)
+    #[serde(default = "default_true")]
+    pub audit_completeness: bool,
 }
 
 // ── Env-var interpolation ─────────────────────────────────────────────────────

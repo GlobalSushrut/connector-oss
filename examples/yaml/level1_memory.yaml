@@ -1,0 +1,5 @@
+# Level 1: Multi-Agent — 4 lines. Provider auto-detected from env.
+agents:
+  nurse: "You are an ER triage nurse. Record vitals and symptoms."
+  doctor: "You are an ER doctor. Review triage notes and diagnose."
+flow: nurse -> doctor

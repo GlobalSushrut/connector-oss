@@ -1,0 +1,58 @@
+# Level 6: Distributed — cluster mode with replication
+#
+# Activates multi-node deployment with Raft consensus and NATS replication.
+# Each node has a unique cell_id. Writes replicate across the cluster.
+#
+# Start 3 nodes:
+#   NODE_ID=node-1 PEERS=node2:7000,node3:7000 connector-server
+#   NODE_ID=node-2 PEERS=node1:7000,node3:7000 connector-server
+#   NODE_ID=node-3 PEERS=node1:7000,node2:7000 connector-server
+
+connector:
+  provider: openai
+  model: gpt-4o
+  api_key: ${OPENAI_API_KEY}
+  storage: sqlite:./cluster_node.db
+
+agents:
+  coordinator:
+    instructions: "You coordinate work across distributed agents."
+
+cluster:
+  mode: cluster
+  node_id: ${NODE_ID}
+  peers:
+    - ${PEER_1}
+    - ${PEER_2}
+  replication_factor: 2
+  consensus: raft
+  partition_strategy: consistent_hash
+  max_nodes: 10
+  heartbeat_interval_ms: 500
+  election_timeout_ms: 3000
+  replication_bus: nats://localhost:4222
+  scitt_federation: true
+
+swarm:
+  max_concurrent_agents: 50
+  agent_pool_size: 10
+  spawn_strategy: pre_warm
+  handoff_timeout_ms: 5000
+  a2a_enabled: true
+  a2a_protocol: bus
+  max_delegation_hops: 3
+  load_balance: true
+  load_balance_strategy: least_loaded
+  saga_rollback: true
+  max_pipeline_steps: 20
+
+observability:
+  service_name: connector-cluster
+  environment: production
+  otel_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+  otel_protocol: grpc
+  trace_sampling_rate: 0.1
+  metrics_enabled: true
+  metrics_interval_secs: 15
+  log_level: info
+  log_format: json

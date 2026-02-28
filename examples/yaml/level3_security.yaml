@@ -1,0 +1,88 @@
+# Level 3: Security + Contracts — firewall, PII scanning, budgets, SLA
+connector:
+  provider: anthropic
+  model: claude-3-5-sonnet-20241022
+  api_key: ${ANTHROPIC_API_KEY}
+  storage: redb://./hospital.redb
+  comply: [hipaa, soc2]
+  security:
+    signing: true
+    data_classification: PHI
+    retention_days: 2555  # 7 years HIPAA
+  firewall:
+    preset: hipaa
+    pii_types: [ssn, medical_record, dob, phone]
+    block_injection: true
+    max_input_length: 10000
+
+agents:
+  triage:
+    instructions: "You are a triage nurse. Record vitals, symptoms, and allergies."
+    role: nurse
+    budget:
+      max_tokens: 50000
+    rate_limit: 30
+
+  doctor:
+    instructions: "You are an ER physician. Diagnose based on triage notes. Always cite evidence."
+    role: doctor
+    memory_from: [triage]
+    tools: [ehr_lookup, lab_results]
+    require_approval: [prescribe]
+    allow_data: [PHI]
+    budget:
+      max_tokens: 100000
+      max_cost_usd: 5.0
+    contract:
+      sla:
+        max_latency_ms: 5000
+        max_error_rate: 1.0
+      capabilities: [diagnose, prescribe, order_labs]
+
+tools:
+  ehr_lookup:
+    description: "Look up patient Electronic Health Records"
+    resource: "ehr://patients/*"
+    actions: [read]
+    data_classification: PHI
+    timeout_ms: 3000
+  lab_results:
+    description: "Query lab test results"
+    resource: "lab://results/*"
+    actions: [read]
+    data_classification: PHI
+
+pipelines:
+  er_visit:
+    actors:
+      - name: triage
+        instructions: "Assess the patient"
+        role: nurse
+      - name: doctor
+        instructions: "Diagnose and prescribe"
+        role: doctor
+        memory_from: [triage]
+        require_approval: [prescribe]
+    flow: "triage -> doctor"
+    comply: [hipaa]
+    budget:
+      max_tokens: 200000
+      max_cost_usd: 10.0
+
+policies:
+  phi_access:
+    name: "PHI Access Control"
+    rules:
+      - effect: deny
+        action_pattern: "export.*"
+        resource_pattern: "ehr://*"
+        priority: 100
+      - effect: require_approval
+        action_pattern: "prescribe.*"
+        roles: [doctor]
+        priority: 50
+      - effect: allow
+        action_pattern: "read.*"
+        resource_pattern: "ehr://*"
+        roles: [doctor, nurse]
+        priority: 10
