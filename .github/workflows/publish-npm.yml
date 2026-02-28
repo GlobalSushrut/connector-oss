@@ -78,7 +78,7 @@ jobs:
           targets: ${{ matrix.settings.target }}
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --ignore-scripts
         working-directory: sdks/typescript
 
       - name: Build native addon
@@ -102,7 +102,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --ignore-scripts
         working-directory: sdks/typescript
 
       - name: Download all native addons
