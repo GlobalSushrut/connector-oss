@@ -2,11 +2,11 @@
 
 <br/>
 
-# 🔐 Connector OSS
+# 🔐 Connector OSS — Tamper-Proof Memory for AI Agents
 
 ### Your AI agents are making decisions. Can you prove what they did?
 
-**Connector gives every AI response a tamper-proof receipt, a cryptographic audit trail, and a trust score — out of the box.**
+**Open-source AI agent framework with tamper-proof memory, cryptographic audit trail, and trust scoring. HIPAA, SOC2, GDPR compliance built-in. Python, TypeScript, Docker.**
 
 <br/>
 
