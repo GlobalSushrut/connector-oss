@@ -73,14 +73,11 @@ curl http://localhost:8080/health   # → {"status": "ok"}
 
 ## 👀 See It Work
 
-<details>
-<summary><b>▶ Watch the 1-minute demo</b> — Knowledge injection · Tool use · Pipeline · Attack simulation · Trust scoring</summary>
-
-<br/>
+**1-minute demo** — YAML config · Knowledge injection · Tool use · Pipeline · Attack simulation · Trust scoring
 
 <img src="assets/demo.gif" alt="Connector OSS Demo" width="800" />
 
-</details>
+> 📖 **[View full YAML config, Python code, and raw output →](demo/DEMO.md)**
 
 Every response comes back with proof:
 
