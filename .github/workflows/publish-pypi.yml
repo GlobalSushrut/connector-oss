@@ -1,6 +1,6 @@
 # ── Publish Python SDK to PyPI ────────────────────────────────────
 # Triggered on release tag: v*
-# Builds maturin wheels for 5 platforms, uploads to PyPI
+# Builds maturin wheels for Linux x86_64, uploads to PyPI
 #
 # Usage: pip install connector-oss
 #
@@ -28,9 +28,9 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
-          - os: macos-14
+          - os: macos-latest
             target: aarch64-apple-darwin
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -47,14 +47,12 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist --manifest-path vac/crates/vac-ffi/Cargo.toml
           manylinux: auto
-          working-directory: sdks/python
 
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.target }}
-          path: sdks/python/dist/*.whl
+          path: dist/*.whl
 
-  # Pure Python sdist (no native code, for source builds)
   sdist:
     name: Build sdist
     runs-on: ubuntu-latest
@@ -66,12 +64,11 @@ jobs:
         with:
           command: sdist
           args: --out dist --manifest-path vac/crates/vac-ffi/Cargo.toml
-          working-directory: sdks/python
 
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
-          path: sdks/python/dist/*.tar.gz
+          path: dist/*.tar.gz
 
   publish:
     name: Publish to PyPI
