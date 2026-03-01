@@ -2,6 +2,10 @@
 
 <br/>
 
+<img src="assets/logo.svg" alt="Connector OSS Logo" width="120" />
+
+<br/>
+
 # 🔐 Connector OSS — Tamper-Proof Memory for AI Agents
 
 ### Your AI agents are making decisions. Can you prove what they did?

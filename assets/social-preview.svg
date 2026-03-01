@@ -1,0 +1,44 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gbg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a14"/>
+      <stop offset="100%" stop-color="#160f2e"/>
+    </linearGradient>
+    <linearGradient id="gs1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#gbg)"/>
+  
+  <!-- Logo icon — right side -->
+  <g transform="translate(830, 100) scale(1.8)">
+    <path d="M 120 20 L 200 58 L 200 130 C 200 178 166 210 120 224 C 74 210 40 178 40 130 L 40 58 Z" fill="url(#gs1)" opacity="0.1"/>
+    <path d="M 120 20 L 200 58 L 200 130 C 200 178 166 210 120 224 C 74 210 40 178 40 130 L 40 58 Z" fill="none" stroke="url(#gs1)" stroke-width="3"/>
+    <rect x="76" y="62" width="88" height="30" rx="6" fill="url(#gs1)"/>
+    <rect x="76" y="100" width="88" height="30" rx="6" fill="url(#gs1)" opacity="0.7"/>
+    <rect x="76" y="138" width="88" height="30" rx="6" fill="url(#gs1)" opacity="0.45"/>
+    <circle cx="120" cy="96" r="5" fill="none" stroke="#fff" stroke-width="2"/>
+    <circle cx="120" cy="134" r="5" fill="none" stroke="#fff" stroke-width="2"/>
+    <rect x="113" y="68" width="14" height="10" rx="2" fill="#0a0a14"/>
+    <path d="M 116 68 L 116 64 C 116 60 118 58 120 58 C 122 58 124 60 124 64 L 124 68" fill="none" stroke="#0a0a14" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="186" cy="186" r="16" fill="url(#gs1)"/>
+    <polyline points="179,186 184,191 195,180" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Text — left side -->
+  <text x="80" y="200" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="76" font-weight="800" fill="#ffffff" letter-spacing="-2">Connector</text>
+  <text x="80" y="270" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="76" font-weight="800" fill="#7C3AED" letter-spacing="-2">OSS</text>
+  <text x="80" y="340" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="26" font-weight="400" fill="rgba(255,255,255,0.6)">Tamper-Proof Memory for AI Agents</text>
+  
+  <!-- Tags -->
+  <text x="80" y="400" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="400" fill="rgba(255,255,255,0.3)">HIPAA  ·  SOC2  ·  GDPR  ·  Ed25519  ·  CID  ·  HMAC</text>
+  
+  <!-- Install command -->
+  <rect x="70" y="440" width="380" height="44" rx="8" fill="rgba(124,58,237,0.15)" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+  <text x="90" y="468" font-family="'Inter', monospace" font-size="16" font-weight="500" fill="rgba(255,255,255,0.6)">pip install connector-agent-oss</text>
+  
+  <!-- GitHub -->
+  <text x="80" y="540" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="500" fill="rgba(255,255,255,0.25)">github.com/GlobalSushrut/connector-oss</text>
+</svg>
