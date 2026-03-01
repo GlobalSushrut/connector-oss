@@ -136,6 +136,79 @@ When a finance AI flags a transaction, **where's the immutable evidence for the 
 | Non-bypassable policies | ❌ | ❌ | ❌ | ✅ 5-layer guard |
 | Multi-cell federation | ❌ | ❌ | ❌ | ✅ BFT consensus |
 | Works with any LLM | ✅ | ✅ | ❌ | ✅ DeepSeek, OpenAI, Anthropic, local |
+| **Lines for simplest agent** | **~8** | **~12** | **~6** | **~3** |
+
+### Same effort, 10x more proof
+
+<table>
+<tr><th>LangChain</th><th>CrewAI</th><th>Connector OSS</th></tr>
+<tr>
+<td>
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain.agents import initialize_agent
+from langchain.agents import AgentType
+
+llm = ChatOpenAI(model="gpt-4")
+agent = initialize_agent(
+    tools=[],
+    llm=llm,
+    agent=AgentType.ZERO_SHOT_REACT,
+)
+result = agent.run("Diagnose patient")
+print(result)
+# just a string — no proof
+```
+
+</td>
+<td>
+
+```python
+from crewai import Agent, Task, Crew
+
+doctor = Agent(
+    role="Doctor",
+    goal="Diagnose patient",
+    llm="gpt-4"
+)
+task = Task(
+    description="Diagnose",
+    agent=doctor
+)
+crew = Crew(agents=[doctor], tasks=[task])
+result = crew.kickoff()
+print(result)
+# just a string — no proof
+```
+
+</td>
+<td>
+
+```python
+from connector_oss import Connector
+
+c = Connector("openai", "gpt-4", api_key)
+r = c.agent("doctor", "Diagnose.") \
+     .run("Diagnose patient", "patient:1")
+
+print(r.text)        # response
+print(r.trust)       # 80 — kernel-verified
+print(r.cid)         # bafy...k7q2
+print(r.is_verified()) # True
+# trust + audit + CID = FREE
+```
+
+</td>
+</tr>
+<tr>
+<td>❌ No trust score<br/>❌ No audit trail<br/>❌ No CID<br/>❌ No compliance</td>
+<td>❌ No trust score<br/>❌ No audit trail<br/>❌ No CID<br/>❌ No compliance</td>
+<td>✅ Trust score<br/>✅ HMAC audit trail<br/>✅ CID content hash<br/>✅ HIPAA/SOC2 ready</td>
+</tr>
+</table>
+
+> **3 lines.** Same effort as competitors. But every response comes with cryptographic proof, trust scoring, and a full audit trail — for free.
 
 ---
 
