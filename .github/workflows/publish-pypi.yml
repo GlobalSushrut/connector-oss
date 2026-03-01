@@ -43,13 +43,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --manifest-path vac/crates/vac-ffi/Cargo.toml
+          args: --release --out dist
           manylinux: auto
+          working-directory: sdks/python
 
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.target }}
-          path: dist/*.whl
+          path: sdks/python/dist/*.whl
 
   sdist:
     name: Build sdist
@@ -61,12 +62,13 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: --out dist --manifest-path vac/crates/vac-ffi/Cargo.toml
+          args: --out dist
+          working-directory: sdks/python
 
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
-          path: dist/*.tar.gz
+          path: sdks/python/dist/*.tar.gz
 
   publish:
     name: Publish to PyPI
