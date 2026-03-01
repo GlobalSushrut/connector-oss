@@ -22,7 +22,7 @@
 #     connector-oss
 
 # ── Stage 1: Build ───────────────────────────────────────────────
-FROM rust:1.82-bookworm AS builder
+FROM rust:latest AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
