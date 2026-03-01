@@ -290,6 +290,99 @@ CI publishes automatically on `git tag v*`:
 
 ---
 
+## 🎯 Who Is This For?
+
+| If you're building... | Connector gives you... |
+|----------------------|----------------------|
+| **Healthcare AI** (HIPAA) | Tamper-proof patient data memory, audit trail for every AI decision, compliance evidence |
+| **Financial AI** (SOC2) | Immutable transaction audit, cryptographic proof for regulators, fraud detection pipeline |
+| **Legal AI** (GDPR) | Right-to-erasure support, data provenance, EU AI Act compliance reports |
+| **Enterprise AI agents** | Non-bypassable policy firewall, RBAC, trust scoring, deterministic guardrails |
+| **Multi-agent systems** | Shared memory with isolation, DAG pipelines, saga rollback, BFT federation |
+| **Any AI agent in production** | Accountability, observability, and "math not trust" verification |
+
+**Connector is the compliance and trust layer that LangChain, CrewAI, and OpenAI SDK don't have.**
+
+---
+
+## 🔄 Alternatives & Comparisons
+
+Looking for an alternative to existing AI frameworks? Here's how Connector compares:
+
+- **LangChain alternative with compliance** — LangChain chains LLMs but has no audit trail, no tamper-proof memory, no compliance evidence. Connector adds all of that.
+- **CrewAI alternative with HIPAA** — CrewAI orchestrates agent crews but has no cryptographic verification. Connector gives you the same multi-agent capability plus provenance.
+- **Mem0 alternative with cryptographic proof** — Mem0 provides AI memory but relies on LLM-based verification. Connector uses CID content-addressing and Ed25519 signatures — math, not AI.
+- **OpenAI Agents SDK alternative for regulated industries** — OpenAI's SDK doesn't provide audit trails or compliance reports. Connector wraps any LLM (including OpenAI) with full accountability.
+- **Dify / Flowise / n8n alternative for enterprise** — Visual workflow tools lack security primitives. Connector provides the trust infrastructure underneath.
+
+---
+
+## ❓ FAQ
+
+<details>
+<summary><b>What is tamper-proof memory for AI agents?</b></summary>
+
+Tamper-proof memory means every piece of data an AI agent reads, writes, or decides is content-addressed using CID (Content Identifier) hashes. If anyone changes the data after the fact, the hash breaks. The audit chain uses HMAC-SHA256 and Ed25519 digital signatures, making it mathematically impossible to alter history without detection. This is the same principle behind Git and IPFS.
+
+</details>
+
+<details>
+<summary><b>How does Connector help with HIPAA compliance for AI?</b></summary>
+
+Connector provides HIPAA compliance evidence from real cryptographic audit trails — not checkbox self-assessments. Every AI agent interaction with patient data is logged with an immutable CID, signed with Ed25519, and chained with HMAC. The `comply("hipaa")` method generates compliance reports that auditors can independently verify. Data isolation is enforced at the kernel level with namespace-based access control.
+
+</details>
+
+<details>
+<summary><b>Can I use Connector with OpenAI, Anthropic, DeepSeek, or local LLMs?</b></summary>
+
+Yes. Connector supports 15+ LLM providers out of the box: OpenAI, Anthropic, DeepSeek, Google Gemini, Groq, Together, Mistral, Cohere, Fireworks, Perplexity, OpenRouter, Ollama, LM Studio, vLLM, and any OpenAI-compatible endpoint. The trust and audit layer works identically regardless of which LLM you use.
+
+</details>
+
+<details>
+<summary><b>How is this different from just logging AI responses?</b></summary>
+
+Logging is self-reported and mutable — anyone with database access can alter logs. Connector's audit trail is cryptographically chained: each entry includes an HMAC of the previous entry, making the entire chain tamper-evident. Every memory packet has a CID (content hash), and every action is Ed25519-signed. An auditor can independently verify the entire chain without trusting the system that produced it.
+
+</details>
+
+<details>
+<summary><b>Does Connector work with existing AI frameworks like LangChain or CrewAI?</b></summary>
+
+Yes. Connector provides adapters for LangChain, CrewAI, and OpenAI Agents SDK. You can use Connector as the memory and compliance layer underneath your existing agent framework, or use Connector's built-in agent and pipeline system directly.
+
+</details>
+
+<details>
+<summary><b>What is an AI agent trust score?</b></summary>
+
+Connector computes a trust score (0–100) for every AI agent response. Unlike self-reported confidence scores, this is kernel-verified from audit chain integrity, memory provenance, policy compliance, and cryptographic verification. A score of 90+ means the response has full CID grounding, complete audit trail, and valid signatures.
+
+</details>
+
+<details>
+<summary><b>Is Connector suitable for SOC2 audits?</b></summary>
+
+Yes. Connector generates SOC2 compliance evidence from real cryptographic data — CID-addressed memory, Ed25519-signed audit entries, and HMAC-chained logs. The `comply("soc2")` method produces exportable reports that map directly to SOC2 Trust Service Criteria (security, availability, processing integrity, confidentiality, privacy).
+
+</details>
+
+<details>
+<summary><b>Can Connector handle multi-agent AI systems?</b></summary>
+
+Yes. Connector supports multi-agent pipelines with DAG orchestration, shared memory with namespace isolation, inter-agent communication, saga rollback for failure recovery, and BFT (Byzantine Fault Tolerant) consensus for multi-organization federation. Each agent gets its own memory namespace with configurable access control.
+
+</details>
+
+---
+
+## 🏷️ Keywords
+
+`AI agent framework` · `tamper-proof AI memory` · `AI audit trail` · `HIPAA compliant AI` · `SOC2 AI compliance` · `GDPR AI agent` · `EU AI Act framework` · `AI agent trust score` · `cryptographic audit trail` · `AI agent governance` · `AI agent observability` · `LangChain alternative` · `CrewAI alternative` · `Mem0 alternative` · `secure AI agent framework` · `enterprise AI agent` · `healthcare AI framework` · `financial AI compliance` · `AI decision provenance` · `multi-agent orchestration` · `AI agent accountability` · `deterministic AI guardrails` · `AI agent memory framework` · `regulated AI infrastructure` · `open source AI compliance`
+
+---
+
 ## 🤝 Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome.
