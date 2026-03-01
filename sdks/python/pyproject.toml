@@ -3,7 +3,7 @@ requires = ["maturin>=1.4,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "connector-oss"
+name = "connector-agent-oss"
 version = "0.2.0"
 description = "Tamper-proof memory, chain-of-custody, and OS-grade runtime for AI agents"
 readme = "README.md"
