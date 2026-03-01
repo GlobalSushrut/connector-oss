@@ -6,11 +6,13 @@
 
 <br/>
 
-# 🔐 Connector OSS — Tamper-Proof Memory for AI Agents
+# 🔐 Connector OSS — Make Every AI Decision Provable
 
 ### Your AI agents are making decisions. Can you prove what they did?
 
-**Open-source AI agent framework with tamper-proof memory, cryptographic audit trail, and trust scoring. HIPAA, SOC2, GDPR compliance built-in. Python, TypeScript, Docker.**
+*Every AI decision deserves proof. We're building it.*
+
+**Open-source AI agent framework with tamper-proof memory, cryptographic audit trail, and trust scoring. HIPAA, SOC2, GDPR, EU AI Act compliance built-in. Python, TypeScript, Docker.**
 
 <br/>
 
@@ -24,7 +26,7 @@
 
 <br/>
 
-[**Get Started**](#-get-started) · [**See It Work**](#-see-it-work) · [**Why This Exists**](#-the-problem) · [**vs Others**](#-connector-vs-everything-else) · [**Docs**](docs/01_INDEX.md)
+[**Get Started**](#-get-started) · [**See It Work**](#-see-it-work) · [**Why Now**](#-why-now) · [**The Gap**](#-the-accountability-gap) · [**vs Others**](#-connector-vs-everything-else) · [**Docs**](docs/01_INDEX.md)
 
 </div>
 
@@ -102,30 +104,52 @@ Every response comes back with proof:
 
 ---
 
-## 🔥 The Problem
+## ⏰ Why Now
 
-Today's AI frameworks have a blind spot:
+This isn't theoretical. It's law.
+
+| Date | What happens | Source |
+|------|-------------|--------|
+| **Aug 2, 2026** | EU AI Act enforcement begins for high-risk AI — audit trails, evidence for regulators, or face fines up to **€35M / 7% revenue** | [EU AI Act](https://artificialintelligenceact.eu/) |
+| **2025** | Italy fined OpenAI **€15M** for GDPR violations in AI data processing | [SecurePrivacy](https://secureprivacy.ai/blog/ai-risk-compliance-2026) |
+| **2025** | FTC launched **"Operation AI Comply"** targeting AI systems without accountability | [FTC](https://www.ftc.gov/) |
+| **2025** | ISACA: *"Agentic AI breaks traditional audit models"* — logging is no longer enough | [ISACA](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai) |
+| **2026** | Colorado AI Act, NIST AI RMF updates, ISO/IEC 42001 — global convergence on AI governance | [Sombra](https://sombrainc.com/blog/ai-regulations-2026-eu-ai-act) |
+
+> *"Compliance is not a checkbox; it's a continuous governance function."* — [AI Regulations 2026](https://sombrainc.com/blog/ai-regulations-2026-eu-ai-act)
+
+Every AI framework today can call an LLM. **None of them can prove what happened after.** That's the gap Connector fills.
+
+---
+
+## 🔥 The Accountability Gap
+
+AI agents are making consequential decisions — diagnosing patients, approving loans, flagging fraud. But when an auditor asks *"prove what your AI did and why"*, today's frameworks have nothing:
 
 ```
-LangChain / CrewAI / OpenAI SDK
+Current state of AI agent frameworks (2026)
 ├── ✅ Great at calling LLMs
 ├── ✅ Great at chaining agents
-├── ❌ No tamper-proof memory
-├── ❌ No audit trail
-├── ❌ No compliance evidence
-├── ❌ No trust scoring
-└── ❌ "Trust me bro" accountability
+├── ❌ No tamper-proof memory    ← data can be altered after the fact
+├── ❌ No cryptographic audit     ← logs are self-reported and mutable
+├── ❌ No compliance evidence     ← auditors get checkbox PDFs, not proof
+├── ❌ No trust scoring           ← "it said confidence=0.95" — who verified?
+└── ❌ No way to answer: "Who approved this? What did the AI see?"
 ```
 
 When a healthcare AI makes a decision about a patient, **who proves what it saw, what it decided, and why?**
 
 When a finance AI flags a transaction, **where's the immutable evidence for the auditor?**
 
-**Connector solves this.** Every memory packet gets a CID. Every action gets an Ed25519 signature. Every chain gets HMAC verification. Compliance reports come from **real cryptographic evidence**, not checkbox self-assessments.
+When an AI agent grants itself elevated access at 3 AM, **where's the tamper-proof record?** ([ISACA documented this exact scenario](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai))
+
+**Connector exists because this gap is now illegal.** Every memory packet gets a CID. Every action gets an Ed25519 signature. Every chain gets HMAC verification. Compliance evidence comes from **real cryptographic proof**, not self-assessments.
 
 ---
 
 ## ⚡ Connector vs Everything Else
+
+> These frameworks are excellent at what they do. Connector doesn't replace them — it adds the accountability layer that regulated industries now require.
 
 | | LangChain | CrewAI | OpenAI SDK | **Connector** |
 |-|-----------|--------|-----------|---------------|
@@ -380,7 +404,7 @@ CI publishes automatically on `git tag v*`:
 | **Multi-agent systems** | Shared memory with isolation, DAG pipelines, saga rollback, BFT federation |
 | **Any AI agent in production** | Accountability, observability, and "math not trust" verification |
 
-**Connector is the compliance and trust layer that LangChain, CrewAI, and OpenAI SDK don't have.**
+**Connector is the accountability layer that the AI industry doesn't have yet.** It works alongside LangChain, CrewAI, and OpenAI SDK — or as a standalone framework.
 
 ---
 
