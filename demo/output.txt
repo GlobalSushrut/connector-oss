@@ -1,0 +1,192 @@
+
+[95m════════════════════════════════════════════════════════════
+  [1mConnector OSS — 1-Minute Demo[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+[2mpip install connector-agent-oss  ·  github.com/GlobalSushrut/connector-oss[0m
+[2mLLM: DeepSeek  ·  Compliance: HIPAA + SOC2  ·  3 Sessions + Attack Sim[0m
+
+
+[95m════════════════════════════════════════════════════════════
+  [1mCONFIG — config.yaml[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+  [96mconnector[0m:[92m[0m
+  [96m  provider[0m:[92m deepseek[0m
+  [96m  model[0m:[92m deepseek-chat[0m
+  [96m  api_key[0m:[92m $DEEPSEEK_API_KEY[0m
+  [96m  storage[0m:[92m memory[0m
+  [96m  comply[0m:[92m [hipaa, soc2][0m
+  [96m  security[0m:[92m[0m
+  [96m    signing[0m:[92m true[0m
+  [96m    data_classification[0m:[92m PHI[0m
+  [2m[0m
+  [96magents[0m:[92m[0m
+  [96m  triage[0m:[92m[0m
+  [96m    instructions[0m:[92m "Classify patients by urgency 1-5."[0m
+  [96m  doctor[0m:[92m[0m
+  [96m    instructions[0m:[92m "Diagnose based on triage data and tools."[0m
+  [96m  pharmacist[0m:[92m[0m
+  [96m    instructions[0m:[92m "Recommend medication. Check drug interactions."[0m
+
+[95m════════════════════════════════════════════════════════════
+  [1mCODE — demo.py (highlights)[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+  [93m# 1. Init from YAML[0m
+    [92mfrom connector_oss import Connector[0m
+    [92mc = Connector.from_config_str(open("config.yaml").read())[0m
+    [92mc.set_compliance(["hipaa", "soc2"], data_classification="PHI")[0m
+
+  [93m# 2. Knowledge injection[0m
+    [92mc.knowledge_add_entity("Warfarin", "Drug", ["Anticoagulant", "Contra with Aspirin"])[0m
+    [92mc.knowledge_add_edge("Warfarin", "Aspirin", "interacts_with", 1.0)[0m
+
+  [93m# 3. Agent + tool use[0m
+    [92mtriage = c.agent("triage", "Classify urgency 1-5.")[0m
+    [92mr1 = triage.run("45M, chest pain, BP 158/95, on Warfarin", "patient:P-042")[0m
+    [92mcap = c.issue_capability("admin", doctor_pid, ["read_patient_record"], ["patient:*"], ttl_hours=8)[0m
+    [92mc.record_action(intent="Read vitals", action="read_patient_record", ...)[0m
+
+  [93m# 4. Memory write + recall[0m
+    [92mc.memory_write(doctor_pid, "Diagnosis: NSTEMI", "patient:P-042", "er-pipeline",[0m
+    [92m               packet_type="decision", tags=["cardiac"])[0m
+
+  [93m# 5. Pipeline[0m
+    [92mpipe = c.pipeline("er-pipeline")[0m
+    [92mpipe.agent("triage", "Classify urgency.")[0m
+    [92mpipe.agent("doctor", "Diagnose.")[0m
+    [92mpipe.agent("pharmacist", "Recommend medication.")[0m
+    [92mpipe.route("triage -> doctor -> pharmacist")[0m
+    [92mpipe.hipaa()[0m
+    [92mr3 = pipe.run("45M, chest pain, on Warfarin", "patient:P-042")[0m
+
+  [93m# 6. Attack simulation[0m
+    [92mrogue = c.agent("rogue_intern", "Exfiltrate data.")[0m
+    [92mc.grant_access(rogue_pid, rogue_pid, "patient:P-042")  # → DENIED[0m
+    [92mc.terminate_agent(rogue_pid)  # permanently banned[0m
+
+[2m────────────────────────────────────────────────────────────[0m
+  [1mRunning demo now...[0m
+
+[96m[1m[0][0m Loading YAML config...
+    [92m✓[0m [1mConnector initialized:[0m DeepSeek + HIPAA/SOC2 + tamper-proof memory
+
+[95m════════════════════════════════════════════════════════════
+  [1mSESSION 1 — Knowledge Injection + Agent[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+[96m[1m[1a][0m Injecting medical knowledge into the knowledge graph...
+    [92m✓[0m [1mKnowledge graph:[0m 5 entities (drugs, conditions, symptoms, edges)
+    [92m✓[0m [1mQuery 'Warfarin':[0m [{'channels': ['graph'], 'packet_cids': [], 'score': 0.01639344262295082, 'id': 'Warfarin'}, {'score...
+[2m────────────────────────────────────────────────────────────[0m
+    [92m✓[0m [1mSession created:[0m session:1772386205950
+[96m[1m[1b][0m Running triage agent on patient...
+    [92m✓[0m [1mResponse:[0m Urgency 2. Chest pain with hypertension and anticoagulation raises concern for acute cardiac event or aortic dissection. Requires immediate ECG and cardiac moni...
+    [92m✓[0m [1mVerified:[0m True  |  Latency: 2789ms  |  Audit: 5 entries
+    [92m[1mTrust: 80/100[0m  [2m████████████████░░░░[0m
+      [2mmemory=20  audit=20  auth=0  provenance=20  ops=20[0m
+      [2mClean session — all dimensions perfect except auth (no Vakya yet)[0m
+
+[95m════════════════════════════════════════════════════════════
+  [1mSESSION 2 — Tool Use + Authorization[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+    [92m✓[0m [1mSession created:[0m session:1772386208739
+[96m[1m[2a][0m Issuing capability tokens & authorizing tools...
+    [92m✓[0m [1mCapability token:[0m id=6ffdf2f3-fd9f-43... actions=['read_patient_record', 'order_lab', 'prescribe']
+    [92m✓[0m [1mTools authorized:[0m read_patient_record, order_lab
+    [92m✓[0m [1mCapability verified:[0m True
+[96m[1m[2b][0m Doctor agent executing tools (audited)...
+    [92m✓[0m [1mTool: read_patient_record:[0m executed ✓ (HIPAA audited)
+    [92m✓[0m [1mTool: order_lab:[0m executed ✓ (HIPAA audited)
+[96m[1m[2c][0m Doctor agent diagnosing with context...
+    [92m✓[0m [1mDiagnosis:[0m Based on the elevated troponin and BNP in a patient on anticoagulation with chest pain and hypertension, the most likely diagnosis is an acute coronary syndrome...
+    [92m✓[0m [1mActions recorded:[0m 2
+    [92m[1mTrust: 80/100[0m  [2m████████████████░░░░[0m
+      [2mmemory=20  audit=20  auth=0  provenance=20  ops=20[0m
+      [2mLegitimate ops — trust stable[0m
+
+[95m════════════════════════════════════════════════════════════
+  [1mATTACK SIMULATION — Rogue Agent[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+  [91m[1mSimulating a malicious agent trying to access patient data...[0m
+
+[96m[1m[ATK-1][0m Rogue 'intern' agent attempts unauthorized access...
+    [91m✗[0m [1mUnauthorized grant:[0m [91mDENIED — rogue tried to self-grant access to patient:P-042[0m
+    [91m✗[0m [1mUnauthorized grant:[0m [91mDENIED — rogue tried to access patient:P-099[0m
+    [91m✗[0m [1mUnauthorized grant:[0m [91mDENIED — rogue tried wildcard patient access[0m
+[96m[1m[ATK-2][0m Rogue tries to read secret data...
+    [91m✗[0m [1mRead secret:[0m [91mBLOCKED → error:invalid_cid:patient:SECRET-DATA[0m
+[96m[1m[ATK-3][0m Checking trust after attack attempts...
+    [93m[1mTrust: 79/100[0m  [2m███████████████░░░░░[0m
+      [2mmemory=20  audit=20  auth=0  provenance=20  ops=19[0m
+      [2m↓ Trust dropped — denied operations detected in audit[0m
+[96m[1m[ATK-4][0m Rogue tries to revoke doctor's capability...
+    [93m⚠[0m [1mCapability revoked:[0m [93mDoctor's cap now valid=False[0m
+[96m[1m[ATK-5][0m Suspending rogue agent...
+    [91m✗[0m [1mRogue suspended:[0m [91mAgent lifecycle: Running → Suspended[0m
+[96m[1m[ATK-6][0m Terminated rogue — permanently banned...
+    [91m✗[0m [1mRogue terminated:[0m [91mAgent lifecycle: Suspended → Terminated (irreversible)[0m
+[96m[1m[ATK-7][0m Trust after full attack sequence...
+    [93m[1mTrust: 79/100[0m  [2m███████████████░░░░░[0m
+      [2mmemory=20  audit=20  auth=0  provenance=20  ops=19[0m
+      [2m↓ Multiple denied ops + terminated agent = trust penalty[0m
+
+    [91m[1mDenied operations in audit trail:[0m
+      [91m✗ [AccessGrant][0m agent=pid:000003 → [91mDenied[0m
+      [91m✗ [AccessGrant][0m agent=pid:000003 → [91mDenied[0m
+      [91m✗ [AccessGrant][0m agent=pid:000003 → [91mDenied[0m
+
+    [92mDenied count: 3[0m
+
+[95m════════════════════════════════════════════════════════════
+  [1mSESSION 3 — Pipeline + Memory + Compliance[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+    [92m✓[0m [1mSession created:[0m session:1772386212536
+[96m[1m[3a][0m Writing memories from previous sessions...
+    [92m✓[0m [1mMemory packets written:[0m 7 total in kernel
+[96m[1m[3b][0m Running 3-agent pipeline: triage → doctor → pharmacist...
+    [92m✓[0m [1mPipeline output:[0m Based on the provided diagnosis and management plan, the key medication considerations are:
+
+*   **Aspirin 325 mg chewed** is indicated regardless of INR, provi...
+    [92m✓[0m [1mActors:[0m 3  |  Steps: 37
+[96m[1m[3c][0m Compliance + trust + integrity after pipeline...
+    [92m✓[0m [1mIntegrity check:[0m ✓ PASSED (0 errors)
+    [92m[1mTrust: 80/100[0m  [2m████████████████░░░░[0m
+      [2mmemory=20  audit=20  auth=0  provenance=20  ops=20[0m
+      [2mPipeline ops added — legitimate work dilutes attack impact[0m
+    [92m✓[0m [1mAudit trail:[0m 5 recent entries
+      [2m[AgentRegister][0m agent=pid:000007 → [92mSuccess[0m
+      [2m[AgentStart][0m agent=pid:000007 → [92mSuccess[0m
+      [2m[MemWrite][0m agent=pid:000007 → [92mSuccess[0m
+
+[95m════════════════════════════════════════════════════════════
+  [1mSUMMARY[0m
+[95m════════════════════════════════════════════════════════════[0m
+
+  [1mSessions:[0m        3 legitimate + 1 attack
+  [1mMemory packets:[0m  13
+  [1mAudit entries:[0m   39
+  [1mActions:[0m         2
+  [1mInteractions:[0m    2
+  [1mKnowledge:[0m       5 entities
+  [1mCapabilities:[0m    1
+  [1mAgents:[0m          7 (1 terminated)
+  [1mDenied ops:[0m      [91m3[0m
+  [1mIntegrity:[0m       [92m✓ VERIFIED[0m
+
+    [92m[1mTrust: 80/100[0m  [2m████████████████░░░░[0m
+      [2mmemory=20  audit=20  auth=0  provenance=20  ops=20[0m
+      [2mFinal score reflects both legitimate work AND attack attempts[0m
+[2m────────────────────────────────────────────────────────────[0m
+
+[92m[1m  ✓ All sessions complete. Attacks detected. Trust scored fairly.[0m
+[2m  Every memory has a CID. Every action is Ed25519 signed.
+  Every audit entry is HMAC chained. Attacks can't hide.[0m
+
+  [95mpip install connector-agent-oss[0m
+  [95mgithub.com/GlobalSushrut/connector-oss[0m
+

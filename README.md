@@ -73,6 +73,15 @@ curl http://localhost:8080/health   # → {"status": "ok"}
 
 ## 👀 See It Work
 
+<details>
+<summary><b>▶ Watch the 1-minute demo</b> — Knowledge injection · Tool use · Pipeline · Attack simulation · Trust scoring</summary>
+
+<br/>
+
+<img src="assets/demo.gif" alt="Connector OSS Demo" width="800" />
+
+</details>
+
 Every response comes back with proof:
 
 ```

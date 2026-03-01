@@ -1,0 +1,18 @@
+# Connector OSS — Demo Config
+connector:
+  provider: deepseek
+  model: deepseek-chat
+  api_key: ${DEEPSEEK_API_KEY}
+  storage: memory
+  comply: [hipaa, soc2]
+  security:
+    signing: true
+    data_classification: PHI
+
+agents:
+  triage:
+    instructions: "You are a hospital triage AI. Classify patients by urgency 1-5. Be concise."
+  doctor:
+    instructions: "You are a diagnostic AI doctor. Use the triage data and patient history to provide a diagnosis. Be concise."
+  pharmacist:
+    instructions: "You are a pharmacist AI. Recommend medication based on the diagnosis. Check for drug interactions. Be concise."
