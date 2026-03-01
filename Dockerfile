@@ -22,21 +22,25 @@
 #     connector-oss
 
 # ── Stage 1: Build ───────────────────────────────────────────────
-FROM rust:1.82-alpine AS builder
+FROM rust:1.82-bookworm AS builder
 
-RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 COPY . .
 
-RUN cargo build --release --target x86_64-unknown-linux-musl \
+RUN cargo build --release \
     -p connector-server \
     --manifest-path connector/Cargo.toml
 
-# ── Stage 2: Scratch (0 CVEs, ~8MB) ─────────────────────────────
-FROM scratch
+# ── Stage 2: Minimal runtime ────────────────────────────────────
+FROM debian:bookworm-slim
 
-COPY --from=builder /build/connector/target/x86_64-unknown-linux-musl/release/connector-server /connector-server
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates libssl3 && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/connector/target/release/connector-server /connector-server
 
 # Default environment
 ENV CONNECTOR_ADDR=0.0.0.0:8080
