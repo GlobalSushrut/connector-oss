@@ -46,7 +46,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            globalsushrut/connector-oss
+            ${{ secrets.DOCKERHUB_USERNAME }}/connector-oss
             ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
