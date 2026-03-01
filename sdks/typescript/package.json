@@ -48,8 +48,7 @@
     "build:ts": "tsc",
     "build": "npm run build:native && npm run build:ts",
     "test": "vitest run",
-    "prepublishOnly": "npm run build",
-    "version": "npm run build"
+    "prepublishOnly": "npm run build:ts"
   },
   "dependencies": {
     "@napi-rs/cli": "^2.18"
@@ -58,15 +57,6 @@
     "@types/node": "^25.3.0",
     "typescript": "^5.3",
     "vitest": "^1.0"
-  },
-  "optionalDependencies": {
-    "@connector-oss/connector-linux-x64-gnu": "0.2.0",
-    "@connector-oss/connector-linux-x64-musl": "0.2.0",
-    "@connector-oss/connector-linux-arm64-gnu": "0.2.0",
-    "@connector-oss/connector-linux-arm64-musl": "0.2.0",
-    "@connector-oss/connector-darwin-x64": "0.2.0",
-    "@connector-oss/connector-darwin-arm64": "0.2.0",
-    "@connector-oss/connector-win32-x64-msvc": "0.2.0"
   },
   "files": [
     "dist",
