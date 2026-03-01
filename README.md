@@ -1,60 +1,57 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Connector_OSS-Tamper--Proof_AI_Memory-6C3483?style=for-the-badge" alt="Connector OSS"/>
-
 # Connector OSS
 
-### *Kernel + Control-Plane + SDK for trusted AI agents.*
-
-> Tamper-proof memory · Ed25519 audit trail · Non-bypassable policy enforcement
-> 28 crates · 61 engine modules · 11 protocol layers · 1,857 tests · 0 failures
+### Every AI response gets a tamper-proof receipt. Every decision has a cryptographic audit trail. Every agent is accountable.
 
 <br/>
 
+[![GitHub stars](https://img.shields.io/github/stars/GlobalSushrut/connector-oss?style=social)](https://github.com/GlobalSushrut/connector-oss/stargazers)
 [![License](https://img.shields.io/badge/license-Apache%202.0-22c55e?style=flat-square)](LICENSE)
-[![PyPI](https://img.shields.io/badge/pip_install-connector--agent--oss-3b82f6?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/connector-agent-oss/)
-[![npm](https://img.shields.io/badge/npm-@connector__oss/connector-ef4444?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@connector_oss/connector)
-[![Docker](https://img.shields.io/badge/docker-connector--oss-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/adminumesh3011/connector-oss)
+[![PyPI version](https://img.shields.io/pypi/v/connector-agent-oss?style=flat-square&logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/connector-agent-oss/)
+[![npm version](https://img.shields.io/npm/v/@connector_oss/connector?style=flat-square&logo=npm&logoColor=white&label=npm)](https://www.npmjs.com/package/@connector_oss/connector)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/adminumesh3011/connector-oss)
 [![Tests](https://img.shields.io/badge/tests-1%2C857_passed-22c55e?style=flat-square)](https://github.com/GlobalSushrut/connector-oss)
 
+**Tamper-proof memory** · **Ed25519 audit trail** · **Non-bypassable policy enforcement**
+28 Rust crates · 61 engine modules · 11 protocol layers
+
 <br/>
 
-**Built by [Umesh Adhikari](mailto:umeshlamton@gmail.com)** · 📧 [umeshlamton@gmail.com](mailto:umeshlamton@gmail.com) · 🐙 [GitHub](https://github.com/GlobalSushrut/connector-oss)
+[Get Started](#try-it-in-10-seconds) · [Why Connector](#why-connector--vs-everything-else) · [Examples](#examples) · [Docs](docs/01_INDEX.md)
+
+<br/>
+
+**If this is useful, [give it a ⭐](https://github.com/GlobalSushrut/connector-oss/stargazers)** — it helps others find it.
 
 </div>
 
 ---
 
-## Install — Pick Your Language
+## Try It in 10 Seconds
 
 ```bash
-pip install connector-agent-oss                        # Python (native Rust via PyO3)
-npm install @connector_oss/connector                   # TypeScript (native Rust via NAPI-RS)
-docker run -p 8080:8080 adminumesh3011/connector-oss   # Server (38 REST + 10 protocol routes)
+pip install connector-agent-oss
 ```
 
-> No Rust toolchain needed. Prebuilt binaries for Linux, macOS, Windows.
-
----
-
-## 60-Second Hello World
-
-### Python
-
 ```python
-import os
 from connector_agent_oss import Connector
+import os
 
 c = Connector("deepseek", "deepseek-chat", os.environ["DEEPSEEK_API_KEY"])
 result = c.agent("bot", "You are helpful").run("Hello!", "user:alice")
 
 print(result.text)         # LLM response
 print(result.trust)        # 0-100 kernel-verified trust score
-print(result.trust_grade)  # "A+"
-print(result.cid)          # tamper-proof content hash
+print(result.cid)          # tamper-proof content hash (CIDv1)
 ```
 
-### TypeScript
+<details>
+<summary><b>TypeScript</b></summary>
+
+```bash
+npm install @connector_oss/connector
+```
 
 ```typescript
 import { Connector, isNativeAvailable } from '@connector_oss/connector'
@@ -63,12 +60,19 @@ await c.remember('pid:bot', 'Patient has fever', 'nurse')
 const mems = await c.memories('ns:er')
 ```
 
-### Docker
+</details>
+
+<details>
+<summary><b>Docker</b></summary>
 
 ```bash
 docker run -p 8080:8080 -e DEEPSEEK_API_KEY=sk-... adminumesh3011/connector-oss
 curl http://localhost:8080/health
 ```
+
+</details>
+
+> No Rust toolchain needed. Prebuilt binaries for Linux, macOS, Windows.
 
 **[→ Full 5-minute guide: QUICKSTART.md](QUICKSTART.md)**
 
@@ -359,8 +363,6 @@ Also see: [ARCHITECTURE.md](ARCHITECTURE.md) · [QUICKSTART.md](QUICKSTART.md) �
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome.
 
-📧 [umeshlamton@gmail.com](mailto:umeshlamton@gmail.com)
-
 ## License
 
 Apache-2.0 — See [LICENSE](LICENSE)
@@ -369,10 +371,21 @@ Apache-2.0 — See [LICENSE](LICENSE)
 
 <div align="center">
 
+### Spread the Word
+
+[![Share on X](https://img.shields.io/badge/Share_on_X-%23000?style=for-the-badge&logo=x&logoColor=white)](https://twitter.com/intent/tweet?text=Connector%20OSS%20%E2%80%94%20tamper-proof%20memory%20%2B%20audit%20trail%20for%20AI%20agents.%20HIPAA%2C%20SOC2%2C%20GDPR%20compliance%20built-in.%20Open%20source%20%F0%9F%94%A5%0A%0Ahttps%3A%2F%2Fgithub.com%2FGlobalSushrut%2Fconnector-oss)
+[![Share on LinkedIn](https://img.shields.io/badge/Share_on_LinkedIn-%230A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/GlobalSushrut/connector-oss)
+[![Share on Reddit](https://img.shields.io/badge/Share_on_Reddit-%23FF4500?style=for-the-badge&logo=reddit&logoColor=white)](https://www.reddit.com/submit?url=https://github.com/GlobalSushrut/connector-oss&title=Connector%20OSS%20%E2%80%94%20Tamper-proof%20memory%20and%20audit%20trail%20for%20AI%20agents)
+[![Share on HN](https://img.shields.io/badge/Share_on_Hacker_News-%23F06426?style=for-the-badge&logo=ycombinator&logoColor=white)](https://news.ycombinator.com/submitlink?u=https://github.com/GlobalSushrut/connector-oss&t=Connector%20OSS%20%E2%80%94%20Tamper-proof%20memory%20and%20audit%20trail%20for%20AI%20agents)
+
+<br/>
+
 `pip install connector-agent-oss` &nbsp;·&nbsp; `npm i @connector_oss/connector` &nbsp;·&nbsp; `docker run adminumesh3011/connector-oss`
 
 [GitHub](https://github.com/GlobalSushrut/connector-oss) &nbsp;·&nbsp; [PyPI](https://pypi.org/project/connector-agent-oss/) &nbsp;·&nbsp; [npm](https://www.npmjs.com/package/@connector_oss/connector) &nbsp;·&nbsp; [Docker](https://hub.docker.com/r/adminumesh3011/connector-oss) &nbsp;·&nbsp; [Docs](docs/01_INDEX.md)
 
-Built by **[Umesh Adhikari](mailto:umeshlamton@gmail.com)**
+**[⭐ Star this repo](https://github.com/GlobalSushrut/connector-oss/stargazers)** if you find it useful — it helps others discover it.
+
+Built by **[Umesh Adhikari](mailto:umeshlamton@gmail.com)** · 📧 [umeshlamton@gmail.com](mailto:umeshlamton@gmail.com)
 
 </div>
