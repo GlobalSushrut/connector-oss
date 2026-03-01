@@ -41,9 +41,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            globalsushrut/connector-oss
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -51,17 +59,7 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64
-          tags: |
-            globalsushrut/connector-oss:latest
-            globalsushrut/connector-oss:${{ steps.version.outputs.VERSION }}
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          labels: |
-            org.opencontainers.image.title=Connector-OSS
-            org.opencontainers.image.description=Tamper-proof memory, chain-of-custody, and OS-grade runtime for AI agents
-            org.opencontainers.image.url=https://github.com/GlobalSushrut/connector-oss
-            org.opencontainers.image.source=https://github.com/GlobalSushrut/connector-oss
-            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
-            org.opencontainers.image.licenses=Apache-2.0
