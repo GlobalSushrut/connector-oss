@@ -30,24 +30,6 @@ jobs:
               cd sdks/typescript
               npm run build:native -- --target x86_64-unknown-linux-gnu
 
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            build: |
-              cd sdks/typescript
-              npm run build:native -- --target x86_64-unknown-linux-musl
-
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            build: |
-              cd sdks/typescript
-              npm run build:native -- --target aarch64-unknown-linux-gnu
-
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            build: |
-              cd sdks/typescript
-              npm run build:native -- --target aarch64-unknown-linux-musl
-
           - os: macos-latest
             target: x86_64-apple-darwin
             build: |
