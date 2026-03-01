@@ -106,6 +106,9 @@ mod tests {
         let c1_id = c1.contract_id.clone();
         store.append(c1).unwrap();
 
+        // Sleep 1ms to ensure distinct created_at timestamps → distinct contract IDs
+        std::thread::sleep(std::time::Duration::from_millis(2));
+
         let c2 = make_sealed(&key, Some(c1_id));
         store.append(c2).unwrap();
 

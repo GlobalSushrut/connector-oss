@@ -511,7 +511,7 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
 name = "connector-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aapi-core",
  "chrono",
@@ -529,7 +529,7 @@ dependencies = [
 
 [[package]]
 name = "connector-caps"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -548,7 +548,7 @@ dependencies = [
 
 [[package]]
 name = "connector-engine"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aapi-core",
  "chrono",
@@ -573,7 +573,7 @@ dependencies = [
 
 [[package]]
 name = "connector-protocol"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -591,7 +591,7 @@ dependencies = [
 
 [[package]]
 name = "connector-protocols"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aapi-core",
  "async-trait",
@@ -613,7 +613,7 @@ dependencies = [
 
 [[package]]
 name = "connector-server"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "chrono",
@@ -3140,7 +3140,7 @@ dependencies = [
 
 [[package]]
 name = "vac-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "async-trait",
