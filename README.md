@@ -12,9 +12,9 @@
 <br/>
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-22c55e?style=flat-square)](LICENSE)
-[![PyPI](https://img.shields.io/badge/pip_install-connector--oss-3b82f6?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/connector-oss/)
-[![npm](https://img.shields.io/badge/npm-@connector--oss/connector-ef4444?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@connector-oss/connector)
-[![Docker](https://img.shields.io/badge/docker-connector--oss-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/globalsushrut/connector-oss)
+[![PyPI](https://img.shields.io/badge/pip_install-connector--agent--oss-3b82f6?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/connector-agent-oss/)
+[![npm](https://img.shields.io/badge/npm-@connector__oss/connector-ef4444?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@connector_oss/connector)
+[![Docker](https://img.shields.io/badge/docker-connector--oss-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/adminumesh3011/connector-oss)
 [![Tests](https://img.shields.io/badge/tests-1%2C857_passed-22c55e?style=flat-square)](https://github.com/GlobalSushrut/connector-oss)
 
 <br/>
@@ -28,9 +28,9 @@
 ## Install — Pick Your Language
 
 ```bash
-pip install connector-oss                              # Python (native Rust via PyO3)
-npm install @connector-oss/connector                   # TypeScript (native Rust via NAPI-RS)
-docker run -p 8080:8080 globalsushrut/connector-oss    # Server (38 REST + 10 protocol routes)
+pip install connector-agent-oss                        # Python (native Rust via PyO3)
+npm install @connector_oss/connector                   # TypeScript (native Rust via NAPI-RS)
+docker run -p 8080:8080 adminumesh3011/connector-oss   # Server (38 REST + 10 protocol routes)
 ```
 
 > No Rust toolchain needed. Prebuilt binaries for Linux, macOS, Windows.
@@ -43,7 +43,7 @@ docker run -p 8080:8080 globalsushrut/connector-oss    # Server (38 REST + 10 pr
 
 ```python
 import os
-from connector_oss import Connector
+from connector_agent_oss import Connector
 
 c = Connector("deepseek", "deepseek-chat", os.environ["DEEPSEEK_API_KEY"])
 result = c.agent("bot", "You are helpful").run("Hello!", "user:alice")
@@ -57,7 +57,7 @@ print(result.cid)          # tamper-proof content hash
 ### TypeScript
 
 ```typescript
-import { Connector, isNativeAvailable } from '@connector-oss/connector'
+import { Connector, isNativeAvailable } from '@connector_oss/connector'
 const c = new Connector({ llm: 'deepseek:deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY })
 await c.remember('pid:bot', 'Patient has fever', 'nurse')
 const mems = await c.memories('ns:er')
@@ -66,7 +66,7 @@ const mems = await c.memories('ns:er')
 ### Docker
 
 ```bash
-docker run -p 8080:8080 -e DEEPSEEK_API_KEY=sk-... globalsushrut/connector-oss
+docker run -p 8080:8080 -e DEEPSEEK_API_KEY=sk-... adminumesh3011/connector-oss
 curl http://localhost:8080/health
 ```
 
@@ -203,7 +203,7 @@ result = pipe.run("My account is locked", user="user:bob")
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  pip install connector-oss  /  npm i @connector-oss/connector               │
+│  pip install connector-agent-oss  /  npm i @connector_oss/connector               │
 │  Python (PyO3 ~140 fn)     TypeScript (NAPI-RS ~35 methods + HTTP fallback)│
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  connector-server  (38 REST + 10 protocol routes)                           │
@@ -287,9 +287,9 @@ Automated via GitHub Actions on `git tag v*`:
 
 | Package | Registry | Workflow |
 |---------|----------|---------|
-| `connector-oss` | PyPI | `publish-pypi.yml` |
-| `@connector-oss/connector` | npm | `publish-npm.yml` |
-| `globalsushrut/connector-oss` | Docker Hub + GHCR | `publish-docker.yml` |
+| `connector-agent-oss` | PyPI | `publish-pypi.yml` |
+| `@connector_oss/connector` | npm | `publish-npm.yml` |
+| `adminumesh3011/connector-oss` | Docker Hub + GHCR | `publish-docker.yml` |
 
 ---
 
@@ -313,8 +313,8 @@ connector-oss/
 │   ├── aapi-federation/     # Cross-org governance, marketplace
 │   └── aapi-pipeline/       # Saga coordinator
 ├── sdks/
-│   ├── python/              # pip install connector-oss
-│   └── typescript/          # npm install @connector-oss/connector
+│   ├── python/              # pip install connector-agent-oss
+│   └── typescript/          # npm install @connector_oss/connector
 ├── examples/yaml/           # 8 progressive YAML configs
 ├── docs/                    # 35+ reference documents
 ├── .github/workflows/       # CI + publish (PyPI, npm, Docker)
@@ -369,9 +369,9 @@ Apache-2.0 — See [LICENSE](LICENSE)
 
 <div align="center">
 
-`pip install connector-oss` &nbsp;·&nbsp; `npm i @connector-oss/connector` &nbsp;·&nbsp; `docker run globalsushrut/connector-oss`
+`pip install connector-agent-oss` &nbsp;·&nbsp; `npm i @connector_oss/connector` &nbsp;·&nbsp; `docker run adminumesh3011/connector-oss`
 
-[GitHub](https://github.com/GlobalSushrut/connector-oss) &nbsp;·&nbsp; [PyPI](https://pypi.org/project/connector-oss/) &nbsp;·&nbsp; [npm](https://www.npmjs.com/package/@connector-oss/connector) &nbsp;·&nbsp; [Docker](https://hub.docker.com/r/globalsushrut/connector-oss) &nbsp;·&nbsp; [Docs](docs/01_INDEX.md)
+[GitHub](https://github.com/GlobalSushrut/connector-oss) &nbsp;·&nbsp; [PyPI](https://pypi.org/project/connector-agent-oss/) &nbsp;·&nbsp; [npm](https://www.npmjs.com/package/@connector_oss/connector) &nbsp;·&nbsp; [Docker](https://hub.docker.com/r/adminumesh3011/connector-oss) &nbsp;·&nbsp; [Docs](docs/01_INDEX.md)
 
 Built by **[Umesh Adhikari](mailto:umeshlamton@gmail.com)**
 
