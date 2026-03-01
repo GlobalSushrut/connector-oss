@@ -72,9 +72,6 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: [build, sdist]
-    environment: pypi
-    permissions:
-      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
