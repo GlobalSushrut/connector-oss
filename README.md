@@ -14,7 +14,7 @@
 
 *Proof = CID content hash + HMAC-chained audit + Ed25519 signatures — verifiable by anyone outside your system.*
 
-**Open-source AI agent framework with tamper-proof memory, cryptographic audit trail, and trust scoring. HIPAA, SOC2, GDPR, EU AI Act compliance built-in. Python, TypeScript, Docker.**
+**Open-source AI agent framework with tamper-proof memory, cryptographic audit trail, and trust scoring. HIPAA, SOC2, GDPR, EU AI Act evidence-ready. Python, TypeScript, Docker.**
 
 <br/>
 
@@ -115,7 +115,7 @@ This isn't theoretical. It's regulation — with deadlines and fines.
 | **Aug 2, 2026** | EU AI Act: high-risk AI rules take effect. Requires audit trails, risk documentation, and evidence for regulators. Fines: up to **€15M / 3%** of global revenue for non-compliance; **€35M / 7%** for prohibited practices. | [EU Commission timeline](https://ai-act-service-desk.ec.europa.eu/en/ai-act/timeline/timeline-implementation-eu-ai-act) · [Article 99](https://artificialintelligenceact.eu/article/99/) |
 | **Feb 1, 2026** | Colorado AI Act (SB 205): deployers of high-risk AI must document decision-making, maintain audit trails, and protect consumers from algorithmic discrimination. | [Colorado Legislature](https://leg.colorado.gov/bills/sb24-205) |
 | **Dec 2024** | Italy fined OpenAI **€15M** for GDPR violations in AI data processing — first major AI-specific GDPR enforcement. | [Reuters](https://www.reuters.com/technology/italy-fines-openai-15-million-euros-over-privacy-rules-breach-2024-12-20/) |
-| **Sep 2024** | FTC launched **"Operation AI Comply"** — crackdown on AI systems making deceptive claims without accountability. | [FTC press release](https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes) |
+| **Sep 2024** | FTC launched **"Operation AI Comply"** — enforcement against deceptive AI claims; *"there is no AI exemption from the laws on the books."* Still active under new administration. | [FTC press release](https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes) · [Benesch analysis](https://www.beneschlaw.com/insight/one-year-in-ftcs-operation-ai-comply-continues-under-new-administration-signaling-enduring-enforcement-focus/) |
 | **2025** | ISACA: *"Agentic AI breaks traditional audit models"* — autonomous agents create decisions that can't be traced by existing governance tools. | [ISACA](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai) |
 | **Jul 2024** | NIST AI 600-1: Generative AI Risk Management Profile — sets expectations for AI documentation, provenance, and accountability. | [NIST](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence) |
 
