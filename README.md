@@ -48,7 +48,11 @@ c = Connector("deepseek", "deepseek-chat", os.environ["DEEPSEEK_API_KEY"])
 result = c.agent("bot", "You are helpful").run("Hello!", "user:alice")
 ```
 
-That's it. **3 lines.** Your agent now has tamper-proof memory, an audit trail, and a trust score.
+That's it. **3 lines.** Every response now includes:
+
+- **`result.cid`** — tamper-proof content hash (CIDv1, SHA2-256)
+- **`result.trust`** — kernel-verified trust score, 0–100
+- **`result.audit_count`** — HMAC-chained, Ed25519-signed audit entries
 
 <details>
 <summary>📦 <b>npm</b> — <code>npm install @connector_oss/connector</code></summary>
@@ -115,7 +119,7 @@ This isn't theoretical. It's regulation — with deadlines and fines.
 | **Aug 2, 2026** | EU AI Act: high-risk AI rules take effect. Requires audit trails, risk documentation, and evidence for regulators. Fines: up to **€15M / 3%** of global revenue for non-compliance; **€35M / 7%** for prohibited practices. | [EU Commission timeline](https://ai-act-service-desk.ec.europa.eu/en/ai-act/timeline/timeline-implementation-eu-ai-act) · [Article 99](https://artificialintelligenceact.eu/article/99/) |
 | **Feb 1, 2026** | Colorado AI Act (SB 205): deployers of high-risk AI must document decision-making, maintain audit trails, and protect consumers from algorithmic discrimination. | [Colorado Legislature](https://leg.colorado.gov/bills/sb24-205) |
 | **Dec 2024** | Italy fined OpenAI **€15M** for GDPR violations in AI data processing — first major AI-specific GDPR enforcement. | [Reuters](https://www.reuters.com/technology/italy-fines-openai-15-million-euros-over-privacy-rules-breach-2024-12-20/) |
-| **Sep 2024** | FTC launched **"Operation AI Comply"** — enforcement against deceptive AI claims; *"there is no AI exemption from the laws on the books."* Still active under new administration. | [FTC press release](https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes) · [Benesch analysis](https://www.beneschlaw.com/insight/one-year-in-ftcs-operation-ai-comply-continues-under-new-administration-signaling-enduring-enforcement-focus/) |
+| **Sep 2024** | FTC launched **"Operation AI Comply"** — enforcement against deceptive AI claims; *"there is no AI exemption from the laws on the books."* | [FTC press release](https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes) |
 | **2025** | ISACA: *"Agentic AI breaks traditional audit models"* — autonomous agents create decisions that can't be traced by existing governance tools. | [ISACA](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai) |
 | **Jul 2024** | NIST AI 600-1: Generative AI Risk Management Profile — sets expectations for AI documentation, provenance, and accountability. | [NIST](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence) |
 
@@ -144,7 +148,7 @@ When a healthcare AI makes a decision about a patient, **who proves what it saw,
 
 When a finance AI flags a transaction, **where's the immutable evidence for the auditor?**
 
-When an AI agent elevates its own permissions to complete a task, **where's the tamper-proof record of who approved it?** (ISACA describes this scenario: *"the AI system [elevated permissions]... there is no clear ticket or human approval"* — [source](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai))
+When an AI agent elevates its own permissions to complete a task, **where's the tamper-proof record of who approved it?** (ISACA discusses autonomous permission elevation and approval traceability as a growing governance gap — [source](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai))
 
 **In regulated environments, this gap is becoming a compliance liability.** Every memory packet gets a CID. Every action gets an Ed25519 signature. Every chain gets HMAC verification. Compliance evidence comes from **real cryptographic proof**, not self-assessments.
 
