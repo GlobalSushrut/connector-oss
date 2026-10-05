@@ -124,7 +124,8 @@ impl MemoryCoordinator {
         if let Some(sid) = session_id { pkt.session_id = Some(sid.to_string()); }
         pkt.content.entities = entities;
         pkt.content.tags = tags;
-        pkt.namespace = Some(format!("m/{}", pid));
+        // Leave namespace unset. The kernel files the packet in the agent's
+        // registered namespace, which is the one it is allowed to write.
         pkt.memory_type = memory_type;
         pkt.abstraction_level = match pkt.memory_type {
             MemoryType::Working => 0,
