@@ -1,3 +1,8 @@
+<p align="center">
+  <a href="https://cnktros.com"><img src="assets/cnktros-logo.png" alt="cnktros" width="168"></a><br>
+  <a href="https://cnktros.com"><strong>cnktros.com</strong></a>
+</p>
+
 # Connector
 
 ## The consequence control plane for autonomous AI
@@ -15,6 +20,10 @@ Connector is for the question that follows capability:
 **One sentence.** Connector binds an intelligence's identity, purpose, and authority to one exact effect, admits that effect through PATE, executes it only when permitted, records what happened, and can revoke the authority to do it again.
 
 **Six words.** Identity → Authority → Effect → Proof → Cease
+
+<p align="center">
+  <img src="assets/architecture.png" alt="Connector OS. cnktros.com. One governed workspace for every agent.">
+</p>
 
 ---
 
@@ -268,7 +277,7 @@ The license server, billing portal, and vendor admin UI are not in the public tr
 
 ## License
 
-Libraries in this directory are [Apache License 2.0](LICENSE). The node under `../platform/` is [Business Source License 1.1](../platform/LICENSE). Report exploitable findings privately through [SECURITY.md](SECURITY.md).
+Libraries under `oss/` are [Apache License 2.0](LICENSE). The node under `platform/` is [Business Source License 1.1](../platform/LICENSE). Report exploitable findings privately through [SECURITY.md](SECURITY.md).
 
 ---
 
