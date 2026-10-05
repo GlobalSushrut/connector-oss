@@ -15,13 +15,19 @@
 
 ## Start
 
+The code is this repository: [github.com/GlobalSushrut/connector-oss](https://github.com/GlobalSushrut/connector-oss).
+
 ```bash
+git clone https://github.com/GlobalSushrut/connector-oss.git
+cd connector-oss
 ./up.sh
 ```
 
-Open <http://127.0.0.1:9091/>. Local login: `Authorization: Bearer dev-token` on your own machine.
+Open <http://127.0.0.1:9091/>. Local login: `Authorization: Bearer dev-token`. Keep that token on your own machine.
 
-Needs Linux, Rust, Docker, Node.js, and [Trunk](https://trunkrs.dev/) (`rustup target add wasm32-unknown-unknown`). Library-only server: [docs/quickstart.md](docs/quickstart.md).
+On **Run**, open **Demo**. On **Bring your agent**, connect something you already use. When PATE says **Ask**, decide that digest on **Fix**. **Watch** shows the evidence.
+
+Needs Linux, Rust, Docker, Node.js, and [Trunk](https://trunkrs.dev/) (`rustup target add wasm32-unknown-unknown`). A smaller library server, without the operator UI: [docs/quickstart.md](docs/quickstart.md).
 
 **Here:** workspace, PATE, receipts, Cease. **Partial:** Keycloak, SPIRE, OpenShell, OPA, Firecracker, OpenTelemetry, cosign. **Target:** agentgateway and production coverage. `./up.sh` does not download Firecracker or OpenShell. This is not a claim of secure, correct, safe, compliant, or production-ready.
 
