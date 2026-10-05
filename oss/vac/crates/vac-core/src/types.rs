@@ -3824,10 +3824,11 @@ mod tests {
             MemPacket::new(pt, serde_json::json!(null), Cid::default(), "s".into(), "p".into(), s, 0)
         };
         
-        // Working scope: transient artifacts
+        // Working scope: transient model artifacts
         assert_eq!(mk(PacketType::Input).scope, MemoryScope::Working);
         assert_eq!(mk(PacketType::LlmRaw).scope, MemoryScope::Working);
-        assert_eq!(mk(PacketType::ToolResult).scope, MemoryScope::Working);
+
+        // Tool results are episodic evidence of a tool interaction, same as the call.
         
         // Semantic scope: extracted knowledge
         assert_eq!(mk(PacketType::Extraction).scope, MemoryScope::Semantic);
@@ -3838,6 +3839,7 @@ mod tests {
         assert_eq!(mk(PacketType::Action).scope, MemoryScope::Episodic);
         assert_eq!(mk(PacketType::Feedback).scope, MemoryScope::Episodic);
         assert_eq!(mk(PacketType::ToolCall).scope, MemoryScope::Episodic);
+        assert_eq!(mk(PacketType::ToolResult).scope, MemoryScope::Episodic);
         assert_eq!(mk(PacketType::StateChange).scope, MemoryScope::Episodic);
     }
     

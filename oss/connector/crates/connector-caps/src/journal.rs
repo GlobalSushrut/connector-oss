@@ -205,6 +205,8 @@ mod tests {
         cap: &str,
         prev: Option<String>,
     ) -> ExecutionContract {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static OFFER_SEQ: AtomicU64 = AtomicU64::new(1);
         let params = serde_json::json!({"path": "/tmp/test"});
         let offer = ContractOffer {
             agent_pid: agent.to_string(),
@@ -214,7 +216,10 @@ mod tests {
             postconditions: vec![],
             rollback_strategy: RollbackStrategy::None,
             timeout_ms: 5000,
-            created_at: chrono::Utc::now().timestamp_millis(),
+            // Contract ids hash created_at. Two offers in the same millisecond
+            // would otherwise collide even when they are different chain links.
+            created_at: chrono::Utc::now().timestamp_millis()
+                + OFFER_SEQ.fetch_add(1, Ordering::Relaxed) as i64,
         };
         let mut c = ExecutionContract::from_offer(offer, prev);
         c.apply_grant(ContractGrant {
