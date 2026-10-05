@@ -42,6 +42,9 @@ fn write_mem(
         },
         reason: None,
         vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
     });
     match r.value {
         SyscallValue::Cid(c) => Some(c),

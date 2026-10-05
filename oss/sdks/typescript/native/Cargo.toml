@@ -33,3 +33,8 @@ cid = "0.11"
 
 [build-dependencies]
 napi-build = "2"
+
+# libipld-core 0.16 depends on core2 ^0.4; 0.4.0 was yanked from crates.io.
+# Same fork the connector and vac workspaces already patch in.
+[patch.crates-io]
+core2 = { git = "https://github.com/technocreatives/core2", branch = "main" }
