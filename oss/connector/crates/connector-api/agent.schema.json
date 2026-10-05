@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://connector.ai/schemas/agent.schema.json",
+  "title": "AgentManifest",
+  "description": "Connector agent package format — connector/v1 Agent kind",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "connector/v1",
+      "description": "Must be 'connector/v1'"
+    },
+    "kind": {
+      "type": "string",
+      "const": "Agent",
+      "description": "Must be 'Agent'"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "minLength": 1,
+          "maxLength": 63,
+          "description": "Unique agent name (DNS-label format: alphanumeric, hyphens, underscores)"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+.*$",
+          "default": "0.1.0",
+          "description": "Semver version string"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of agent purpose"
+        },
+        "author": {
+          "type": "string",
+          "description": "Author or team name"
+        },
+        "cid": {
+          "type": "string",
+          "description": "Content-addressing CID (set automatically on deploy)"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Arbitrary key-value labels for filtering and grouping"
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["model", "instructions"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "object",
+          "required": ["provider", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": ["openai", "anthropic", "google", "ollama", "custom"],
+              "description": "LLM provider"
+            },
+            "name": {
+              "type": "string",
+              "examples": ["gpt-4o", "claude-3-5-sonnet-20241022", "llama-3-70b"],
+              "description": "Model identifier"
+            },
+            "fallback": {
+              "type": "string",
+              "description": "Fallback model if primary unavailable"
+            },
+            "baseUrl": {
+              "type": "string",
+              "format": "uri",
+              "description": "Override base URL for custom/local endpoints"
+            },
+            "maxTokens": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum tokens per response"
+            },
+            "temperature": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 2.0,
+              "description": "Sampling temperature"
+            }
+          }
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1,
+          "description": "System instructions — the agent's personality and purpose"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tool names or tool:// URIs this agent may invoke",
+          "examples": [["web_search", "email_send", "tool://sql_query@v2"]]
+        },
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["persistent", "ephemeral", "readonly"],
+              "default": "persistent",
+              "description": "Memory persistence mode"
+            },
+            "namespace": {
+              "type": "string",
+              "description": "Memory namespace path (default: m/{name})"
+            },
+            "readableNamespaces": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Additional namespaces this agent can read"
+            },
+            "writableNamespaces": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Additional namespaces this agent can write"
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tokenBudget": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "dailyLimit": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Max tokens per 24h window (0 = unlimited)"
+                },
+                "hourlyLimit": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Max tokens per hour (0 = unlimited)"
+                },
+                "burstLimit": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Max tokens per single request (0 = unlimited)"
+                },
+                "costCenter": {
+                  "type": "string",
+                  "description": "Cost attribution tag (e.g. team:healthcare/project:triage)"
+                },
+                "enforce": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Hard-block (true) or soft-warn (false) when exhausted"
+                }
+              }
+            },
+            "priority": {
+              "type": "string",
+              "enum": ["idle", "background", "normal", "high", "realtime"],
+              "default": "normal",
+              "description": "Scheduling priority"
+            },
+            "maxConcurrent": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "description": "Max concurrent sessions (0 = unlimited)"
+            }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "classification": {
+              "type": "string",
+              "enum": ["public", "toolio", "standard", "protected", "control", "kernel"],
+              "default": "standard",
+              "description": "MAC Guard security level"
+            },
+            "firewall": {
+              "type": "string",
+              "enum": ["none", "standard", "hipaa", "pci", "custom"],
+              "default": "standard",
+              "description": "Firewall policy profile"
+            },
+            "requireMfa": {
+              "type": "boolean",
+              "default": false,
+              "description": "Require MFA for admin operations"
+            },
+            "riskClass": {
+              "type": "string",
+              "enum": ["minimal", "limited", "high", "unacceptable"],
+              "description": "EU AI Act risk classification"
+            }
+          }
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "restart": {
+              "type": "string",
+              "enum": ["always", "on-failure", "never"],
+              "default": "on-failure",
+              "description": "Restart policy"
+            },
+            "maxRestarts": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 3,
+              "description": "Max restart attempts (0 = unlimited)"
+            },
+            "checkpointIntervalSecs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "description": "Checkpoint interval in seconds (0 = disabled)"
+            },
+            "shutdownTimeoutSecs": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 30,
+              "description": "Graceful shutdown timeout in seconds"
+            }
+          }
+        },
+        "comply": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["hipaa", "soc2", "gdpr", "pci", "eu_ai_act"]
+          },
+          "description": "Compliance frameworks to enforce",
+          "examples": [["hipaa", "soc2"]]
+        },
+        "residency": {
+          "type": "object",
+          "required": ["region"],
+          "additionalProperties": false,
+          "properties": {
+            "region": {
+              "type": "string",
+              "examples": ["us-east-1", "eu-west-1"],
+              "description": "Primary data residency region"
+            },
+            "allowRegions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Additional allowed regions for replication/failover"
+            }
+          }
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "envVar"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "description": "Secret name in SecretStore" },
+              "envVar": { "type": "string", "description": "Environment variable to inject at runtime" },
+              "rotationDays": { "type": "integer", "minimum": 0, "default": 0, "description": "Rotation period in days (0 = manual)" }
+            }
+          },
+          "description": "Secret references fetched from SecretStore at runtime"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "apiVersion": "connector/v1",
+      "kind": "Agent",
+      "metadata": {
+        "name": "support-bot",
+        "version": "1.0.0",
+        "description": "Customer support agent"
+      },
+      "spec": {
+        "model": { "provider": "openai", "name": "gpt-4o" },
+        "instructions": "You are a helpful customer support agent. Resolve issues politely and escalate when needed.",
+        "tools": ["web_search", "email_send"],
+        "memory": { "mode": "persistent" },
+        "resources": {
+          "tokenBudget": { "dailyLimit": 100000, "enforce": true },
+          "priority": "normal"
+        },
+        "security": { "classification": "standard" },
+        "lifecycle": { "restart": "on-failure", "maxRestarts": 3 },
+        "comply": ["soc2"]
+      }
+    }
+  ]
+}

@@ -1,50 +1,19 @@
-# Rust build artifacts
 target/
 **/target/
-
-# Compiled artifacts
-*.o
-*.so
-*.dylib
-*.rlib
-*.rmeta
-*.pdb
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-.venv/
-venv/
-*.whl
-
-# Node / TypeScript
+.cargo-target-umesh/
 node_modules/
 dist/
-*.js.map
-
-# Databases
-*.db
-*.redb
-*.sqlite
-*.sqlite3
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# NATS server binary (downloaded for testing)
-nats-server
-
-# Env
+.venv/
+venv/
+__pycache__/
 .env
 .env.*
 !.env.example
+*.db
+*.sqlite
+*.sqlite3
+*.redb
+.license-seed
+**/*PLAN*.md
+**/*CHECKLIST*.md
+**/*REMAINING*.md

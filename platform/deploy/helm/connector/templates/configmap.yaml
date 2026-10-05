@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "connector.fullname" . }}
+  labels:
+    {{- include "connector.labels" . | nindent 4 }}
+data:
+  # Feature flags
+  CONNECTOR_FEATURE_COGNITIVE: {{ .Values.features.cognitive | quote }}
+  CONNECTOR_FEATURE_ECONOMY: {{ .Values.features.economy | quote }}
+  CONNECTOR_FEATURE_MULTI_AGENT: {{ .Values.features.multiAgent | quote }}
+  CONNECTOR_FEATURE_MCP_BRIDGE: {{ .Values.features.mcpBridge | quote }}
+  CONNECTOR_FEATURE_A2A_PROTOCOL: {{ .Values.features.a2aProtocol | quote }}
+  
+  # Compliance settings
+  {{- if .Values.compliance.hipaa.enabled }}
+  CONNECTOR_HIPAA_MODE: "true"
+  CONNECTOR_AUDIT_RETENTION_DAYS: {{ .Values.compliance.hipaa.auditRetentionDays | quote }}
+  {{- end }}
+  {{- if .Values.compliance.gdpr.enabled }}
+  CONNECTOR_GDPR_MODE: "true"
+  {{- if .Values.compliance.gdpr.dataResidency }}
+  CONNECTOR_DATA_RESIDENCY: {{ .Values.compliance.gdpr.dataResidency | quote }}
+  {{- end }}
+  {{- end }}
+---
+{{- if .Values.observability.otelCollector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "connector.fullname" . }}-otel
+  labels:
+    {{- include "connector.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    {{- .Values.observability.otelCollector.config | nindent 4 }}
+{{- end }}

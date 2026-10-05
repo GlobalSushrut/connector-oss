@@ -1,528 +1,275 @@
-<div align="center">
+# Connector
 
-<br/>
+## The consequence control plane for autonomous AI
 
-<img src="assets/logo.svg" alt="Connector OSS Logo" width="120" />
+> **Govern AI before intelligence becomes consequence.**
 
-<br/>
+**Identity. Authority. Admission. Runtime. Proof. Cease.**
 
-# 🔐 Connector OSS — Make Every AI Decision Provable
+Models no longer only answer. Agents write files, run code, call APIs, hold credentials, invoke MCP tools, talk to other agents, deploy software, trigger workflows, spend resources, and keep going. The industry is getting very good at making them capable.
 
-### Your AI agents are making decisions. Can you prove what they did?
+Connector is for the question that follows capability:
 
-*Every AI decision deserves proof. We're building it.*
+> **When an agent can act, what governs the moment its intention becomes a real consequence?**
 
-*Proof = CID content hash + HMAC-chained audit + Ed25519 signatures — verifiable by anyone outside your system.*
+**One sentence.** Connector binds an intelligence's identity, purpose, and authority to one exact effect, admits that effect through PATE, executes it only when permitted, records what happened, and can revoke the authority to do it again.
 
-**Open-source AI agent framework with tamper-proof memory, cryptographic audit trail, and trust scoring. HIPAA, SOC2, GDPR, EU AI Act evidence-ready. Python, TypeScript, Docker.**
-
-<br/>
-
-[![GitHub stars](https://img.shields.io/github/stars/GlobalSushrut/connector-oss?style=for-the-badge&logo=github&color=yellow)](https://github.com/GlobalSushrut/connector-oss/stargazers)
-&nbsp;
-[![PyPI](https://img.shields.io/pypi/v/connector-agent-oss?style=for-the-badge&logo=pypi&logoColor=white&color=3b82f6)](https://pypi.org/project/connector-agent-oss/)
-&nbsp;
-[![npm](https://img.shields.io/npm/v/@connector_oss/connector?style=for-the-badge&logo=npm&color=cb3837)](https://www.npmjs.com/package/@connector_oss/connector)
-&nbsp;
-[![Docker](https://img.shields.io/badge/docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://hub.docker.com/r/adminumesh3011/connector-oss)
-
-<br/>
-
-[**Get Started**](#-get-started) · [**See It Work**](#-see-it-work) · [**Why Now**](#-why-now) · [**The Gap**](#-the-accountability-gap) · [**vs Others**](#-connector-vs-everything-else) · [**Docs**](docs/01_INDEX.md)
-
-</div>
+**Six words.** Identity → Authority → Effect → Proof → Cease
 
 ---
 
-## 🚀 Get Started
+## The boundary
+
+Saying "rotate the production credential" is information. Rotating it is an effect. Suggesting a refund is information. Issuing it is an effect. Proposing a deploy is information. Changing production is an effect.
+
+```text
+REASONING          free to propose
+    │
+INTENTION
+════════════════════════════
+    CONNECTOR BOUNDARY
+════════════════════════════
+    │
+ADMISSION → EXECUTION → CONSEQUENCE
+```
+
+Connector does not decide what a model should think. It governs what intelligence is allowed to turn into consequence. A prompt cannot answer that. It takes infrastructure.
+
+## The chain
+
+```text
+WHO is acting?
+WHY does this intelligence exist?
+WHAT authority does it hold right now?
+WHAT exact effect is requested?
+SHOULD it happen — Proceed, Ask, Defer, Quarantine, or Block?
+WHERE does it execute?
+WHAT actually happened?
+CAN the chain be reconstructed?
+CAN future authority be killed?
+```
+
+```text
+IDENTITY → PURPOSE → AUTHORITY → EXACT EFFECT → PATE
+    → RUNTIME → ATTEMPT → OBSERVATION → RECEIPT
+    → CONSEQUENCE → CEASE
+```
+
+Seeing a tool is not permission to run it. Connecting an agent is not trust. Knowledge is not a directive. A directive is not a grant. Memory is not authority.
+
+## PATE
+
+PATE is the only admission authority. One requested effect, one verdict:
+
+| Verdict | What happens |
+| --- | --- |
+| **Proceed** | That exact effect may enter the governed runtime. |
+| **Ask** | A person must decide. The task stays open. The handler does not run. |
+| **Defer** | The request is not ready to execute. |
+| **Quarantine** | The intelligence or task is held in a restricted posture. |
+| **Block** | The effect does not execute. |
+
+No Connector-managed consequence should happen merely because an agent asked for it.
+
+## Seven dimensions
+
+An agent is not a prompt plus a model name.
+
+| Dimension | Question |
+| --- | --- |
+| **Principal** | Who is this intelligence? |
+| **Purpose** | Why was it created? |
+| **Presence** | Where and how is it operating? |
+| **Knowledge** | What information may support its reasoning? |
+| **Directives** | What instructions govern its behavior? |
+| **Authority** | What consequences may it create? |
+| **Situation** | What is happening now? |
+
+Two copies of the same model can exist for different purposes and must not inherit each other's authority. Files, ingested knowledge, memory, mutable state, and the context actually sent to a model stay separate. Upload is not model context.
+
+## Bring the intelligence you already have
+
+Connector does not replace your model, framework, or MCP server. It puts a governance envelope around consequence.
+
+```text
+your agent, editor, gateway, or future client
+                 │
+                 ▼
+             Connector
+                 │
+     reachability is not authority
+                 │
+      API · tool · file · workflow · agent
+```
+
+Two directions cover the market, including products that do not exist yet:
+
+- **They call Connector.** Any MCP client — an editor, a desktop app, a gateway — pastes this node's MCP handle into its own config. A stdio command is their transport, not a URL Connector probes. Adding the address does not grant them.
+- **Connector calls them.** Paste the HTTP MCP server, A2A card (`/.well-known/agent.json`), or OpenAI-compatible `/v1` chat URL they already publish. Hosted chat APIs need a key. The link is model-only until a contract, grant, and PATE route exist.
+
+A chat window with none of those addresses stays unconnected. There is no integration per logo.
+
+## The stack Connector joins
+
+Connector does not rebuild identity, policy, isolation, tracing, or signing. It binds those decisions to the same intelligence, the same authority, the same admitted effect, and the same consequence.
+
+| System | Primary job | Where it sits |
+| --- | --- | --- |
+| **Connector** | Intelligence → consequence | The joining layer |
+| **Keycloak** | Operator identity | Identity |
+| **SPIFFE / SPIRE** | Workload identity | Identity |
+| **NVIDIA OpenShell** | Agent runtime boundaries | Execution |
+| **OPA** | Policy decisions | Inside OpenShell |
+| **Firecracker** | MicroVM isolation | Execution |
+| **agentgateway** | MCP, A2A, model, and service traffic | Proposed traffic plane |
+| **OpenTelemetry** | What the system observed | Evidence |
+| **Sigstore / cosign** | Artifact provenance | Evidence |
+
+```text
+OpenShell:     what may this runtime touch?
+OPA:           does this input satisfy policy?
+SPIRE:         which workload is this?
+agentgateway:  how is this traffic routed?
+OpenTelemetry: what was observed?
+Frameworks:    how should the agent reason and continue?
+
+Connector:     which intelligence, under which purpose and authority,
+               may create this exact consequence, through which runtime,
+               what happened, and does that authority still exist?
+```
+
+A healthy backend does not prove an effect was admitted. An admitted effect does not prove the deployment is production-ready.
+
+## Proof, and stop
+
+Logs say something happened near a timestamp. Connector aims at one chain: intelligence, request, authority, admission, attempt, observed effect, receipt, trace, consequence.
+
+**Cease** is how stop becomes real. When a budget ends, a credential is revoked, a contract changes, or an operator stops an agent, that generation is fenced. Old authorization does not keep working. The model may still be able to think. Capability is not authority.
+
+## One effect, end to end
+
+An operations agent wants to rotate one database credential.
+
+```text
+Agent proposes "rotate credential"
+        │
+identity + purpose + contract
+        │
+exact operation, exact target, exact generation
+        │
+PATE ── Ask ──► a person, on the exact digest
+     ├─ Block ─► no execution
+     └─ Proceed
+            │
+     governed runtime
+            │
+     observed result → receipt → evidence
+```
+
+Afterward the operable questions are: who rotated it, why that intelligence existed, which grant allowed it, which target was admitted, whether a person approved that digest, which policy version was active, whether execution happened, which receipt represents it, and whether that authority can be reused.
+
+## What is already here
+
+This tree already contains principals, the seven-dimension workspace, contracts and grants, PATE, execution attempts, receipts and traces, separated memory and state, Cease, and a universal connection surface. The local node can be started and explored.
+
+Status stays in three words: **HAVE**, **PARTIAL**, **TARGET**. A local start is not production. A box in the architecture is not an installed backend. A policy decision is not proof the outside effect occurred. A receipt is not proof the model was right. A sandbox is not proof of total security.
+
+Three claims stay independent:
+
+| Claim | Means |
+| --- | --- |
+| `inventory_complete` | This build's declared mutations are classified as governed or explicitly non-effecting. |
+| `effect_mediated` | One named effect has evidence that it traversed the required path. |
+| `production_ready` | The production infrastructure and operational evidence for that claim are live. |
+
+None of them means secure, correct, safe, or compliant. Firecracker and OpenShell are not downloaded by `./up.sh`. If they are absent, they stay absent. agentgateway stays a target until forwarding acceptance passes. Missing evidence stays missing.
+
+## Start
+
+Linux. Install Rust, Cargo, Docker, curl, Node.js, and [Trunk](https://trunkrs.dev/).
 
 ```bash
-pip install connector-agent-oss
+rustup target add wasm32-unknown-unknown
+cargo install trunk
 ```
 
-```python
-from connector_agent_oss import Connector
-import os
-
-c = Connector("deepseek", "deepseek-chat", os.environ["DEEPSEEK_API_KEY"])
-result = c.agent("bot", "You are helpful").run("Hello!", "user:alice")
-```
-
-That's it. **3 lines.** Every response now includes:
-
-- **`result.cid`** — tamper-proof content hash (CIDv1, SHA2-256)
-- **`result.trust`** — kernel-verified trust score, 0–100
-- **`result.audit_count`** — HMAC-chained, Ed25519-signed audit entries
-
-<details>
-<summary>📦 <b>npm</b> — <code>npm install @connector_oss/connector</code></summary>
-
-```typescript
-import { Connector } from '@connector_oss/connector'
-const c = new Connector({ llm: 'deepseek:deepseek-chat', apiKey: process.env.DEEPSEEK_API_KEY })
-await c.remember('pid:bot', 'Patient has fever', 'nurse')
-```
-
-</details>
-
-<details>
-<summary>🐳 <b>Docker</b> — <code>docker run adminumesh3011/connector-oss</code></summary>
+From the repository root:
 
 ```bash
-docker run -p 8080:8080 -e DEEPSEEK_API_KEY=sk-... adminumesh3011/connector-oss
-curl http://localhost:8080/health   # → {"status": "ok"}
+./up.sh
 ```
 
-</details>
+That one command reads `oss/boot.defaults`, prepares or probes the configured industry tools, builds the operator UI and `connector-platform` when a fresh clone does not have them, starts the API and workspace, waits until health responds, and prints the URL.
 
-> **No Rust toolchain needed.** Prebuilt native binaries for Linux, macOS, Windows.
+Open <http://127.0.0.1:9091/>.
 
----
+Local development login:
 
-## 👀 See It Work
-
-**1-minute demo** — YAML config · Knowledge injection · Tool use · Pipeline · Attack simulation · Trust scoring
-
-<img src="assets/demo.gif" alt="Connector OSS Demo" width="800" />
-
-> 📖 **[View full YAML config, Python code, and raw output →](demo/DEMO.md)**
-
-Every response comes back with proof:
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  result = agent.run("Diagnose this patient", "patient:P-001")       │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  result.text          "Based on the symptoms, likely diagnosis..."   │
-│  result.trust         94                                             │
-│  result.trust_grade   "A+"                                           │
-│  result.cid           "bafy...k7q2"   ← tamper-proof content hash   │
-│  result.namespace     "patient:P-001"                                │
-│  result.audit_count   3               ← HMAC-chained, Ed25519-signed│
-│  result.comply("hipaa")  → { passed: true, evidence: [...] }        │
-│                                                                      │
-│  Every field is kernel-verified. Nothing is self-reported.           │
-└──────────────────────────────────────────────────────────────────────┘
+```text
+Authorization: Bearer dev-token
 ```
 
-**The CID is a content hash.** If anyone changes the data, the hash breaks. If the audit chain is tampered with, the HMAC breaks. If a signature is forged, Ed25519 catches it. **Math, not trust.**
+Keep that token and this default configuration on your own machine. Do not put them on an untrusted network.
 
----
-
-## ⏰ Why Now
-
-This isn't theoretical. It's regulation — with deadlines and fines.
-
-| When | What | Source |
-|------|------|--------|
-| **Aug 2, 2026** | EU AI Act: high-risk AI rules take effect. Requires audit trails, risk documentation, and evidence for regulators. Fines: up to **€15M / 3%** of global revenue for non-compliance; **€35M / 7%** for prohibited practices. | [EU Commission timeline](https://ai-act-service-desk.ec.europa.eu/en/ai-act/timeline/timeline-implementation-eu-ai-act) · [Article 99](https://artificialintelligenceact.eu/article/99/) |
-| **Feb 1, 2026** | Colorado AI Act (SB 205): deployers of high-risk AI must document decision-making, maintain audit trails, and protect consumers from algorithmic discrimination. | [Colorado Legislature](https://leg.colorado.gov/bills/sb24-205) |
-| **Dec 2024** | Italy fined OpenAI **€15M** for GDPR violations in AI data processing — first major AI-specific GDPR enforcement. | [Reuters](https://www.reuters.com/technology/italy-fines-openai-15-million-euros-over-privacy-rules-breach-2024-12-20/) |
-| **Sep 2024** | FTC launched **"Operation AI Comply"** — enforcement against deceptive AI claims; *"there is no AI exemption from the laws on the books."* | [FTC press release](https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes) |
-| **2025** | ISACA: *"Agentic AI breaks traditional audit models"* — autonomous agents create decisions that can't be traced by existing governance tools. | [ISACA](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai) |
-| **Jul 2024** | NIST AI 600-1: Generative AI Risk Management Profile — sets expectations for AI documentation, provenance, and accountability. | [NIST](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence) |
-
-> *"Every action taken by an AI system should be logged via an audit trail that captures who initiated the action — whether human, application, or AI agent — along with the reason for it."* — [ISACA, 2025](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai)
-
-Every AI framework today can call an LLM. **None of them can prove what happened after.** That's the gap Connector fills.
-
----
-
-## 🔥 The Accountability Gap
-
-AI agents are making consequential decisions — diagnosing patients, approving loans, flagging fraud. But when an auditor asks *"prove what your AI did and why"*, today's frameworks have nothing:
-
-```
-Current state of AI agent frameworks (2026)
-├── ✅ Great at calling LLMs
-├── ✅ Great at chaining agents
-├── ❌ No tamper-proof memory    ← data can be altered after the fact
-├── ❌ No cryptographic audit     ← logs are self-reported and mutable
-├── ❌ No compliance evidence     ← auditors get checkbox PDFs, not proof
-├── ❌ No trust scoring           ← "it said confidence=0.95" — who verified?
-└── ❌ No way to answer: "Who approved this? What did the AI see?"
-```
-
-When a healthcare AI makes a decision about a patient, **who proves what it saw, what it decided, and why?**
-
-When a finance AI flags a transaction, **where's the immutable evidence for the auditor?**
-
-When an AI agent elevates its own permissions to complete a task, **where's the tamper-proof record of who approved it?** (ISACA discusses autonomous permission elevation and approval traceability as a growing governance gap — [source](https://www.isaca.org/resources/news-and-trends/industry-news/2025/the-growing-challenge-of-auditing-agentic-ai))
-
-**In regulated environments, this gap is becoming a compliance liability.** Every memory packet gets a CID. Every action gets an Ed25519 signature. Every chain gets HMAC verification. Compliance evidence comes from **real cryptographic proof**, not self-assessments.
-
----
-
-## ⚡ Connector vs Everything Else
-
-> These frameworks are excellent at what they do. Connector doesn't replace them — it adds the accountability layer that regulated industries now require.
-
-| | LangChain | CrewAI | OpenAI SDK | **Connector** |
-|-|-----------|--------|-----------|---------------|
-| Tamper-proof memory | ❌ | ❌ | ❌ | ✅ CID-addressed |
-| Cryptographic audit trail | ❌ | ❌ | ❌ | ✅ Ed25519 + HMAC |
-| HIPAA / SOC2 / GDPR | ❌ | ❌ | ❌ | ✅ From real evidence |
-| Trust score per response | ❌ | ❌ | ❌ | ✅ 0–100, kernel-verified |
-| Non-bypassable policies | ❌ | ❌ | ❌ | ✅ 5-layer guard |
-| Multi-cell federation | ❌ | ❌ | ❌ | ✅ BFT consensus |
-| Works with any LLM | ✅ | ✅ | ❌ | ✅ DeepSeek, OpenAI, Anthropic, local |
-| **Lines for simplest agent** | **~8** | **~12** | **~6** | **~3** |
-
-### Same effort, 10x more proof
-
-<table>
-<tr><th>LangChain</th><th>CrewAI</th><th>Connector OSS</th></tr>
-<tr>
-<td>
-
-```python
-from langchain_openai import ChatOpenAI
-from langchain.agents import initialize_agent
-from langchain.agents import AgentType
-
-llm = ChatOpenAI(model="gpt-4")
-agent = initialize_agent(
-    tools=[],
-    llm=llm,
-    agent=AgentType.ZERO_SHOT_REACT,
-)
-result = agent.run("Diagnose patient")
-print(result)
-# just a string — no proof
-```
-
-</td>
-<td>
-
-```python
-from crewai import Agent, Task, Crew
-
-doctor = Agent(
-    role="Doctor",
-    goal="Diagnose patient",
-    llm="gpt-4"
-)
-task = Task(
-    description="Diagnose",
-    agent=doctor
-)
-crew = Crew(agents=[doctor], tasks=[task])
-result = crew.kickoff()
-print(result)
-# just a string — no proof
-```
-
-</td>
-<td>
-
-```python
-from connector_oss import Connector
-
-c = Connector("openai", "gpt-4", api_key)
-r = c.agent("doctor", "Diagnose.") \
-     .run("Diagnose patient", "patient:1")
-
-print(r.text)        # response
-print(r.trust)       # 80 — kernel-verified
-print(r.cid)         # bafy...k7q2
-print(r.is_verified()) # True
-# trust + audit + CID = FREE
-```
-
-</td>
-</tr>
-<tr>
-<td>❌ No trust score<br/>❌ No audit trail<br/>❌ No CID<br/>❌ No compliance</td>
-<td>❌ No trust score<br/>❌ No audit trail<br/>❌ No CID<br/>❌ No compliance</td>
-<td>✅ Trust score<br/>✅ HMAC audit trail<br/>✅ CID content hash<br/>✅ HIPAA/SOC2 ready</td>
-</tr>
-</table>
-
-> **3 lines.** Same effort as competitors. But every response comes with cryptographic proof, trust scoring, and a full audit trail — for free.
-
----
-
-## 💡 What You Get — Zero Config
-
-| | Feature | How it works |
-|-|---------|-------------|
-| 🔒 | **Tamper-proof memory** | Every memory packet → CIDv1 (SHA2-256 of DAG-CBOR) |
-| 📊 | **Trust score 0–100** | Kernel-computed from audit integrity, not self-reported |
-| 📋 | **Full audit trail** | HMAC-chained, Ed25519-signed, exportable |
-| 🏥 | **Compliance reports** | HIPAA, SOC2, GDPR, EU AI Act — from real evidence |
-| 🧠 | **Knowledge graph + RAG** | Built-in entity extraction and retrieval |
-| 🔀 | **Multi-agent pipelines** | DAG orchestration with saga rollback |
-| 🌐 | **Federation** | BFT consensus across organizations |
-| 🛡️ | **Policy firewall** | Non-bypassable, 5-layer, per-request enforcement |
-
----
-
-## 🏗️ Real-World Examples
-
-### Healthcare — HIPAA ER Triage
-
-```python
-c = Connector.from_config("hospital.yaml")  # comply=[hipaa]
-triage = c.agent("triage", "Classify patients by urgency 1-5.")
-doctor = c.agent("doctor", "Diagnose based on triage data.")
-
-t = triage.run("45M, chest pain 2h, BP 158/95", "patient:P-001")
-d = doctor.run(f"Patient: {t.text}", "patient:P-001")
-print(f"Trust: {d.trust}/100 ({d.trust_grade})")  # 94/100 (A+)
-print(f"CID: {d.cid}")  # Immutable proof of this decision
-```
-
-<details>
-<summary><b>Finance — Fraud Detection</b></summary>
-
-```python
-c = Connector.from_config("finance.yaml")  # comply=[soc2, gdpr]
-result = c.agent("fraud_analyzer", "Analyze transactions.").run(
-    "Transaction: $4,200 at 3:47 AM, Lagos. Cardholder in New York.",
-    "user:card-8821"
-)
-print(f"CID: {result.cid}")  # Immutable audit evidence for regulators
-```
-
-</details>
-
-<details>
-<summary><b>Multi-Agent Pipeline</b></summary>
-
-```python
-pipe = c.pipeline("support")
-pipe.agent("triage", "Classify tickets")
-pipe.agent("resolver", "Find answers")
-pipe.route("triage -> resolver")
-pipe.hipaa()
-result = pipe.run("My account is locked", user="user:bob")
-```
-
-</details>
-
-<details>
-<summary><b>YAML Config — HIPAA system in 15 lines</b></summary>
-
-```yaml
-connector:
-  provider: deepseek
-  model: deepseek-chat
-  api_key: ${DEEPSEEK_API_KEY}
-  storage: sqlite:./data.db
-  comply: [hipaa, soc2]
-  security:
-    signing: true
-    data_classification: PHI
-  firewall:
-    preset: hipaa
-agents:
-  triage: { instructions: "Classify patients by urgency 1-5." }
-  doctor: { instructions: "Diagnose based on triage.", memory_from: [triage] }
-```
-
-→ [Full YAML Dictionary](docs/31_YAML_DICTIONARY.md)
-
-</details>
-
----
-
-## 🏛️ Architecture
-
-<details>
-<summary><b>28 Rust crates · 3 workspaces · 1,857 tests · 0 failures</b> — click to expand</summary>
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  SDK Layer                                                                   │
-│  Python (PyO3 ~140 fn)     TypeScript (NAPI-RS ~35 methods + HTTP fallback) │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Ring 4 — connector-api  (Connector · AgentBuilder · PipelineBuilder)       │
-│  Ring 3 — connector-engine  (61 modules: firewall, policy, trust, routing)  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Ring 1 — VAC Memory Kernel     │  Ring 2 — AAPI Action Kernel              │
-│  MemoryKernel · 29 syscalls     │  VAKYA grammar (8 slots, 15 verbs)        │
-│  MemPacket (CID-addressed)      │  Ed25519 signing · capability tokens      │
-│  KnotEngine · Prolly tree       │  SagaCoordinator · FederatedPolicy        │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Ring 0 — Cryptographic Foundation                                           │
-│  CIDv1 · Ed25519 · HMAC-SHA256 · Noise_IK · ML-DSA-65 · Prolly Merkle    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Connector Protocol — CP/1.0  (7 layers, 120 capabilities)                  │
-│  Bridges: ANP · A2A · ACP · MCP · SCITT                                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-→ [Full architecture: ARCHITECTURE.md](ARCHITECTURE.md)
-
-</details>
-
----
-
-## 📦 Install from Source
-
-<details>
-<summary>Build everything locally</summary>
+Change ports before the next boot in `oss/boot.defaults`:
 
 ```bash
-git clone https://github.com/GlobalSushrut/connector-oss.git && cd connector-oss
-
-# Test (1,857 tests)
-cd connector && cargo test && cd ..   # 1,194 tests
-cd vac && cargo test && cd ..         # 492 tests
-cd aapi && cargo test && cd ..        # 171 tests
-
-# Python SDK
-cd sdks/python && pip install maturin && maturin develop --release && cd ../..
-
-# TypeScript SDK
-cd sdks/typescript && npm install && npm run build && cd ../..
-
-# Docker
-docker build -t connector-oss .
+CONNECTOR_PORT=9091
+KEYCLOAK_HTTPS_PORT=18443
+OTEL_HEALTH_URL=http://127.0.0.1:13133
+OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
+SPIRE_BIND_PORT=18081
+AGENTGATEWAY_PORT=4000
 ```
 
-</details>
+Provider keys, signing keys, and production JWT secrets stay out of git.
 
-CI publishes automatically on `git tag v*`:
+## Use it
 
-| Package | Install |
-|---------|---------|
-| [`connector-agent-oss`](https://pypi.org/project/connector-agent-oss/) | `pip install connector-agent-oss` |
-| [`@connector_oss/connector`](https://www.npmjs.com/package/@connector_oss/connector) | `npm i @connector_oss/connector` |
-| [`connector-oss`](https://hub.docker.com/r/adminumesh3011/connector-oss) | `docker pull adminumesh3011/connector-oss` |
+1. Open **Run** and select **Demo**. Demo already knows what Connector is, how a turn is admitted, and who is building it.
+2. Choose **Start talking**. Connect a provider key, or a local OpenAI-compatible endpoint, before expecting free-text answers.
+3. Open **Workspace** and read Principal, Purpose, Presence, Knowledge, Directives, Authority, and Situation. Absent means absent.
+4. Open **Bring your agent**. Either paste Connector's MCP handle into the client you already use, or paste that product's MCP, A2A, or chat URL. Reading an address does not grant it.
+5. When PATE returns **Ask**, open **Fix**, approve or deny that exact digest, and let the task finish. Done closes the receipt. The decision is what clears the ask.
+6. Open **Watch** for outcomes and evidence.
 
----
+Give a new agent a specific purpose. "General-purpose" is refused. Then grant only the effects it should be able to cause.
 
-## 📚 Documentation
+## What you get
 
-**[→ 35 docs from crypto to deployment](docs/01_INDEX.md)** · [QUICKSTART.md](QUICKSTART.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [CHANGELOG.md](CHANGELOG.md)
+A place to see who an intelligence is, why it exists, what it knows, what it was told, what it may change, and what it is doing now. A gate before consequence. A human decision bound to one digest. A receipt when a governed effect is observed. A way to cease future authority. An honest empty state when a backend, grant, or proof is missing.
 
----
+## What an agent gets
 
-## 🎯 Who Is This For?
+A persistent principal, a purpose, a contract, and grants that are explicit. Knowledge that is not secretly permission. A runtime path for the effects it is allowed to cause. An Ask when a person must decide. A stop that removes the ability to create the next governed effect, rather than a sentence asking it to behave.
 
-| If you're building... | Connector gives you... |
-|----------------------|----------------------|
-| **Healthcare AI** (HIPAA) | Tamper-proof patient data memory, audit trail for every AI decision, compliance evidence |
-| **Financial AI** (SOC2) | Immutable transaction audit, cryptographic proof for regulators, fraud detection pipeline |
-| **Legal AI** (GDPR) | Right-to-erasure support, data provenance, EU AI Act compliance reports |
-| **Enterprise AI agents** | Non-bypassable policy firewall, RBAC, trust scoring, deterministic guardrails |
-| **Multi-agent systems** | Shared memory with isolation, DAG pipelines, saga rollback, BFT federation |
-| **Any AI agent in production** | Accountability, observability, and "math not trust" verification |
+## Libraries
 
-**Connector is the accountability layer that the AI industry doesn't have yet.** It works alongside LangChain, CrewAI, and OpenAI SDK — or as a standalone framework.
+From `oss/`:
 
----
+```bash
+make rust
+cd connector && cargo run -p connector-server
+```
 
-## 🔄 Alternatives & Comparisons
+`connector-server` listens on `127.0.0.1:8080` unless `CONNECTOR_ADDR` is set. Details are in [docs/quickstart.md](oss/docs/quickstart.md). `./up.sh` is the product path: it runs `connector-platform` and the operator UI.
 
-Looking for an alternative to existing AI frameworks? Here's how Connector compares:
+| Path | Role |
+| --- | --- |
+| `oss/vac/` | Memory kernel |
+| `oss/aapi/` | Action API |
+| `oss/connector/` | Engine, trust records, protocols, CLI |
+| `oss/sdks/` | Python and TypeScript clients |
+| `platform/server/` | The node |
+| `platform/ui-leptos/dashboard/` | Operator UI |
+| `agos-abi/`, `agos-sdk/` | Build dependencies of the node |
 
-- **LangChain alternative with compliance** — LangChain chains LLMs but has no audit trail, no tamper-proof memory, no compliance evidence. Connector adds all of that.
-- **CrewAI alternative with HIPAA** — CrewAI orchestrates agent crews but has no cryptographic verification. Connector gives you the same multi-agent capability plus provenance.
-- **Mem0 alternative with cryptographic proof** — Mem0 provides AI memory but relies on LLM-based verification. Connector uses CID content-addressing and Ed25519 signatures — math, not AI.
-- **OpenAI Agents SDK alternative for regulated industries** — OpenAI's SDK doesn't provide audit trails or compliance reports. Connector wraps any LLM (including OpenAI) with full accountability.
-- **Dify / Flowise / n8n alternative for enterprise** — Visual workflow tools lack security primitives. Connector provides the trust infrastructure underneath.
+The license server, billing portal, and vendor admin UI are not in the public tree.
 
----
+## License
 
-## ❓ FAQ
-
-<details>
-<summary><b>What is tamper-proof memory for AI agents?</b></summary>
-
-Tamper-proof memory means every piece of data an AI agent reads, writes, or decides is content-addressed using CID (Content Identifier) hashes. If anyone changes the data after the fact, the hash breaks. The audit chain uses HMAC-SHA256 and Ed25519 digital signatures, making it mathematically impossible to alter history without detection. This is the same principle behind Git and IPFS.
-
-</details>
-
-<details>
-<summary><b>How does Connector help with HIPAA compliance for AI?</b></summary>
-
-Connector provides HIPAA compliance evidence from real cryptographic audit trails — not checkbox self-assessments. Every AI agent interaction with patient data is logged with an immutable CID, signed with Ed25519, and chained with HMAC. The `comply("hipaa")` method generates compliance reports that auditors can independently verify. Data isolation is enforced at the kernel level with namespace-based access control.
-
-</details>
-
-<details>
-<summary><b>Can I use Connector with OpenAI, Anthropic, DeepSeek, or local LLMs?</b></summary>
-
-Yes. Connector supports 15+ LLM providers out of the box: OpenAI, Anthropic, DeepSeek, Google Gemini, Groq, Together, Mistral, Cohere, Fireworks, Perplexity, OpenRouter, Ollama, LM Studio, vLLM, and any OpenAI-compatible endpoint. The trust and audit layer works identically regardless of which LLM you use.
-
-</details>
-
-<details>
-<summary><b>How is this different from just logging AI responses?</b></summary>
-
-Logging is self-reported and mutable — anyone with database access can alter logs. Connector's audit trail is cryptographically chained: each entry includes an HMAC of the previous entry, making the entire chain tamper-evident. Every memory packet has a CID (content hash), and every action is Ed25519-signed. An auditor can independently verify the entire chain without trusting the system that produced it.
-
-</details>
-
-<details>
-<summary><b>Does Connector work with existing AI frameworks like LangChain or CrewAI?</b></summary>
-
-Yes. Connector provides adapters for LangChain, CrewAI, and OpenAI Agents SDK. You can use Connector as the memory and compliance layer underneath your existing agent framework, or use Connector's built-in agent and pipeline system directly.
-
-</details>
-
-<details>
-<summary><b>What is an AI agent trust score?</b></summary>
-
-Connector computes a trust score (0–100) for every AI agent response. Unlike self-reported confidence scores, this is kernel-verified from audit chain integrity, memory provenance, policy compliance, and cryptographic verification. A score of 90+ means the response has full CID grounding, complete audit trail, and valid signatures.
-
-</details>
-
-<details>
-<summary><b>Is Connector suitable for SOC2 audits?</b></summary>
-
-Yes. Connector generates SOC2 compliance evidence from real cryptographic data — CID-addressed memory, Ed25519-signed audit entries, and HMAC-chained logs. The `comply("soc2")` method produces exportable reports that map directly to SOC2 Trust Service Criteria (security, availability, processing integrity, confidentiality, privacy).
-
-</details>
-
-<details>
-<summary><b>Can Connector handle multi-agent AI systems?</b></summary>
-
-Yes. Connector supports multi-agent pipelines with DAG orchestration, shared memory with namespace isolation, inter-agent communication, saga rollback for failure recovery, and BFT (Byzantine Fault Tolerant) consensus for multi-organization federation. Each agent gets its own memory namespace with configurable access control.
-
-</details>
+Libraries under `oss/` are [Apache License 2.0](oss/LICENSE). The node under `platform/` is [Business Source License 1.1](platform/LICENSE). Report exploitable findings privately through [SECURITY.md](oss/SECURITY.md).
 
 ---
 
-## 🏷️ Keywords
-
-`AI agent framework` · `tamper-proof AI memory` · `AI audit trail` · `HIPAA compliant AI` · `SOC2 AI compliance` · `GDPR AI agent` · `EU AI Act framework` · `AI agent trust score` · `cryptographic audit trail` · `AI agent governance` · `AI agent observability` · `LangChain alternative` · `CrewAI alternative` · `Mem0 alternative` · `secure AI agent framework` · `enterprise AI agent` · `healthcare AI framework` · `financial AI compliance` · `AI decision provenance` · `multi-agent orchestration` · `AI agent accountability` · `deterministic AI guardrails` · `AI agent memory framework` · `regulated AI infrastructure` · `open source AI compliance`
-
----
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs welcome.
-
-**License:** Apache-2.0 — [LICENSE](LICENSE)
-
----
-
-<div align="center">
-
-### Found this useful? Help others find it too.
-
-<br/>
-
-[![Star on GitHub](https://img.shields.io/badge/⭐_Star_on_GitHub-yellow?style=for-the-badge&logo=github&logoColor=black)](https://github.com/GlobalSushrut/connector-oss/stargazers)
-
-<br/>
-
-[![Share on X](https://img.shields.io/badge/Tweet_This-%23000?style=for-the-badge&logo=x&logoColor=white)](https://twitter.com/intent/tweet?text=Found%20this%20%E2%80%94%20open%20source%20AI%20agent%20framework%20with%20tamper-proof%20memory%20and%20cryptographic%20audit%20trails.%20HIPAA%2FSOC2%2FGDPR%20compliance%20built%20in.%20%F0%9F%94%A5%0A%0Ahttps%3A%2F%2Fgithub.com%2FGlobalSushrut%2Fconnector-oss)
-&nbsp;
-[![Share on LinkedIn](https://img.shields.io/badge/Share_on_LinkedIn-%230A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/GlobalSushrut/connector-oss)
-&nbsp;
-[![Share on Reddit](https://img.shields.io/badge/Post_on_Reddit-%23FF4500?style=for-the-badge&logo=reddit&logoColor=white)](https://www.reddit.com/submit?url=https://github.com/GlobalSushrut/connector-oss&title=Connector%20OSS%20%E2%80%94%20Tamper-proof%20memory%20and%20audit%20trail%20for%20AI%20agents)
-&nbsp;
-[![Submit to HN](https://img.shields.io/badge/Hacker_News-%23F06426?style=for-the-badge&logo=ycombinator&logoColor=white)](https://news.ycombinator.com/submitlink?u=https://github.com/GlobalSushrut/connector-oss&t=Connector%20OSS%20%E2%80%94%20Tamper-proof%20memory%20and%20audit%20trail%20for%20AI%20agents)
-
-<br/>
-
-`pip install connector-agent-oss` · `npm i @connector_oss/connector` · `docker pull adminumesh3011/connector-oss`
-
-Built by **[Umesh Adhikari](mailto:umeshlamton@gmail.com)**
-
-</div>
+**Agent frameworks make agents capable. Runtimes contain them. Gateways connect them. Policy engines decide rules. Observability makes them visible. Connector makes consequences governable.**

@@ -1,0 +1,27 @@
+apiVersion: v2
+name: connector
+description: Connector Platform - Enterprise AI Agent Operating System
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai
+  - agents
+  - llm
+  - memory
+  - enterprise
+home: https://connector.ai
+sources:
+  - https://github.com/connector-ai/connector
+maintainers:
+  - name: Connector Team
+    email: team@connector.ai
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

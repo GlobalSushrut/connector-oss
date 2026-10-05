@@ -1,0 +1,130 @@
+# Connector OS — Vendor Control Plane
+#
+# Hosts everything YOU (the vendor) operate:
+#   - connector-license-server  (licensing, payments, customer portal, admin UI)
+#   - playground node           (hosted SaaS trial — optional, comment out if not needed)
+#   - Caddy                     (TLS termination, routing)
+#
+# Topology:
+#   https://connector.dev/          → portal SPA (customer self-service)
+#   https://connector.dev/admin/    → admin SPA (your ops team)
+#   https://try.connector.dev/      → playground node
+#
+# Prerequisites:
+#   1. Point connector.dev + try.connector.dev DNS A records at this server
+#   2. Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SENDGRID_API_KEY below
+#   3. Set CONNECTOR_LICENSE_ADMIN_KEY to a long random secret (protects /admin API)
+#   4. docker compose -f docker-compose.control-plane.yml up -d
+#
+# Data is persisted under ./data/ on the host — back this up.
+
+version: "3.9"
+
+services:
+
+  # ── License + Portal + Admin server ─────────────────────────────────────────
+  license:
+    image: connector-license-server:latest
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile.license
+    restart: unless-stopped
+    environment:
+      # ── Data ────────────────────────────────────────────────────────────────
+      CONNECTOR_LICENSE_DATA_DIR: /data
+      CONNECTOR_KEY_DIR: /data/keys
+      CONNECTOR_ADMIN_UI_DIR: /app/ui/admin
+      CONNECTOR_WWW_DIR: /app/ui/www
+
+      # ── Network ─────────────────────────────────────────────────────────────
+      CONNECTOR_LICENSE_ADDR: "0.0.0.0:4100"
+
+      # ── Admin security — CHANGE THIS ────────────────────────────────────────
+      CONNECTOR_LICENSE_ADMIN_KEY: "${CONNECTOR_LICENSE_ADMIN_KEY:?set CONNECTOR_LICENSE_ADMIN_KEY}"
+
+      # ── Stripe ──────────────────────────────────────────────────────────────
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      STRIPE_PRICE_COMMUNITY: "${STRIPE_PRICE_COMMUNITY:-}"
+      STRIPE_PRICE_STARTUP: "${STRIPE_PRICE_STARTUP:-}"
+      STRIPE_PRICE_PROFESSIONAL: "${STRIPE_PRICE_PROFESSIONAL:-}"
+      STRIPE_PRICE_ENTERPRISE: "${STRIPE_PRICE_ENTERPRISE:-}"
+
+      # ── Email (dunning recovery emails) ─────────────────────────────────────
+      SENDGRID_API_KEY: "${SENDGRID_API_KEY:-}"
+      CONNECTOR_FROM_EMAIL: "${CONNECTOR_FROM_EMAIL:-noreply@connector.dev}"
+
+      # ── Public URLs (used in email links + portal) ───────────────────────────
+      CONNECTOR_PUBLIC_URL: "${CONNECTOR_PUBLIC_URL:-https://connector.dev}"
+
+    volumes:
+      - license-data:/data
+    expose:
+      - "4100"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4100/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  # ── Playground node (trial mode) ─────────────────────────────────────────────
+  playground:
+    image: connector-platform:latest
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile.playground
+    restart: unless-stopped
+    environment:
+      CONNECTOR_PRESET: playground
+      CONNECTOR_HOST: "0.0.0.0"
+      CONNECTOR_PORT: "9091"
+      CONNECTOR_PUBLIC_URL: "${PLAYGROUND_PUBLIC_URL:-https://try.connector.dev}"
+      CONNECTOR_PLAYGROUND_SESSION_TTL_SECS: "5400"
+      CONNECTOR_PLAYGROUND_MAX_SESSIONS: "50"
+      CONNECTOR_PLAYGROUND_MAX_AGENTS: "5"
+      CONNECTOR_PLAYGROUND_TOKEN_BUDGET: "100000"
+      CONNECTOR_DATA_DIR: "/var/lib/connector"
+      CONNECTOR_UI_DIR: "/var/lib/connector/ui"
+      RUST_LOG: "info"
+    volumes:
+      - playground-data:/var/lib/connector
+    expose:
+      - "9091"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9091/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+
+  # ── Caddy — TLS + routing ─────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - license
+      - playground
+
+volumes:
+  license-data:
+  playground-data:
+  caddy-data:
+  caddy-config:

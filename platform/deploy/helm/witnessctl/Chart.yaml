@@ -1,0 +1,12 @@
+apiVersion: v2
+name: witnessctl
+description: WitnessCtl — API witness layer (capture, receipts, seal, compliance)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - witness
+  - compliance
+  - evidence
+maintainers:
+  - name: Connector Team

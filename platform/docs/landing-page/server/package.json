@@ -1,0 +1,10 @@
+{
+  "name": "connector-landing-notify",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Optional tiny API for future webhooks (Slack, custom forms). Google Form embed does not POST here — use Gmail via Forms settings or Apps Script.",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  }
+}

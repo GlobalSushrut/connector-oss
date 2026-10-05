@@ -1,0 +1,47 @@
+connector:
+  # Build this image from a reviewed lockfile containing connectorctl,
+  # openshell, spire-agent, and cosign. The verifier rejects missing tools.
+  image:
+    repository: ghcr.io/connector-ai/connector-platform-seven-backends
+    tag: replace-with-immutable-release
+    pullPolicy: IfNotPresent
+
+  env:
+    CONNECTOR_ENV: production
+    CONNECTOR_PRESET: production
+    CONNECTOR_PORT: "9091"
+    CONNECTOR_UI_DIR: /ui/dist
+    RUST_LOG: info
+    CONNECTOR_MULTI_TENANT: "true"
+    CONNECTOR_SSO_ISSUER: https://id.example/realms/connector
+    CONNECTOR_SSO_DISCOVERY_URL: https://id.example/realms/connector/.well-known/openid-configuration
+    CONNECTOR_SSO_AUTHORIZATION_URL: https://id.example/realms/connector/protocol/openid-connect/auth
+    CONNECTOR_SSO_TOKEN_URL: https://id.example/realms/connector/protocol/openid-connect/token
+    CONNECTOR_SSO_USERINFO_URL: https://id.example/realms/connector/protocol/openid-connect/userinfo
+    CONNECTOR_SSO_JWKS_URL: https://id.example/realms/connector/protocol/openid-connect/certs
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4317
+
+  spire:
+    enabled: true
+
+  microd:
+    enabled: true
+
+  nodeSelector:
+    connector.ai/kvm: "true"
+  tolerations:
+    - key: connector.ai/kvm
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
+
+observability:
+  otelCollector:
+    enabled: true
+
+backendVerification:
+  enabled: true
+  profile: kubernetes
+  apiKeySecret:
+    name: connector-secrets
+    key: connector-api-key

@@ -1,0 +1,52 @@
+# Trunk config for the vendor-hosted Playground bundle.
+#
+# Usage:
+#   TRUNK_CONFIG=Trunk.playground.toml \
+#     trunk build --release --no-default-features --features=playground
+#
+# The default `Trunk.toml` builds the self-deploy bundle into `dist/`.
+# This config writes to `dist/playground/` so both artefacts can sit side
+# by side under one workspace without overwriting each other.
+
+[build]
+target = "./index.html"
+dist   = "dist/playground"
+
+[[hooks]]
+stage   = "pre_build"
+command = "npx"
+command_arguments = ["--yes", "tailwindcss@3.4.17", "-i", "./input.css", "-o", "./tailwind.out.css", "--minify"]
+
+# Post-build pipeline (all handled by patch script):
+#   1. wasm-opt -Oz   — shrink WASM binary 40-50%
+#   2. patch script   — streaming init, SW registration, progress feedback
+#   3. gzip -9        — pre-compress WASM/JS/CSS for content-encoding:gzip serving
+#   4. cp sw.js       — copy service worker to dist root
+[[hooks]]
+stage   = "post_build"
+command = "sh"
+command_arguments = ["-c", "STAGE=$(ls -d dist/playground/.stage 2>/dev/null || echo dist/playground) && python3 scripts/patch_wasm_init.py $STAGE/index.html playground && for f in $STAGE/*.js $STAGE/*.css; do [ -f \"$f\" ] && gzip -9 -f -k \"$f\" && echo \"gzipped $f\"; done && cp public/sw.js $STAGE/sw.js && echo 'post_build done'"]
+
+
+# Dev serve is intentionally on a different port than the default self-deploy
+# config so both can run concurrently for smoke-testing dual-distribution UX.
+[serve]
+port = 1430
+open = false
+ws_protocol = "ws"
+
+[[proxy]]
+rewrite = "/api"
+backend = "http://localhost:9091"
+
+[[proxy]]
+rewrite = "/v1"
+backend = "http://localhost:9091"
+
+[[proxy]]
+rewrite = "/health"
+backend = "http://localhost:9091"
+
+[[proxy]]
+rewrite = "/readyz"
+backend = "http://localhost:9091"

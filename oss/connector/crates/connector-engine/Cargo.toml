@@ -1,0 +1,31 @@
+[package]
+name = "connector-engine"
+description = "Ring 3: Connector Engine — bridges VAC Memory Kernel and AAPI Action Kernel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+vac-core = { workspace = true }
+aapi-core = { workspace = true }
+connector-native-contract = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+cid = { workspace = true }
+multihash = { workspace = true }
+sha2 = { workspace = true }
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+serde_yaml = { workspace = true }
+hex = "0.4"
+regex-lite = "0.1"
+reqwest = { version = "0.12", features = ["json", "blocking", "rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+redb = { workspace = true }
+rusqlite = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

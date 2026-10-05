@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Connector — Problem, Software, Demo, Founder Ask</title>
+  <style>
+    @page { size: Letter; margin: 0.7in 0.75in; }
+    :root {
+      --ink: #12141a;
+      --muted: #4b5563;
+      --line: #d1d5db;
+      --accent: #0f766e;
+      --soft: #f3f4f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      font-size: 10.5pt;
+      line-height: 1.45;
+      max-width: 7.5in;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 20pt;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.35rem;
+      line-height: 1.15;
+    }
+    h2 {
+      font-size: 12.5pt;
+      color: var(--accent);
+      margin: 1.35rem 0 0.55rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 1.5px solid var(--line);
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 10.5pt;
+      margin: 0.85rem 0 0.35rem;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 0.55rem; }
+    .lede {
+      font-size: 11pt;
+      color: var(--muted);
+      max-width: 38rem;
+      margin-bottom: 0.85rem;
+    }
+    .meta {
+      font-size: 8.5pt;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    ol.seven {
+      margin: 0.4rem 0 0.7rem 1.15rem;
+      padding: 0;
+    }
+    ol.seven li {
+      margin-bottom: 0.45rem;
+      padding-left: 0.15rem;
+    }
+    ol.seven li strong { color: var(--ink); }
+    .box {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.7rem 0.85rem;
+      margin: 0.6rem 0 0.85rem;
+    }
+    .box p:last-child { margin-bottom: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      margin: 0.4rem 0 0.8rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.4rem 0.5rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--soft); font-weight: 600; }
+    .timing {
+      display: inline-block;
+      font-size: 8pt;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .footer-logo {
+      margin-top: 1.75rem;
+      padding-top: 1rem;
+      border-top: 1.5px solid var(--line);
+      text-align: center;
+      page-break-inside: avoid;
+    }
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 0.35rem;
+    }
+    .logo-mark svg { display: block; }
+    .logo-word {
+      font-size: 18pt;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .logo-word span { color: var(--accent); }
+    .tagline {
+      font-size: 8.5pt;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    ul.clean { margin: 0.35rem 0 0.7rem 1.1rem; padding: 0; }
+    ul.clean li { margin-bottom: 0.3rem; }
+    .keep { page-break-inside: avoid; }
+  </style>
+</head>
+<body>
+
+  <p class="meta">Connector · explaining brief · for design partners &amp; early operators · not a spoken script</p>
+  <h1>What is happening, what Connector is,<br />and why this demo matters</h1>
+  <p class="lede">
+    This document explains — in plain language — the problem the world is moving into,
+    what the software is, what it does, the vision, why it matters, how a short demo
+    should look and what it must make clear, and what a solo founder is trying to find next.
+    It is written to be read. It is not a pitch script.
+  </p>
+
+  <!-- ========== PART 1 · ~20s equivalent density when skimmed ========== -->
+  <h2>1. The problem — seven points (world we are evolving toward)</h2>
+  <p>
+    Organizations are putting language models next to real systems: money, tickets,
+    machines, customer data, internal tools. The model can talk. The hard part is
+    what happens when talk becomes <em>action</em> — when an agent can change the world.
+  </p>
+  <ol class="seven">
+    <li>
+      <strong>Agents are becoming effectors, not just chat windows.</strong>
+      Teams want agents that score wires, file tickets, call APIs, move money, open holds.
+      A reply is cheap. An effect is irreversible and billable.
+    </li>
+    <li>
+      <strong>“Stop” in the UI often does not stop spend or side effects.</strong>
+      Providers may keep streaming. Workers may keep hopping. The model still “wants”
+      to finish the task. Soft cancel is not mechanical refusal.
+    </li>
+    <li>
+      <strong>Capability is confused with authority.</strong>
+      Listing tools or pasting an API key looks like permission. Real permission is
+      who may touch which address, under which policy, after which human or kernel admit.
+    </li>
+    <li>
+      <strong>Operators cannot see live posture.</strong>
+      Is this agent active, ceased, quarantined, cut from egress? What world grants does
+      it hold? Is the LLM stubbed or linked? Without one place to look, demos and audits fail.
+    </li>
+    <li>
+      <strong>There is no reconstructible loop.</strong>
+      After something goes wrong, people need: what was proposed, what was admitted,
+      what ran, what was denied, and why — not a chat scroll that mixed opinion with effect.
+    </li>
+    <li>
+      <strong>Security theatre and lab grades get sold as production.</strong>
+      Soft playground modes, HMAC lab seals, and “demo ledgers” get confused with
+      court-grade or core-banking truth. Honesty itself is part of the product.
+    </li>
+    <li>
+      <strong>The continuum from explore → harden is missing as one spine.</strong>
+      Labs need soft fail. Production needs fail-closed. Most stacks fork into two products
+      or two stories. Engineers need one runtime where posture is dialable and visible.
+    </li>
+  </ol>
+
+  <div class="box keep">
+    <p><strong>In one sentence:</strong> the world is evolving toward agents that can change
+    production systems, while the industry still ships chat UX, soft cancels, and opaque
+    tool loops — without admit-as-law, exposure meters, or reconstructible evidence.</p>
+  </div>
+
+  <h2>2. What the software is</h2>
+  <p>
+    <strong>Connector</strong> is operational software for hosting <em>dynamic agents under
+    engineer-chosen constraints</em>. It is not “another chatbot.” It is the layer where
+    intelligence may propose, and where <strong>Admit</strong> (through identity, DAL, PATE,
+    ToolDispatch) is the only path for world-changing effects.
+  </p>
+  <p>
+    On the hosted playground today you meet that spine as: <strong>Workbench</strong>
+    (Talk → Orders → Admit), <strong>Expometer</strong> (live cease / quarantine / world /
+    LLM exposure), <strong>Action Trail</strong> (full-page loop timeline + manage), and
+    <strong>SpendCease</strong> (fence a generation so further admits refuse). The flagship
+    story is <strong>BankOps</strong> — score / hold / decide / ledger on a tenant book —
+    not a cinematic reel.
+  </p>
+
+  <h2>3. What it does — how it solves the problem</h2>
+  <table>
+    <thead>
+      <tr><th>Problem pressure</th><th>What Connector does</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Effects sneak out of chat</td>
+        <td>Ring-1 proposals never auto-dispatch; Admit is required</td>
+      </tr>
+      <tr>
+        <td>Stop does not stop</td>
+        <td>SpendCease fences generation, voids context tokens, reaps; next admit refuses</td>
+      </tr>
+      <tr>
+        <td>Opaque “what can it do?”</td>
+        <td>Expometer shows verdict, grants, LLM mode, burn / inflight</td>
+      </tr>
+      <tr>
+        <td>No loop history</td>
+        <td>Action Trail stitches journal + watch + activity; Orders / Evidence / Standing</td>
+      </tr>
+      <tr>
+        <td>Overclaiming grades</td>
+        <td>Playground honesty: tenant ledger ≠ FedWire; grade stays playground_demo</td>
+      </tr>
+      <tr>
+        <td>Explore vs harden fork</td>
+        <td>Same spine; posture differs — soft lab vs fail-closed harden</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    We guarantee <strong>honesty and reconstructibility of consequence</strong> — what was
+    admitted and what ran — not absolute security, not model truth, not “we made the AI compliant.”
+  </p>
+
+  <h2>4. Vision</h2>
+  <p>
+    Engineers compose how dynamic and how constrained each agent is: tools, world grants,
+    budgets, isolation tiers, HITL, cease. The same product serves a 90‑minute playground
+    tenant and a hardened node. Marketing language never outruns the control plane.
+    Partners use Connector to put agents next to real ops — wires, tickets, machines —
+    with admit, visibility, stop, and proof as first-class product, not afterthought.
+  </p>
+
+  <h2>5. Why it matters <span class="timing">· skim ≈ 20 seconds for sections 1–5</span></h2>
+  <p>
+    If agents become default operators of software, then <em>who admits effects</em>,
+    <em>who can see exposure</em>, <em>who can hard-stop spend</em>, and <em>who can prove
+    the loop</em> become as important as the model. Connector exists so those questions
+    have a runnable answer — not a slide narrative. That is why a short demo must show
+    propose → admit → control → report on a real surface (try.cnktros.com), not a video
+    of pretend automation.
+  </p>
+
+  <!-- ========== PART 2 · DEMO EXPLAINING ========== -->
+  <h2>6. The demo — how it should look, what it shows, what it must explain
+    <span class="timing">· ≈ 40 seconds of attention</span></h2>
+
+  <h3>How it should look</h3>
+  <p>
+    Dark operator UI, not a marketing landing page. One principal (BankOps) in Workbench.
+    Expometer visible (verdict, admit line, world, LLM). Tool cards with Admit / Reject —
+    pending, never auto-run. After Cease, a clear refuse reason (popup), Expometer flipped
+    to ceased. Then a <strong>dedicated</strong> Action Trail page (URL changes to
+    <code>/run/trail/…</code>) — cyan “dedicated page” framing — not a sidebar that feels
+    like the same screen.
+  </p>
+
+  <h3>What the forty seconds should show (five beats)</h3>
+  <table>
+    <thead>
+      <tr><th>Beat</th><th>What you see</th><th>What it explains</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Whoami</strong></td>
+        <td>BankOps identity; Expometer <code>active</code></td>
+        <td>This is a governed principal, not a free chat bot</td>
+      </tr>
+      <tr>
+        <td><strong>Capabilities</strong></td>
+        <td>Tools chips; world / LLM on Expometer</td>
+        <td>Capability is listed before authority is used</td>
+      </tr>
+      <tr>
+        <td><strong>Tool exec</strong></td>
+        <td>Score $47.5k wire → Admit → receipt / ledger</td>
+        <td>Effects only after Admit → PATE → ToolDispatch</td>
+      </tr>
+      <tr>
+        <td><strong>Control</strong></td>
+        <td>Cease → continue refuses; Expometer <code>CEASED</code></td>
+        <td>Hard stop is mechanical; model desire does not matter</td>
+      </tr>
+      <tr>
+        <td><strong>Report</strong></td>
+        <td>Action Trail · Evidence focus</td>
+        <td>The loop is reconstructible for operators and partners</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>What the demo must not pretend</h3>
+  <ul class="clean">
+    <li>It must not look like FedWire or court attestation.</li>
+    <li>It must not hide that the ledger is a playground tenant store.</li>
+    <li>It must not imply tools ran without Admit.</li>
+    <li>It must not leave refuse as a silent disabled button — reason must be visible.</li>
+  </ul>
+  <p>
+    Supporting materials: auto deck <code>power-demo-45s.html</code>, live path
+    https://try.cnktros.com , reached surface doc <code>CONNECTOR_PLAYGROUND_REACHED.md</code>.
+  </p>
+
+  <!-- ========== PART 3 · FOUNDER ========== -->
+  <h2>7. Solo founder — what I am trying, why it matters, paid early design partners
+    <span class="timing">· ≈ 20 seconds of attention</span></h2>
+  <p>
+    I am building Connector as a solo founder: one spine from playground to harden, with
+    BankOps as the first honest ops story. The goal is not “more AI features.” The goal is
+    a control plane partners can trust enough to put next to real workflows — with admit,
+    cease, exposure, and trail as product, not slideware.
+  </p>
+  <p>
+    That matters because early design partners who <strong>pay</strong> are not buying
+    hype. They buy time with a founder who will encode their constraints into the runtime,
+    and they buy a surface they can critique: Workbench, Expometer, Trail, Cease. Paid
+    early design partners fund focus. They force honesty about what is playground vs
+    production. They turn seven industry pressures into a weekly backlog instead of a
+    manifesto.
+  </p>
+  <div class="box keep">
+    <p><strong>Ask:</strong> paid early design partners — operators or platform engineers
+    who will run the hosted trial (or a pilot node), walk the BankOps loop, and sit with
+    the founder on posture, grants, and proof. Not free “advisor” seats. Not logo trades.
+    Working sessions against the live software.</p>
+    <p style="margin-top:0.55rem"><strong>Contact / try:</strong> https://try.cnktros.com
+    · product promise and reached surface in <code>platform/docs/</code>.</p>
+  </div>
+
+  <!-- ========== LOGO ========== -->
+  <div class="footer-logo">
+    <div class="logo-mark">
+      <img src="connector-logo.png" width="52" height="52" alt="Connector" style="border-radius:10px;display:block;" />
+      <div class="logo-word">Connector<span>.</span></div>
+    </div>
+    <p class="tagline">Admit is law · Exposure is visible · Consequence is reconstructible</p>
+  </div>
+
+</body>
+</html>

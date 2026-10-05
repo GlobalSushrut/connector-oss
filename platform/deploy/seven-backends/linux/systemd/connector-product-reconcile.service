@@ -1,0 +1,13 @@
+[Unit]
+Description=Connector product reconcile
+Documentation=file:///usr/share/doc/connector/OPERATOR.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=CONNECTOR_PRODUCT_STATE=/var/lib/connector/deployment
+ExecStart=/usr/local/bin/connectorctl product reconcile
+NoNewPrivileges=true
+Nice=10

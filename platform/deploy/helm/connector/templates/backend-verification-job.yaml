@@ -1,0 +1,50 @@
+{{- if .Values.backendVerification.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "connector.fullname" . }}-seven-backends
+  labels:
+    {{- include "connector.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.backendVerification.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.backendVerification.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "connector.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend-verification
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "connector.serviceAccountName" . }}
+      containers:
+        - name: connectorctl
+          image: "{{ .Values.connector.image.repository }}:{{ .Values.connector.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
+          command:
+            - /usr/local/bin/connectorctl
+            - --json
+            - --endpoint
+            - http://{{ include "connector.fullname" . }}:{{ .Values.connector.service.port }}
+            - govern
+            - deploy-verify
+            - {{ .Values.backendVerification.profile | quote }}
+          env:
+            - name: CONNECTOR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backendVerification.apiKeySecret.name }}
+                  key: {{ .Values.backendVerification.apiKeySecret.key }}
+          securityContext:
+            {{- toYaml .Values.security.containerSecurityContext | nindent 12 }}
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+{{- end }}

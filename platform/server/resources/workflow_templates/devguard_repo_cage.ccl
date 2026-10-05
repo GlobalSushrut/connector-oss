@@ -1,0 +1,40 @@
+contract devguard_repo_cage {
+    identity {
+        name: "devguard_repo_cage"
+        version: "1.0.0"
+    }
+    interface {
+        input repo: Json required
+        output cage_address: Json
+        tool devguard_bind
+        tool devguard_attach_agent
+        event repo_caged
+    }
+    state {
+        initial start
+        terminal done
+        start -> done on complete
+    }
+    governance {
+        require repo is present
+        ensure cage_address is present
+        roles [operator, builder, intern, reviewer, release]
+        clearance "high"
+    }
+    budget {
+        tokens: 2048
+        cost_usd: 0.50
+        tool_calls: 30
+    }
+    memory {
+        use devguard_repos as repos
+        use devguard_policies as policies
+    }
+    behavior {
+        step cage_repo {
+            tool devguard_bind { repo: ${repo} } -> cage_address
+            transition done
+            emit repo_caged { address: ${cage_address} }
+        }
+    }
+}

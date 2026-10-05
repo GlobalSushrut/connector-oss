@@ -1,0 +1,15 @@
+apiVersion: v2
+name: tracetramp
+description: TraceTramp — runtime proxy and execution control plane for AI agents
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai
+  - governance
+  - proxy
+  - tracetramp
+home: https://github.com/connector-ai/connector
+maintainers:
+  - name: Connector Team
+# Optional: add Bitnami postgresql/redis subcharts locally with `helm dependency update`

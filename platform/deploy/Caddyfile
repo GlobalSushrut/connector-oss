@@ -1,0 +1,249 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Connector Platform — Caddyfile
+# Caddy auto-provisions Let's Encrypt TLS (HTTP-01 or DNS-01 challenge).
+# Replace {$DOMAIN} with your actual domain in .env:
+#   DOMAIN=connector.yourdomain.com
+#   LICENSE_DOMAIN=license.yourdomain.com
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Platform API + Dashboard ──────────────────────────────────────────────────
+{$DOMAIN:connector.example.com} {
+
+    # Auto-HTTPS via Let's Encrypt (HTTP-01 challenge, port 80 must be reachable)
+    tls {$ACME_EMAIL:admin@example.com}
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "DENY"
+        X-XSS-Protection          "1; mode=block"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "camera=(), microphone=(), geolocation=()"
+        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'"
+        -Server
+    }
+
+    # Rate limiting (requires caddy-ratelimit plugin — see Dockerfile.caddy)
+    # rate_limit {remote}.{path} 100r/s
+
+    # API routes → connector-platform backend
+    handle /api/* {
+        reverse_proxy connector-platform:9090 {
+            header_up X-Real-IP        {remote_host}
+            header_up X-Forwarded-For  {remote_host}
+            header_up X-Forwarded-Proto https
+            health_uri    /health
+            health_interval 15s
+            lb_policy     first
+        }
+    }
+
+    # WebSocket support for trace/stream endpoints
+    handle /api/v1/debug/agents/*/trace/stream {
+        reverse_proxy connector-platform:9090 {
+            header_up Upgrade    {http.request.header.Upgrade}
+            header_up Connection {http.request.header.Connection}
+        }
+    }
+
+    # Metrics endpoint — restrict to internal/monitoring networks
+    handle /metrics {
+        @allowed remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.1
+        handle @allowed {
+            reverse_proxy connector-platform:9090
+        }
+        respond "Forbidden" 403
+    }
+
+    # Health check — public (for load balancer probes)
+    handle /health {
+        reverse_proxy connector-platform:9090
+    }
+
+    # All other traffic → connector-platform (serves UI from /ui/dist)
+    handle {
+        reverse_proxy connector-platform:9090 {
+            header_up X-Real-IP       {remote_host}
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # Access log
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+        format json
+    }
+}
+
+# ── Marketing Website ─────────────────────────────────────────────────────────
+{$WWW_DOMAIN:www.example.com} {
+    tls {$ACME_EMAIL:admin@example.com}
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        -Server
+    }
+
+    # Portal API calls go to platform backend
+    handle /api/* {
+        reverse_proxy connector-platform:9090 {
+            header_up X-Real-IP        {remote_host}
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    handle {
+        reverse_proxy connector-platform:9090
+    }
+
+    log {
+        output file /var/log/caddy/www-access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+        format json
+    }
+}
+
+# ── Redirect apex domain → www ────────────────────────────────────────────────
+{$APEX_DOMAIN:example.com} {
+    redir https://{$WWW_DOMAIN:www.example.com}{uri} permanent
+}
+
+# ── Vendor control plane: connector.dev ──────────────────────────────────────
+# Portal (customer self-service) + Admin UI + License APIs
+# Used with docker-compose.control-plane.yml
+{$PORTAL_DOMAIN:connector.dev} {
+    tls {$ACME_EMAIL:admin@connector.dev}
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        -Server
+    }
+
+    # Admin UI + API — restrict to trusted IPs in production
+    @admin_paths path /admin* /api/v1/admin/* /api/v1/surveillance/*
+    handle @admin_paths {
+        @allowed_admin remote_ip {$ADMIN_CIDR:127.0.0.1/32 10.0.0.0/8}
+        handle @allowed_admin {
+            reverse_proxy license:4100 {
+                header_up X-Real-IP        {remote_host}
+                header_up X-Forwarded-Proto https
+            }
+        }
+        respond "Forbidden" 403
+    }
+
+    # Stripe webhooks — Stripe IPs only
+    handle /webhooks/stripe {
+        reverse_proxy license:4100 {
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # All other traffic → license server (portal SPA + API)
+    handle {
+        reverse_proxy license:4100 {
+            header_up X-Real-IP        {remote_host}
+            header_up X-Forwarded-Proto https
+            health_uri    /health
+            health_interval 15s
+        }
+    }
+
+    log {
+        output file /var/log/caddy/portal-access.log {
+            roll_size 100mb
+            roll_keep 7
+        }
+        format json
+    }
+}
+
+# ── Hosted playground: try.connector.dev ─────────────────────────────────────
+# Real connector-platform in playground mode — SaaS trial for prospects
+{$PLAYGROUND_DOMAIN:try.connector.dev} {
+    tls {$ACME_EMAIL:admin@connector.dev}
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        -Server
+        # Allow AI tool connections from any origin (DevGuard connect)
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Headers "Authorization, Content-Type, X-Tenant-Id"
+    }
+
+    # Playground session API — public (no IP restriction, rate-limit by app layer)
+    handle /api/v1/playground/* {
+        reverse_proxy playground:9091 {
+            header_up X-Real-IP        {remote_host}
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # All other traffic → playground node (dashboard + APIs)
+    handle {
+        reverse_proxy playground:9091 {
+            header_up X-Real-IP        {remote_host}
+            header_up X-Forwarded-Proto https
+            health_uri    /health
+            health_interval 15s
+        }
+    }
+
+    log {
+        output file /var/log/caddy/playground-access.log {
+            roll_size 100mb
+            roll_keep 7
+        }
+        format json
+    }
+}
+
+# ── License Server (internal-only recommended, or separate subdomain) ─────────
+{$LICENSE_DOMAIN:license.example.com} {
+    tls {$ACME_EMAIL:admin@example.com}
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    "nosniff"
+        -Server
+    }
+
+    # Restrict admin endpoints to known IPs
+    @admin path /api/v1/admin/* /api/v1/surveillance/*
+    handle @admin {
+        @allowed_admin remote_ip {$ADMIN_CIDR:127.0.0.1}
+        handle @allowed_admin {
+            reverse_proxy license-server:4100 {
+                header_up X-Real-IP {remote_host}
+            }
+        }
+        respond "Forbidden" 403
+    }
+
+    handle {
+        reverse_proxy license-server:4100 {
+            header_up X-Real-IP        {remote_host}
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    log {
+        output file /var/log/caddy/license-access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+        format json
+    }
+}

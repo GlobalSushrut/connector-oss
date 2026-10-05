@@ -1,0 +1,23 @@
+[Unit]
+Description=Connector host kernel reconciler (platform API → systemd drop-in)
+Documentation=file:///usr/share/doc/connector-kerneld/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Requires write to drop-in path (often under /run/systemd/system/...) and optionally systemctl(1).
+User=root
+Environment=CONNECTOR_PLATFORM_URL=http://127.0.0.1:9735
+Environment=CONNECTOR_KERNELD_INTERVAL_SEC=30
+# Set in environment file or drop-in:
+#   CONNECTOR_API_KEY=…
+#   CONNECTOR_KERNELD_AGENT_PID=…
+#   CONNECTOR_KERNELD_DROPIN_PATH=/run/systemd/system/your-worker.service.d/50-connector-ip.conf
+#   CONNECTOR_KERNELD_SYSTEMD_UNIT=your-worker.service
+ExecStart=/usr/bin/connector-kerneld watch --agent ${CONNECTOR_KERNELD_AGENT_PID} --output ${CONNECTOR_KERNELD_DROPIN_PATH}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

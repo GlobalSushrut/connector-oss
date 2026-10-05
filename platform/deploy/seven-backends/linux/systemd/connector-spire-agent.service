@@ -1,0 +1,24 @@
+[Unit]
+Description=Connector-operated SPIRE agent
+Documentation=https://spiffe.io/docs/latest/deploying/spire_agent/
+After=network-online.target connector-spire-server.service
+Wants=network-online.target
+Requires=connector-spire-server.service
+Before=connector-platform.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/spire-agent run -config /etc/connector/seven-backends/spire/agent.conf
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/spire/agent /run/spire/agent
+RuntimeDirectory=spire/agent
+StateDirectory=spire/agent
+
+[Install]
+WantedBy=multi-user.target

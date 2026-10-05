@@ -1,0 +1,303 @@
+# Connector Platform Helm Values
+# Default configuration for production deployment
+
+# ============================================================================
+# Global Settings
+# ============================================================================
+global:
+  # Image pull secrets for private registries
+  imagePullSecrets: []
+  # Storage class for persistent volumes
+  storageClass: ""
+
+# ============================================================================
+# Connector Node (Core Service)
+# ============================================================================
+connector:
+  # Single-node only while local engine_store / RWO PVC is the default.
+  # Multi-replica HA is not supported until shared durable state + leader election exist.
+  # Do not raise this above 1 with ReadWriteOnce persistence.
+  replicaCount: 1
+  
+  image:
+    repository: ghcr.io/connector-ai/connector-platform
+    tag: ""  # Defaults to Chart appVersion
+    pullPolicy: IfNotPresent
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9091
+  
+  # Ingress configuration
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: connector.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+    #  - secretName: connector-tls
+    #    hosts:
+    #      - connector.local
+  
+  # Environment variables
+  env:
+    # Deployment mode: development | staging | production
+    CONNECTOR_ENV: production
+    CONNECTOR_PORT: "9091"
+    CONNECTOR_UI_DIR: /ui/dist
+    # Log level: trace | debug | info | warn | error
+    RUST_LOG: info
+    # Enable multi-tenant mode
+    CONNECTOR_MULTI_TENANT: "false"
+    # OpenTelemetry endpoint (optional)
+    OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  
+  # Secret environment variables (from Kubernetes secrets)
+  envFromSecrets:
+    - name: connector-secrets
+      optional: true
+  
+  # Persistence for kernel data
+  persistence:
+    enabled: true
+    size: 10Gi
+    accessMode: ReadWriteOnce
+    # storageClass: ""
+  
+  # Health probes (matches boot/probes.rs)
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 9091
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: 9091
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 3
+  
+  startupProbe:
+    httpGet:
+      path: /readyz
+      port: 9091
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30  # 2.5 minutes for boot
+  
+  # Pod disruption budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity rules
+  affinity: {}
+  
+  # Service account
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  # SPIRE CSI Workload API. Requires the official SPIFFE hardened chart.
+  spire:
+    enabled: false
+    socketMountPath: /run/spire/sockets
+    endpointSocket: unix:///run/spire/sockets/spire-agent.sock
+
+  # Host connector-microd on KVM-capable nodes.
+  microd:
+    enabled: false
+    socketPath: /run/connector/microd.sock
+    readyFilePath: /run/connector/microd.ready
+
+# Post-install functional gate. This does not alter /readyz.
+backendVerification:
+  enabled: false
+  profile: kubernetes
+  apiKeySecret:
+    name: connector-secrets
+    key: connector-api-key
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+
+# ============================================================================
+# Observability Stack
+# ============================================================================
+observability:
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+      interval: 30s
+      labels: {}
+  
+  # OpenTelemetry Collector sidecar
+  otelCollector:
+    enabled: false
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: "0.96.0"
+    config: |
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+      processors:
+        batch:
+          timeout: 1s
+          send_batch_size: 1024
+      exporters:
+        otlp:
+          endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+          tls:
+            insecure: true
+      service:
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [otlp]
+          metrics:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [otlp]
+
+# ============================================================================
+# Security Settings
+# ============================================================================
+security:
+  # Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  
+  # Container security context
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  
+  # Network policies
+  networkPolicy:
+    enabled: false
+    ingress: []
+    egress: []
+
+# ============================================================================
+# External Dependencies
+# ============================================================================
+postgresql:
+  enabled: false
+  auth:
+    postgresPassword: ""
+    database: connector
+  primary:
+    persistence:
+      size: 10Gi
+
+redis:
+  enabled: false
+  auth:
+    enabled: true
+    password: ""
+  master:
+    persistence:
+      size: 1Gi
+
+# External database (when postgresql.enabled=false)
+externalDatabase:
+  host: ""
+  port: 5432
+  database: connector
+  username: connector
+  existingSecret: ""
+  existingSecretPasswordKey: password
+
+# External Redis (when redis.enabled=false)
+externalRedis:
+  host: ""
+  port: 6379
+  existingSecret: ""
+  existingSecretPasswordKey: password
+
+# ============================================================================
+# Autoscaling
+# ============================================================================
+# Disabled by default: HPA + RWO volume = split-brain / attach failures.
+# Enable only with shared storage (RWX) and an HA-capable Connector build.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# ============================================================================
+# HIPAA / Compliance Mode
+# ============================================================================
+compliance:
+  # Enable HIPAA mode (requires BAA)
+  hipaa:
+    enabled: false
+    # Audit log retention in days
+    auditRetentionDays: 2555  # 7 years
+  
+  # SOC2 mode
+  soc2:
+    enabled: false
+  
+  # GDPR mode
+  gdpr:
+    enabled: false
+    # Data residency region
+    dataResidency: ""
+
+# ============================================================================
+# Feature Flags
+# ============================================================================
+features:
+  # Enable cognitive substrate
+  cognitive: true
+  # Enable economy/billing
+  economy: false
+  # Enable multi-agent orchestration
+  multiAgent: true
+  # Enable MCP bridge
+  mcpBridge: true
+  # Enable A2A protocol
+  a2aProtocol: true

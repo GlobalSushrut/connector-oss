@@ -1,0 +1,58 @@
+// U6.4 / I-26 — sample workflow that uses only Connector OS substrate APIs.
+// No TraceTramp / WitnessCtl / DevGuard private types. Institutions list is empty.
+// Tools map to platform routes: MemWrite, Moment commit, UsageEvent, ArtifactLog.
+contract substrate_memory_moment {
+    identity {
+        name: "substrate_memory_moment"
+        version: "1.0.0"
+    }
+    interface {
+        input turn: Json required
+        output moment_ref: Json
+        tool memory_write
+        tool moment_commit
+        tool usage_record
+        tool artifact_append
+        event moment_ready
+    }
+    state {
+        initial start
+        terminal done
+        start -> done on complete
+    }
+    governance {
+        require turn is present
+        ensure moment_ref is present
+        roles [operator, agent]
+        clearance "standard"
+        compliance [usage_first, substrate_sot]
+    }
+    budget {
+        tokens: 2048
+        cost_usd: 0.00
+        tool_calls: 8
+    }
+    memory {
+        use agent_working as working
+        use moment_index as moments
+    }
+    behavior {
+        step commit_turn {
+            // 1) Durable MemPacket (Object Fabric for large parts via platform write path)
+            tool memory_write { content: ${turn}, parts: ${turn.parts} } -> packet_cid
+            // 2) Lean moment skeleton (D/R/U/A/I/O refs)
+            tool moment_commit { session: ${turn.session_id}, packet: ${packet_cid} } -> moment_ref
+            // 3) Immutable usage meter (never invent $)
+            tool usage_record { moment: ${moment_ref}, tokens: ${turn.tokens} } -> usage_id
+            // 4) Append-only ArtifactLog projection seed
+            tool artifact_append { usage: ${usage_id}, moment: ${moment_ref} } -> artifact_id
+            transition done
+            emit moment_ready {
+                moment: ${moment_ref},
+                packet: ${packet_cid},
+                usage: ${usage_id},
+                artifact: ${artifact_id}
+            }
+        }
+    }
+}

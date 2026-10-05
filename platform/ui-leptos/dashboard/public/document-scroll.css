@@ -1,0 +1,64 @@
+/* Window scrollbar is the only vertical scroller. Unclip operator chrome. */
+html, body {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+}
+#root {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
+}
+.op-shell,
+.op-shell.h-screen {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 100dvh !important;
+  overflow: visible !important;
+}
+.op-shell > div:first-child,
+.op-chrome {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: none !important;
+}
+#main-content {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overscroll-behavior: auto !important;
+}
+#main-content > * {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  flex: none !important;
+}
+.op-pulse-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.op-mode-rail {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: #09090e; }
+::-webkit-scrollbar-thumb {
+  background: #71717a;
+  border-radius: 8px;
+  border: 2px solid #09090e;
+}
+::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }

@@ -1,0 +1,61 @@
+# Connector Platform — production OCI image (single-node)
+#
+# Build (from repo root, after `make package` or release binaries exist):
+#   docker build -f platform/deploy/Dockerfile.connector-platform \
+#     --build-arg BIN_DIR=platform/server/target/release \
+#     -t connector-platform:local .
+#
+# Or build inside Docker:
+#   docker build -f platform/deploy/Dockerfile.connector-platform --target runtime -t connector-platform:local .
+#
+# Run:
+#   docker run --rm -p 9091:9091 \
+#     -e CONNECTOR_ENV=production \
+#     -e CONNECTOR_DATA_DIR=/data \
+#     -v connector-data:/data \
+#     connector-platform:local
+#
+# Honesty: this is a sovereign single-node image. Replica count ≠ HA.
+
+ARG BIN_DIR=platform/server/target/release
+
+# ── Optional in-container build ─────────────────────────────────────────────
+FROM rust:1-bookworm AS builder
+WORKDIR /src
+COPY . .
+RUN cargo build --manifest-path platform/server/Cargo.toml --release \
+      --bin connector-platform --bin connectorctl
+
+# ── Runtime ─────────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl libssl3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system connector \
+    && useradd --system --gid connector --home-dir /var/lib/connector --shell /usr/sbin/nologin connector \
+    && mkdir -p /var/lib/connector /var/log/connector /etc/connector \
+    && chown -R connector:connector /var/lib/connector /var/log/connector
+
+# Prefer prebuilt host binaries when present; else take builder stage outputs.
+ARG BIN_DIR
+COPY --from=builder /src/platform/server/target/release/connector-platform /usr/local/bin/connector-platform
+COPY --from=builder /src/platform/server/target/release/connectorctl /usr/local/bin/connectorctl
+COPY platform/deploy/PACKAGING.md /usr/share/doc/connector-platform/PACKAGING.md
+COPY connector.yaml.example /etc/connector/connector.yaml.example
+
+USER connector
+WORKDIR /var/lib/connector
+
+ENV CONNECTOR_ENV=production \
+    CONNECTOR_DATA_DIR=/var/lib/connector \
+    CONNECTOR_HOST=0.0.0.0 \
+    CONNECTOR_PORT=9091 \
+    RUST_LOG=info
+
+EXPOSE 9091
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:9091/healthz || exit 1
+
+ENTRYPOINT ["/usr/local/bin/connector-platform"]

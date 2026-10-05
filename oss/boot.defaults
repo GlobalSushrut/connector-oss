@@ -1,0 +1,9 @@
+# Defaults for the first boot. Change these paths later; the next ./up.sh reads this file.
+CONNECTOR_PORT=9091
+KEYCLOAK_HTTPS_PORT=18443
+OTEL_HEALTH_URL=http://127.0.0.1:13133
+OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
+SPIRE_BIND_PORT=18081
+AGENTGATEWAY_PORT=4000
+COSIGN_PASSWORD=connector-oss
+CONNECTOR_JWT_SECRET=connector-oss-dev-jwt-secret-32b

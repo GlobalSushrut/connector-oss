@@ -1,0 +1,53 @@
+{
+  "schema": "operator_surface.v1",
+  "display": {
+    "title": "Substrate Memory → Moment",
+    "subtitle": "MemWrite · Moment · UsageEvent · ArtifactLog (no TT/WC)",
+    "category": "memory",
+    "icon": "database"
+  },
+  "accounting": {
+    "contract": "workflow_accounting.v1",
+    "mode": "service_monitoring",
+    "source": "manifest",
+    "two_way": false
+  },
+  "institutions": [],
+  "lifecycle": {
+    "primary_action": "dry_run",
+    "run_label": "Dry-run",
+    "enable_label": "Enable"
+  },
+  "signals": [],
+  "panels": [
+    {
+      "id": "substrate",
+      "title": "Substrate SoT",
+      "type": "kv",
+      "source": "capabilities",
+      "fields": [
+        { "label": "Memory write", "capability": "memory.write" },
+        { "label": "Moment recall", "capability": "memory.moment.recall" },
+        { "label": "Usage events", "capability": "substrate.usage" },
+        { "label": "Artifact log", "capability": "substrate.artifact_log" }
+      ]
+    }
+  ],
+  "fix_rules": [],
+  "console_links": [
+    {
+      "institution_id": "substrate",
+      "label": "Substrate status",
+      "tier": "T0",
+      "path": "/monitor"
+    }
+  ],
+  "evidence": ["kernel.audit.export", "substrate.artifact_log"],
+  "forensics": ["substrate.causal", "memory.moment"],
+  "perform": ["memory.write"],
+  "honesty": [
+    "MemPackets / UsageEvent / ArtifactLog are SoT",
+    "TT/WC not required — this sample proves WF-as-projection builders can stay on substrate APIs",
+    "cost_usd budget 0.00 means usage-first; do not invent invoice dollars"
+  ]
+}

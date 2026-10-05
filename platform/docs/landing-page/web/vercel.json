@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "headers": [
+    {
+      "source": "/sitemap.xml",
+      "headers": [{ "key": "Content-Type", "value": "application/xml" }]
+    },
+    {
+      "source": "/robots.txt",
+      "headers": [{ "key": "Content-Type", "value": "text/plain" }]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/((?!sitemap\\.xml|robots\\.txt|favicon\\.svg|logo\\.png|icons\\.svg|llms.*\\.txt|googlec.*\\.html|connector.*\\.txt|svg/|seo-pages\\.css|assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,270 @@
+# ═══════════════════════════════════════════════════════════════
+# Patient Triage Agent — CLS Contract
+# ═══════════════════════════════════════════════════════════════
+# This contract defines the complete behavior of the triage agent.
+# The agent.py runtime loads this contract and executes it through
+# the Connector kernel — no business logic lives in Python.
+
+name: patient_triage
+version: "1.0.0"
+description: "Triage incoming patients by severity using clinical reasoning"
+author: "connector-platform"
+domain: medical
+
+# ── Interface ─────────────────────────────────────────────────
+inputs:
+  - name: patient_id
+    type: string
+    required: true
+    description: "Patient identifier (MRN or encounter ID)"
+  - name: symptoms
+    type: string
+    required: true
+    description: "Chief complaint and reported symptoms"
+  - name: vitals
+    type: json
+    required: false
+    description: "Vital signs if available (BP, HR, SpO2, temp)"
+
+outputs:
+  - name: triage_result
+    type: json
+    description: "Full triage assessment object"
+  - name: severity_score
+    type: float
+    description: "Severity score 0.0–10.0"
+  - name: priority_level
+    type: string
+    description: "Priority: critical | urgent | standard | low"
+
+# ── Tools ─────────────────────────────────────────────────────
+tools:
+  - lookup_patient
+  - assess_severity
+  - assign_priority
+  - notify_staff
+  - check_allergies
+
+# ── Memory ────────────────────────────────────────────────────
+memory:
+  - patient_records
+  - triage_history
+  - clinical_guidelines
+
+# ── State Machine ─────────────────────────────────────────────
+states:
+  initial: intake
+  terminal:
+    - triaged
+    - escalated
+    - failed
+  transitions:
+    - from: intake
+      to: assessing
+      trigger: start_assessment
+    - from: assessing
+      to: scoring
+      trigger: assessment_ready
+    - from: scoring
+      to: triaged
+      trigger: score_assigned
+    - from: scoring
+      to: escalated
+      trigger: critical_detected
+    - from: assessing
+      to: failed
+      trigger: error
+    - from: scoring
+      to: failed
+      trigger: error
+
+# ── Execution Steps (compiled into IR DAG) ────────────────────
+steps:
+  # Step 1: Look up patient record from EHR
+  - id: lookup
+    label: "Look up patient record"
+    type: tool_call
+    tool: lookup_patient
+    patient_id: "${patient_id}"
+    output: patient_record
+
+  # Step 2: Transition to assessing state
+  - id: transition_assessing
+    label: "Enter assessment phase"
+    type: transition
+    to: assessing
+
+  # Step 3: Check allergies (safety-critical)
+  - id: check_allergies
+    label: "Check known allergies"
+    type: tool_call
+    tool: check_allergies
+    patient_id: "${patient_id}"
+    output: allergy_info
+
+  # Step 4: Recall patient history from memory
+  - id: recall_history
+    label: "Recall patient history"
+    type: mem_read
+    namespace: patient_records
+    query: "${patient_id}"
+    output: history
+    max_results: 10
+
+  # Step 5: Recall clinical guidelines for symptoms
+  - id: recall_guidelines
+    label: "Recall relevant clinical guidelines"
+    type: mem_read
+    namespace: clinical_guidelines
+    query: "${symptoms}"
+    output: guidelines
+    max_results: 5
+
+  # Step 6: Checkpoint before LLM reasoning
+  - id: pre_reasoning_checkpoint
+    label: "Checkpoint before reasoning"
+    type: checkpoint
+    label: "pre_reasoning"
+
+  # Step 7: LLM-based clinical reasoning
+  - id: reason
+    label: "Clinical triage reasoning"
+    type: llm_infer
+    prompt: "prompts/triage_reasoning.md"
+    inputs: ["patient_record", "allergy_info", "history", "guidelines", "symptoms", "vitals"]
+    output: assessment
+    max_tokens: 2048
+    temperature: 0.2
+
+  # Step 8: Transition to scoring
+  - id: transition_scoring
+    label: "Enter scoring phase"
+    type: transition
+    to: scoring
+
+  # Step 9: Compute severity score
+  - id: score
+    label: "Compute severity score"
+    type: tool_call
+    tool: assess_severity
+    assessment: "${assessment}"
+    symptoms: "${symptoms}"
+    vitals: "${vitals}"
+    output: severity_score
+
+  # Step 10: Build triage result
+  - id: build_result
+    label: "Build triage result object"
+    type: set_var
+    var: triage_result
+    value:
+      patient_id: "${patient_id}"
+      assessment: "${assessment}"
+      severity_score: "${severity_score}"
+      timestamp: "${_timestamp}"
+
+  # Step 11: Check if critical (severity > 8.0)
+  - id: check_critical
+    label: "Check if critical severity"
+    type: branch
+    precondition:
+      type: field_gt
+      field: severity_score
+      value: 8.0
+    then: handle_critical
+    else: handle_standard
+
+  # Step 12a: Critical path — escalate
+  - id: handle_critical
+    label: "Escalate critical patient"
+    type: tool_call
+    tool: notify_staff
+    priority: "critical"
+    patient_id: "${patient_id}"
+    severity: "${severity_score}"
+    assessment: "${assessment}"
+    output: escalation_result
+    next: [set_priority_critical]
+
+  # Step 12b: Set critical priority
+  - id: set_priority_critical
+    label: "Set critical priority level"
+    type: set_var
+    var: priority_level
+    value: "critical"
+    next: [save_record]
+
+  # Step 13a: Standard path — assign priority
+  - id: handle_standard
+    label: "Assign standard priority"
+    type: tool_call
+    tool: assign_priority
+    severity: "${severity_score}"
+    patient_id: "${patient_id}"
+    output: assignment_result
+    next: [determine_priority]
+
+  # Step 13b: Determine priority level from score
+  - id: determine_priority
+    label: "Determine priority level"
+    type: set_var
+    var: priority_level
+    value: "standard"
+    next: [save_record]
+
+  # Step 14: Save triage record to memory
+  - id: save_record
+    label: "Persist triage record"
+    type: mem_write
+    namespace: triage_history
+    content: triage_result
+    tags: ["triage", "patient", "assessment"]
+
+  # Step 15: Emit completion event
+  - id: emit_complete
+    label: "Emit triage complete event"
+    type: emit_event
+    event: triage_complete
+    data: ["severity_score", "priority_level", "triage_result"]
+
+  # Step 16: Final transition
+  - id: finalize
+    label: "Complete triage"
+    type: transition
+    to: triaged
+
+# ── Governance ────────────────────────────────────────────────
+governance:
+  preconditions:
+    - type: field_present
+      field: patient_id
+    - type: field_present
+      field: symptoms
+  postconditions:
+    - type: field_present
+      field: severity_score
+    - type: field_present
+      field: triage_result
+  invariants:
+    - type: budget_remaining
+      resource: tokens
+      min: 0
+  allowed_roles:
+    - medical_staff
+    - triage_nurse
+    - attending_physician
+    - admin
+  clearance: "medical"
+  compliance_tags:
+    - hipaa
+    - phi
+    - clinical_decision_support
+  failure_strategy: human_review
+
+# ── Resource Budget ───────────────────────────────────────────
+budget:
+  tokens: 4096
+  cost_usd: 0.50
+  tool_calls: 15
+  time_ms: 45000
+  memory_mb: 64

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+  <title>Connector</title>
+  <meta name="description" content="Connector — Agentic AI governance, plugin runtime, and operator console for self-hosted and trial deployments." />
+  <meta name="application-name" content="Connector" />
+
+  <!-- Open Graph / Twitter — operator share previews stay branded. -->
+  <meta property="og:site_name" content="Connector" />
+  <meta property="og:title" content="Connector" />
+  <meta property="og:description" content="Agentic AI governance, plugin runtime, and operator console." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/logo.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Connector" />
+  <meta name="twitter:description" content="Agentic AI governance, plugin runtime, and operator console." />
+
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+
+  <!-- Critical CSS loaded by Trunk. -->
+  <link data-trunk rel="css" href="./tailwind.out.css" />
+  <link data-trunk rel="css" href="./public/document-scroll.css" />
+  <link data-trunk rel="rust" data-no-wasm-opt />
+
+  <!-- Inter / JetBrains Mono loaded non-blocking so they never delay first paint.
+       media=print + onload swap is the canonical render-unblocking pattern.
+       The inline style above covers system-ui fallback during font load. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
+
+  <!--
+    Pre-paint background so the dashboard doesn't flash white between
+    initial HTML and the first WASM render. The same colour appears on
+    `body { @apply bg-zinc-950 }` in `input.css`; we duplicate it here
+    so it applies before Tailwind has loaded.
+  -->
+  <style>
+    html, body {
+      background-color: #09090b;
+      color: #fafafa;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      height: auto !important;
+      max-height: none !important;
+      min-height: 100%;
+      overflow-x: hidden !important;
+      overflow-y: scroll !important;
+      scrollbar-gutter: stable;
+    }
+    #root { min-height: 100%; height: auto !important; overflow: visible !important; }
+    .op-shell, .op-shell.h-screen {
+      height: auto !important;
+      max-height: none !important;
+      min-height: 100dvh !important;
+      overflow: visible !important;
+    }
+    .op-shell > div:first-child, .op-chrome {
+      overflow: visible !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+    }
+    #main-content {
+      overflow: visible !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+    }
+    #main-content > * {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+      flex: none !important;
+    }
+    .op-pulse-bar { position: sticky; top: 0; z-index: 40; }
+    .op-mode-rail { position: sticky; top: 0; align-self: flex-start; height: 100dvh; overflow-y: auto; }
+    ::-webkit-scrollbar { width: 12px; height: 12px; }
+    ::-webkit-scrollbar-track { background: #09090e; }
+    ::-webkit-scrollbar-thumb { background: #71717a; border-radius: 8px; border: 2px solid #09090e; }
+    ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+    /* Center the boot splash so it doesn't jump when WASM mounts. */
+    .boot-splash {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 0.75rem;
+      color: #71717a; font-family: 'Inter', system-ui, sans-serif;
+    }
+    .boot-spinner {
+      width: 1.5rem; height: 1.5rem;
+      border: 2px solid #27272a; border-top-color: #6366f1;
+      border-radius: 9999px; animation: boot-spin 0.8s linear infinite;
+    }
+    @keyframes boot-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .boot-spinner { animation-duration: 1.6s; }
+    }
+    /* Leptos mount_to() appends into #root; hide splash once real UI exists. */
+    #root:has(> :not(.boot-splash)) .boot-splash {
+      display: none !important;
+      pointer-events: none;
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-50 antialiased">
+  <!--
+    Visible only while the WASM bundle is still streaming/initialising.
+    `main.rs` clears #root before mount so this overlay cannot sit on top
+    of the live app. Operators on slow links get a real signal instead of a
+    blank page.
+  -->
+  <div id="root">
+    <div class="boot-splash" role="status" aria-live="polite" aria-busy="true">
+      <img src="/logo.png" alt="cnktros" width="180" height="48" style="height:40px;width:auto;margin-bottom:0.5rem;" />
+      <div class="boot-spinner" aria-hidden="true"></div>
+      <div style="font-size: 0.875rem;">Loading Connector…</div>
+      <div id="boot-err" style="display:none;max-width:32rem;margin-top:1rem;padding:0.75rem 1rem;border-radius:8px;border:1px solid #7f1d1d;background:#1c0a0a;color:#fca5a5;font-size:0.75rem;font-family:monospace;white-space:pre-wrap;word-break:break-all;"></div>
+    </div>
+  </div>
+  <script>
+    window.onerror = function(msg, src, line, col, err) {
+      var el = document.getElementById('boot-err');
+      if (el) { el.style.display='block'; el.textContent = 'JS Error: ' + msg + (src ? ' (' + src + ':' + line + ')' : '') + (err && err.stack ? '\n' + err.stack : ''); }
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      var el = document.getElementById('boot-err');
+      if (el) { el.style.display='block'; el.textContent = 'Unhandled Promise: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)); }
+    });
+  </script>
+
+  <noscript>
+    <div style="max-width: 36rem; margin: 6rem auto; padding: 1.5rem; border-radius: 12px; border: 1px solid #3f3f46; background: #18181b; color: #e4e4e7; font-family: 'Inter', system-ui, sans-serif;">
+      <h1 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem;">JavaScript &amp; WebAssembly required</h1>
+      <p style="font-size: 0.875rem; line-height: 1.5; color: #a1a1aa;">
+        The Connector dashboard is a WebAssembly application. Enable JavaScript and WebAssembly in your browser to continue,
+        or use <code style="color: #c7d2fe;">connectorctl</code> from the command line.
+      </p>
+    </div>
+  </noscript>
+</body>
+</html>

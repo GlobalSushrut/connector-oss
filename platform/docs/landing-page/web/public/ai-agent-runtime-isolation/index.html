@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Agent Runtime Isolation | Sandbox AI Agents | Connector</title>
+    <meta name="description" content="Isolate AI agents at runtime with granted world addresses and dest-pinned Landlock children. Ungranted destinations fail closed when the cage is on. Not Firecracker-by-default." />
+    <meta name="keywords" content="AI agent isolation, AI runtime isolation, sandbox AI agents, AI agent namespace, AI workload isolation, multi-tenant AI, AI agent identity, agent vault" />
+    <link rel="canonical" href="https://cnktros.com/ai-agent-runtime-isolation/" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="AI Agent Runtime Isolation | Connector" />
+    <meta property="og:description" content="Isolate every AI agent in its granted world. Ungranted destinations fail closed when the cage is on across workloads. Identity at boot; AgentPassport DID is planned." />
+    <meta property="og:url" content="https://cnktros.com/ai-agent-runtime-isolation/" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "AI Agent Runtime Isolation: Preventing Cross-Agent Contamination and Data Leakage",
+      "description": "How to isolate AI agents at runtime so secrets, credentials, and data cannot leak between agents, workloads, or tenants.",
+      "url": "https://cnktros.com/ai-agent-runtime-isolation/",
+      "publisher": { "@type": "Organization", "name": "Connector", "url": "https://cnktros.com" }
+    }
+    </script>
+    <link rel="stylesheet" href="/seo-pages.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-nav">
+        <a class="site-nav__brand" href="/"><img src="/logo.png" alt="Connector" height="36" /></a>
+        <a class="site-nav__home" href="/">Back to homepage</a>
+      </header>
+      <main>
+        <section class="hero">
+          <p class="eyebrow">AI Agent Runtime Isolation</p>
+          <h1>Granted worlds. Dest-pinned dials. Default DROP.</h1>
+          <p>
+            When multiple AI agents share infrastructure, the risk is cross-agent contamination:
+            one agent reads another's secrets, a compromised agent pivots to adjacent workloads,
+            or multi-tenant data leaks between customer contexts. The world cage is built to fail closed on ungranted destinations. It does not claim contamination is impossible, and it is not Firecracker-by-default.
+          </p>
+          <p class="honesty">Connector is a self-hosted OS for intelligence. Three institutions are ready: DevGuard, TraceTramp, WitnessCtl. Isolation today is dest-pinned Landlock children, not Firecracker-by-default. HMAC receipts are inspectable evidence — not a sold SOC 2, HIPAA, or FedRAMP checkbox. Stop is not undo. Memory and journals stay on the node; vendor LLM HTTP may leave when a model is granted.</p>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="/#interest">Apply for access</a>
+            <a class="btn btn--ghost" href="/ai-agent-security/">Agent security</a>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>What the world cage is built to stop</h2>
+          <div class="grid">
+            <article class="card">
+              <h2>Secret leakage</h2>
+              <p>Credentials, API keys, and tokens scoped to one agent cannot be accessed by another. Secret brokering ensures agents receive only the credentials their policy authorizes.</p>
+            </article>
+            <article class="card">
+              <h2>Data contamination</h2>
+              <p>Memory namespaces enforce that agents only read data their role permits. A customer-A agent cannot access customer-B data — enforced at the storage layer, not the application layer.</p>
+            </article>
+            <article class="card">
+              <h2>Lateral movement</h2>
+              <p>A compromised agent cannot pivot to adjacent workloads. Capability limits define exactly what each agent can reach — and nothing else.</p>
+            </article>
+            <article class="card">
+              <h2>Context bleed</h2>
+              <p>Selective context construction ensures agents only receive context relevant to their current task. Past conversations, other agents' context, and out-of-scope data are excluded before the LLM call.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>How Connector implements runtime isolation</h2>
+          <ul class="list">
+            <li>Identity at boot on the node. W3C DID packaging (AgentPassport) is planned, not ready</li>
+            <li>Namespace isolation — private (/p/), shared (/s/), and organizational (/o/) memory tiers</li>
+            <li>Secret broker — agents receive scoped, time-limited credentials — never raw secrets</li>
+            <li>Capability limits — tool access defined per agent identity, not per application role</li>
+            <li>Context construction — selective, policy-governed context — no full history exposure</li>
+            <li>Boot verification — 12-stage boot sequence ensures agent integrity before any workload runs</li>
+          </ul>
+        </section>
+
+        <section class="cta">
+          <h2>Isolate your AI agents at the infrastructure level</h2>
+          <p>Connector provides dest-pinned Landlock world cage for granted destinations. Identity at boot, namespace storage, and capability limits — fail closed when the cage is on. Not Firecracker-by-default.</p>
+          <a class="btn btn--primary" href="/#interest">Request access</a>
+        </section>
+      </main>
+      <footer class="footer">
+        Connector — AI agent runtime isolation · <a href="/ai-agent-security/">Security</a> · <a href="/ai-agent-governance/">Governance</a> · <a href="/agentic-workflow-security/">Workflow security</a>
+      </footer>
+    </div>
+  </body>
+</html>

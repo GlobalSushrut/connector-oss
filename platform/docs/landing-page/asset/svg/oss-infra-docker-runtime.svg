@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 280" role="img" aria-labelledby="t1">
+  <title id="t1">Connector container runtime: Docker host, connector process, health and API ports</title>
+  <rect width="560" height="280" fill="#0d0d0f" rx="8"/>
+  <defs>
+    <marker id="ah" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#9898a4"/>
+    </marker>
+  </defs>
+  <rect x="40" y="40" width="480" height="200" rx="8" fill="#141418" stroke="#2496ed" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="60" y="68" fill="#2496ed" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600">Docker host</text>
+  <rect x="80" y="90" width="160" height="120" rx="6" fill="#0d0d0f" stroke="#2a2a30" stroke-width="1.5"/>
+  <text x="160" y="118" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="11" text-anchor="middle">Connector</text>
+  <text x="160" y="140" fill="#3ecf8e" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle">:8080 /health</text>
+  <rect x="100" y="152" width="120" height="44" rx="4" fill="#141418" stroke="#5ba8ff" stroke-width="1.5"/>
+  <text x="160" y="178" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle">HTTP API, kernel</text>
+  <rect x="300" y="90" width="180" height="120" rx="6" fill="#0d0d0f" stroke="#2a2a30" stroke-width="1.5"/>
+  <text x="390" y="118" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="11" text-anchor="middle">Volumes / env</text>
+  <text x="390" y="142" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle">API keys, policy</text>
+  <text x="390" y="162" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle">persisted state</text>
+  <line x1="240" y1="150" x2="300" y2="150" stroke="#9898a4" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="280" y="248" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle">Run anywhere Docker runs: same governance semantics</text>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "connector": {
+    "base_url": "http://127.0.0.1:9091",
+    "api_key": "replace-with-kernel-minted-key"
+  }
+}

@@ -1,0 +1,43 @@
+contract pii_redaction_pipeline {
+    identity {
+        name: "pii_redaction_pipeline"
+        version: "1.0.0"
+    }
+    interface {
+        // `document` is a CCL type keyword — use a plain field name here.
+        input payload: Json required
+        output sanitized: Json
+        tool devguard_scan
+        tool llm_gateway_infer
+        event redaction_complete
+    }
+    state {
+        initial start
+        terminal done
+        start -> done on complete
+    }
+    governance {
+        require payload is present
+        ensure sanitized is present
+        roles [operator, privacy_officer]
+        clearance "high"
+        compliance [gdpr, internal_pii_policy]
+    }
+    budget {
+        tokens: 4096
+        cost_usd: 1.50
+        tool_calls: 15
+    }
+    memory {
+        use devguard_policies as policies
+        use redaction_audit as audit_log
+    }
+    behavior {
+        step redact_pipeline {
+            tool devguard_scan { doc: ${payload} } -> findings
+            tool llm_gateway_infer { doc: ${payload}, mask: ${findings} } -> sanitized
+            transition done
+            emit redaction_complete { findings: ${findings} }
+        }
+    }
+}

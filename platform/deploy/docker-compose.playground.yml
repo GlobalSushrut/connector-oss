@@ -1,0 +1,83 @@
+# Connector OS — Hosted Playground Node
+#
+# One-command SaaS trial deployment.  Run:
+#   docker compose -f docker-compose.playground.yml up
+#
+# What this is:
+#   - Real connector-platform in CONNECTOR_PRESET=playground mode
+#   - Real APIs, real behaviour, real dashboard — not a mock
+#   - Sandboxed: stub LLM, per-session namespaces, agent + token caps
+#   - 50 concurrent visitor sessions, each 90 min TTL
+#
+# Customise before deploying to production:
+#   1. Set CONNECTOR_PUBLIC_URL to your domain (e.g. https://try.connector.dev)
+#   2. Optionally set CONNECTOR_LLM_API_KEY to enable real LLM calls (with spend caps)
+#   3. Set CONNECTOR_PLAYGROUND_MAX_SESSIONS to match your instance size
+#   4. Put a TLS-terminating reverse proxy (Caddy/nginx) in front on port 443
+#
+# Endpoints after `docker compose up`:
+#   http://localhost:9091/           — Operator dashboard
+#   http://localhost:9091/api/v1/playground/status   — node info (public)
+#   POST http://localhost:9091/api/v1/playground/session — start a trial session
+
+version: "3.9"
+
+services:
+  connector-playground:
+    image: connector-platform:latest
+    # Build from source if no image available:
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile.playground
+    restart: unless-stopped
+    ports:
+      - "9091:9091"
+    environment:
+      # ── Preset: real software, sandboxed ─────────────────────────────────
+      CONNECTOR_PRESET: playground
+
+      # ── Network ───────────────────────────────────────────────────────────
+      CONNECTOR_HOST: "0.0.0.0"
+      CONNECTOR_PORT: "9091"
+      # Set this to your public domain when deploying:
+      # CONNECTOR_PUBLIC_URL: "https://try.connector.dev"
+
+      # ── LLM: stub by default (no spend), set key for real calls ──────────
+      CONNECTOR_LLM_STUB: "1"
+      # CONNECTOR_LLM_API_KEY: "sk-..."
+      # CONNECTOR_LLM_PROVIDER: "openai"
+      # CONNECTOR_LLM_MODEL: "gpt-4o-mini"
+
+      # ── Playground caps ───────────────────────────────────────────────────
+      CONNECTOR_PLAYGROUND_SESSION_TTL_SECS: "5400"    # 90 min idle timeout
+      CONNECTOR_PLAYGROUND_MAX_AGENTS: "5"             # agents per session
+      CONNECTOR_PLAYGROUND_MAX_SESSIONS: "50"          # concurrent visitors
+      CONNECTOR_PLAYGROUND_TOKEN_BUDGET: "100000"      # LLM tokens per session
+      CONNECTOR_PLAYGROUND_SEED_CATALOG: "1"           # pre-seed catalog on boot
+
+      # ── Data ──────────────────────────────────────────────────────────────
+      CONNECTOR_DATA_DIR: "/var/lib/connector"
+      CONNECTOR_UI_DIR: "/var/lib/connector/ui"
+
+      # ── Logging ───────────────────────────────────────────────────────────
+      RUST_LOG: "info"
+
+    volumes:
+      - connector-playground-data:/var/lib/connector
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9091/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+
+volumes:
+  connector-playground-data:
+    driver: local

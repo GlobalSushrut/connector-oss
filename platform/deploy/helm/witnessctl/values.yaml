@@ -1,0 +1,47 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/connector-ai/witnessctl
+  tag: ""
+  pullPolicy: IfNotPresent
+
+service:
+  port: 7443
+  type: ClusterIP
+
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+env:
+  WITNESSCTL_REQUESTED_AGENTS: "1"
+  RUST_LOG: witnessctl=info
+
+connector:
+  baseUrl: http://connector:9091
+  existingSecret: ""
+
+hmac:
+  existingSecret: ""
+  secretKey: WITNESSCTL_HMAC_SECRET
+
+handoff:
+  secret: ""
+
+custody:
+  replicas: []
+  nodeSecret: ""
+
+externalDatabase:
+  host: postgresql
+  port: 5432
+  database: witnessctl
+  username: witnessctl
+  password: changeme

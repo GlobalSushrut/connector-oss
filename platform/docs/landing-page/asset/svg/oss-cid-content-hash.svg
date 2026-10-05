@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 180" role="img" aria-labelledby="t1">
+  <title id="t1">Content-addressed storage: payload hashes to CID</title>
+  <rect width="480" height="180" fill="#0d0d0f" rx="8"/>
+  <text x="240" y="28" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="13" text-anchor="middle" font-weight="600">Content-addressed evidence</text>
+  <rect x="48" y="56" width="140" height="72" rx="8" fill="#141418" stroke="#2a2a30" stroke-width="1.5"/>
+  <text x="118" y="88" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="11" text-anchor="middle">Memory /</text>
+  <text x="118" y="106" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="11" text-anchor="middle">response payload</text>
+  <text x="212" y="98" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="20" text-anchor="middle">&#8594;</text>
+  <rect x="252" y="56" width="180" height="72" rx="8" fill="#141418" stroke="#3ecf8e" stroke-width="1.5"/>
+  <text x="342" y="84" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle">CIDv1, SHA2-256</text>
+  <text x="342" y="106" fill="#3ecf8e" font-family="Inter, system-ui, sans-serif" font-size="11" text-anchor="middle">bafy...k7q2</text>
+  <text x="240" y="158" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle">Same bytes, same CID; integrity without blind trust</text>
+</svg>

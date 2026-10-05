@@ -1,0 +1,97 @@
+# Connector OS — Playground Node (hosted SaaS trial)
+# fly.io app: connector-playground
+#
+# Deploy (canonical — UI release + bookworm binaries + unified image):
+#   ./scripts/build-and-deploy.sh
+# Or:
+#   ./platform/deploy/scripts/fly-deploy.sh playground
+#
+# First-time only:
+#   fly launch --no-deploy --config platform/deploy/fly.playground.toml
+#   fly secrets set -a connector-playground \
+#       CONNECTOR_LICENSE_URL="https://connector-license.fly.dev"
+
+app      = "connector-playground"
+primary_region = "iad"
+
+# Default: Dockerfile.playground.unified + pre-built artifacts (scripts/build-and-deploy.sh).
+# Set PLAYGROUND_REMOTE_BUILD=1 to compile on Depot via Dockerfile.playground (often OOM).
+[build]
+  dockerfile = "Dockerfile.playground.unified"
+  ignorefile = "dockerignore.playground.runtime"
+
+[env]
+  CONNECTOR_PRESET                        = "playground"
+  CONNECTOR_ENV                           = "pilots"
+  CONNECTOR_HOST                          = "0.0.0.0"
+  CONNECTOR_PORT                          = "8080"
+  CONNECTOR_PLAYGROUND                    = "1"
+  CONNECTOR_ULTIMATE_FREE                 = "0"
+  CONNECTOR_PLAYGROUND_SESSION_TTL_SECS   = "5400"
+  CONNECTOR_PLAYGROUND_MAX_SESSIONS       = "10"
+  CONNECTOR_PLAYGROUND_SESSION_LIMIT_PER_EMAIL = "3"
+  CONNECTOR_PLAYGROUND_QUEUE_WAIT_SECS    = "1800"
+  CONNECTOR_PLAYGROUND_UNLIMITED_EMAILS   = "umeshlamton@gmail.com"
+  CONNECTOR_PLAYGROUND_MAX_AGENTS         = "1"
+  CONNECTOR_PLAYGROUND_KERNEL_AGENT_CAP   = "24"
+  CONNECTOR_PLAYGROUND_SEED_DEMO          = "1"
+  CONNECTOR_PLAYGROUND_TOKEN_BUDGET       = "100000"
+  CONNECTOR_DATA_DIR                      = "/var/lib/connector/data"
+  CONNECTOR_UI_DIR                        = "/var/lib/connector/ui"
+  CONNECTOR_PUBLIC_URL                    = "https://try.cnktros.com"
+  CONNECTOR_ALLOW_LEGACY_HEADER_TENANT    = "0"
+  # Shared Fly VM: no Firecracker / no connector-kerneld systemd drop-in.
+  CONNECTOR_ALLOW_SUBPROCESS_ISOLATION    = "1"
+  CONNECTOR_KERNEL_EGRESS_DEGRADED        = "1"
+  CONNECTOR_KERNEL_ENFORCE                = "0"
+  CONNECTOR_LLM_CONTEXT_BROKER            = "1"
+  # Prove-out required: UI "LLM proven" only after vendor ping succeeds.
+  CONNECTOR_PLAYGROUND_LLM_LINK_SKIP_PING = "0"
+  # Explicit: preset also set_if_absent; keep stub when no tenant LLM linked.
+  CONNECTOR_LLM_STUB                        = "1"
+  CONNECTOR_LLM_STUB_ALLOW_IN_PROD          = "1"
+  CONNECTOR_LLM_DNS_PIN                 = "0"
+  CONNECTOR_LLM_TIMEOUT_SECS            = "45"
+  CONNECTOR_LLM_MAX_RETRIES             = "1"
+  CONNECTOR_PLAYGROUND_TALK_LLM_TIMEOUT_SECS = "75"
+  # Default: skip VAC RAG on Talk so /health never waits on the kernel mutex.
+  # Set CONNECTOR_PLAYGROUND_RAG=1 to re-enable memory recall on playground.
+  CONNECTOR_PLAYGROUND_RAG                = "0"
+  # Landlock path allowlists for nsfs (Talk must not hit fs_allowlist_required).
+  CONNECTOR_DOCKLOCK_FS_READ              = "/var/lib/connector/data/nsfs"
+  CONNECTOR_DOCKLOCK_FS_WRITE             = "/var/lib/connector/data/nsfs"
+  RUST_LOG                                = "info"
+  # JWT / HMAC / CFNI / cage-cap secrets: `fly secrets set -a connector-playground`.
+  # Do not commit them. Do not set CONNECTOR_ALLOW_OPEN_AUTH_NONLOCAL on 0.0.0.0.
+  # CONNECTOR_PUBLIC_URL must stay try.cnktros.com (do not override secret to *.fly.dev).
+
+[mounts]
+  source      = "playground_data"
+  destination = "/var/lib/connector/data"
+
+[[services]]
+  internal_port = 8080
+  protocol      = "tcp"
+
+  [[services.ports]]
+    port     = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port     = 443
+    handlers = ["tls", "http"]
+
+  [services.tls_options]
+    alpn     = ["h2", "http/1.1"]
+    versions = ["TLSv1.2", "TLSv1.3"]
+
+  [[services.http_checks]]
+    path         = "/healthz"
+    interval     = "20s"
+    timeout      = "15s"
+    grace_period = "120s"
+
+[[vm]]
+  size   = "shared-cpu-2x"
+  memory = "4gb"

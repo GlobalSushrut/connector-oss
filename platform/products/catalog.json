@@ -1,0 +1,125 @@
+{
+  "_comment": "Canonical product catalog (Phase 2.1). Single source consumed by the Leptos dashboard sidebar/Apps Hub AND the marketing site Nav megamenu. Adding a plugin: append to `plugins`, then sidebar + landing megamenu pick it up automatically.",
+  "_schema_version": 1,
+  "plugins": [
+    {
+      "slug": "devguard",
+      "name": "DevGuard",
+      "short_desc": "Policy & secret enforcement",
+      "long_desc": "Block secrets, dangerous shell commands, exfil patterns, and unsanctioned tools before the agent runs them. Ships with a default policy and a wizard-driven authoring flow.",
+      "icon_key": "firewall",
+      "category": "trust",
+      "marketed": true,
+      "default_enabled": true,
+      "tagline": "Lock down agent execution"
+    },
+    {
+      "slug": "tracetramp",
+      "name": "TraceTramp",
+      "short_desc": "Who did what — execution path",
+      "long_desc": "Records the governed execution path: decisions, tool calls, and LLM exchanges. Reconstruct a run on traffic that went through the node.",
+      "icon_key": "monitor",
+      "category": "trust",
+      "marketed": true,
+      "default_enabled": true,
+      "tagline": "Who did what"
+    },
+    {
+      "slug": "witnessctl",
+      "name": "WitnessCtl",
+      "short_desc": "HMAC-chained receipts",
+      "long_desc": "Issues HMAC-chained receipts a reviewer can inspect. Issuer HMAC is evidence, not court-grade custody and not a sold certification.",
+      "icon_key": "verify",
+      "category": "trust",
+      "marketed": true,
+      "default_enabled": true,
+      "tagline": "Inspectable evidence"
+    },
+    {
+      "slug": "conductor",
+      "name": "Conductor",
+      "short_desc": "Multi-agent orchestration",
+      "long_desc": "Coordinate fleets of agents with capability handshakes, mesh routing, and consensus. The orchestration layer that turns single agents into teams.",
+      "icon_key": "orchestrator",
+      "category": "build",
+      "marketed": true,
+      "default_enabled": false,
+      "tagline": "Run agent fleets"
+    },
+    {
+      "slug": "agentloop",
+      "name": "AgentLoop",
+      "short_desc": "Agent lifecycle management",
+      "long_desc": "Per-agent budgets, retries, escalation, and self-healing. The runtime that keeps agents alive without burning the wallet.",
+      "icon_key": "agents",
+      "category": "build",
+      "marketed": true,
+      "default_enabled": false,
+      "tagline": "Self-healing agent runtime"
+    },
+    {
+      "slug": "ledgerlens",
+      "name": "LedgerLens",
+      "short_desc": "Cost & budget control",
+      "long_desc": "Real-time spend, model attribution, and budget enforcement across agents, tenants, and workflows.",
+      "icon_key": "books",
+      "category": "trust",
+      "marketed": true,
+      "default_enabled": false,
+      "tagline": "Stop the agent spend leak"
+    },
+    {
+      "slug": "agentpassport",
+      "name": "AgentPassport",
+      "short_desc": "Agent identity (planned)",
+      "long_desc": "Planned SKU: portable agent identity. W3C DID packaging is AgentPassport — not a live product today.",
+      "icon_key": "trust",
+      "category": "trust",
+      "marketed": true,
+      "default_enabled": false,
+      "tagline": "Identity on the map"
+    },
+    {
+      "slug": "relay",
+      "name": "Relay",
+      "short_desc": "Zero-framework runtime",
+      "long_desc": "Drop-in HTTP runtime for agents written in any language. No SDK, no framework — just signed requests.",
+      "icon_key": "tools",
+      "category": "build",
+      "marketed": true,
+      "default_enabled": false,
+      "tagline": "Bring-your-own agent"
+    },
+    {
+      "slug": "engram",
+      "name": "Engram",
+      "short_desc": "Governed memory (planned)",
+      "long_desc": "Planned SKU: tenant-isolated memory with provenance. SOC 2 mapping is a design-partner path, not a sold checkbox.",
+      "icon_key": "memory",
+      "category": "build",
+      "marketed": true,
+      "default_enabled": false,
+      "tagline": "Memory you can inspect"
+    }
+  ],
+  "reference_workflows": [
+    {
+      "slug": "hitl_approve_audit",
+      "name": "HITL Approve-and-Audit",
+      "short_desc": "Human approval gate with audit emit",
+      "tagline": "TraceTramp capture → WitnessCtl seal → HITL"
+    },
+    {
+      "slug": "pii_redaction_pipeline",
+      "name": "PII Redaction Pipeline",
+      "short_desc": "Policy scan + LLM rewrite + redaction event",
+      "tagline": "DevGuard guarded gateway flow"
+    },
+    {
+      "slug": "incident_slack_jira",
+      "name": "Incident → Slack → Jira",
+      "short_desc": "Community bridge pattern for alerts",
+      "tagline": "Alert channel + tracking ticket"
+    }
+  ]
+}

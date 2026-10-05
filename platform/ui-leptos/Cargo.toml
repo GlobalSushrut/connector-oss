@@ -1,0 +1,38 @@
+[workspace]
+resolver = "2"
+members = ["dashboard", "dashboard-server"]
+exclude = ["trial", "www", "admin"]
+
+[profile.release]
+codegen-units = 16
+lto = false
+opt-level = 2
+panic = "abort"
+strip = true
+
+[profile.wasm-release]
+inherits = "release"
+codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
+
+# cargo-leptos CSR + WASM code splitting for the dashboard.
+# Trial / www / admin stay on Trunk (separate crates, no workspace members).
+[[workspace.metadata.leptos]]
+name = "connector-ui"
+bin-package = "connector-ui-server"
+lib-package = "connector-ui"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+assets-dir = "dashboard/public"
+site-addr = "127.0.0.1:1420"
+reload-port = 1421
+env = "PROD"
+hash-files = false
+watch = false
+bin-features = []
+lib-features = []
+bin-default-features = false
+lib-default-features = false
+lib-profile-release = "wasm-release"

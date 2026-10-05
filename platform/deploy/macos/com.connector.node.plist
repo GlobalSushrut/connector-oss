@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Connector OS — macOS launchd service (LaunchDaemon = system-wide, auto-start on boot)
+
+  Install (system-wide, runs as 'connector' user):
+    sudo cp com.connector.node.plist /Library/LaunchDaemons/
+    sudo launchctl load -w /Library/LaunchDaemons/com.connector.node.plist
+
+  Install (current user only, runs on login):
+    cp com.connector.node.plist ~/Library/LaunchAgents/
+    launchctl load -w ~/Library/LaunchAgents/com.connector.node.plist
+
+  Uninstall:
+    sudo launchctl unload /Library/LaunchDaemons/com.connector.node.plist
+    sudo rm /Library/LaunchDaemons/com.connector.node.plist
+
+  Logs:
+    tail -f /var/log/connector/stdout.log
+    tail -f /var/log/connector/stderr.log
+
+  Or with `connectorctl init` (auto-detected on macOS):
+    sudo connectorctl init
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.connector.node</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/connector-platform</string>
+    </array>
+
+    <!-- Load environment from ~/.connector/env or /etc/connector/env -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CONNECTOR_PORT</key>
+        <string>9091</string>
+        <key>CONNECTOR_HOST</key>
+        <string>0.0.0.0</string>
+        <key>CONNECTOR_UI_DIR</key>
+        <string>/usr/local/share/connector/ui</string>
+        <key>RUST_LOG</key>
+        <string>info</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/var/lib/connector</string>
+
+    <!-- Start at boot -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Restart on crash -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <!-- Throttle restart to avoid rapid respawn on config error -->
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <!-- Stdout/stderr to files (readable without sudo) -->
+    <key>StandardOutPath</key>
+    <string>/var/log/connector/stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/connector/stderr.log</string>
+
+    <!-- Nice level (don't starve UI) -->
+    <key>Nice</key>
+    <integer>1</integer>
+</dict>
+</plist>

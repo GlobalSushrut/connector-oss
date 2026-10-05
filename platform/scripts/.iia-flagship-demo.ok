@@ -1,0 +1,17 @@
+2026-08-10T18:08:33Z
+FLAGSHIP=§23
+S01=PASS principals=cnktr:agent:agent_0b80233b3f474cb1884494ee31136c26,cnktr:agent:agent_ced58e109a73435297baa4965ce382cd
+S02=PASS contract_digests_distinct
+S03=PASS quantum=q_a952aaa75ce62f14
+S04=PASS qpr_denied
+S05=PASS docklock_bypass_adversarial.ok
+S06=PASS continuity_broken
+S07=PASS erm_attestation_tier=none
+S08=PASS agent_b_compliance_contract
+S09=PASS provenance_receipts
+S10=PASS export_verify_and_tamper_detect
+S11=PASS intelligence_id_changed agent_stable
+S12=PASS untrusted_cpo_qpr_deny
+S13=PASS n4_handshake_denied
+S14=PASS four_id_and_forensic_package
+COURT_OK=2026-08-10T18:08:42Z

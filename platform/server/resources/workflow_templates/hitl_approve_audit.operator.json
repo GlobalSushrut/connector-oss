@@ -1,0 +1,69 @@
+{
+  "schema": "operator_surface.v1",
+  "display": {
+    "title": "HITL Approve and Audit",
+    "subtitle": "Capture → seal → human gate",
+    "category": "trust",
+    "icon": "shield-check"
+  },
+  "accounting": {
+    "contract": "workflow_accounting.v1",
+    "mode": "service_monitoring",
+    "source": "manifest",
+    "two_way": true
+  },
+  "institutions": ["tracetramp", "witnessctl"],
+  "lifecycle": {
+    "primary_action": "dry_run",
+    "run_label": "Dry-run",
+    "enable_label": "Enable"
+  },
+  "signals": [
+    {
+      "id": "blocked",
+      "label": "Blocked",
+      "source": "fix_queue",
+      "filter": { "workflow_id": "$self" },
+      "format": "boolean_badge"
+    }
+  ],
+  "panels": [
+    {
+      "id": "forensics",
+      "title": "Forensics",
+      "type": "kv",
+      "source": "capabilities",
+      "fields": [
+        { "label": "Export", "capability": "witnessctl.evidence.export" },
+        { "label": "Trace", "capability": "tracetramp.trace.list" }
+      ]
+    }
+  ],
+  "fix_rules": [
+    {
+      "id": "approval_pending",
+      "label": "Approval pending — dry-run review",
+      "source": "tracetramp",
+      "panel_id": "forensics",
+      "remediation": "dry_run",
+      "severity": "medium"
+    }
+  ],
+  "console_links": [
+    {
+      "institution_id": "tracetramp",
+      "label": "TraceTramp console",
+      "tier": "T1",
+      "path": "/plugins/tracetramp"
+    },
+    {
+      "institution_id": "witnessctl",
+      "label": "WitnessCtl console",
+      "tier": "T1",
+      "path": "/plugins/witnessctl"
+    }
+  ],
+  "evidence": ["witnessctl.evidence.export", "kernel.audit.export"],
+  "forensics": ["witnessctl.custody.status", "tracetramp.trace.list"],
+  "perform": ["tracetramp.approval.queue"]
+}

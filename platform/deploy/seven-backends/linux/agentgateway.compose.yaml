@@ -1,0 +1,15 @@
+# Separate from the seven-backend compose. This file does not start unless
+# AGENTGATEWAY_IMAGE is the immutable reference in agentgateway.pin.
+# A pinned digest does not install the process. A missing process is not ready.
+# Connector ext-auth still denies forwarding.
+services:
+  agentgateway:
+    profiles: ["target"]
+    image: ${AGENTGATEWAY_IMAGE:?set AGENTGATEWAY_IMAGE to an immutable digest before any start}
+    restart: "no"
+    network_mode: none
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      AGENTGATEWAY_EXT_AUTH_URL: http://127.0.0.1:8080/api/v1/runtime/agentgateway/ext-auth

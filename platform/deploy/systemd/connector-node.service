@@ -1,0 +1,10 @@
+# DEPRECATED — use connector-platform.service
+# Kept so old docs that copy connector-node.service fail loudly with a clear path.
+[Unit]
+Description=DEPRECATED — use connector-platform.service (binary is connector-platform, not connector-node)
+[Service]
+Type=oneshot
+ExecStart=/bin/false
+RemainAfterExit=no
+[Install]
+WantedBy=multi-user.target

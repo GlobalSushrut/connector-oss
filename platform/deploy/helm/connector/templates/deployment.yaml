@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "connector.fullname" . }}
+  labels:
+    {{- include "connector.labels" . | nindent 4 }}
+spec:
+  {{- /* RWO persistence cannot safely attach to >1 pod. Clamp until HA lands. */}}
+  {{- $replicas := .Values.connector.replicaCount | int }}
+  {{- if and .Values.connector.persistence.enabled (eq (.Values.connector.persistence.accessMode | default "ReadWriteOnce") "ReadWriteOnce") }}
+  {{- if gt $replicas 1 }}
+  {{- fail "connector.replicaCount > 1 is unsupported with ReadWriteOnce persistence (single-node until HA)" }}
+  {{- end }}
+  {{- end }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ $replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "connector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "connector.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "connector.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.security.podSecurityContext | nindent 8 }}
+      containers:
+        - name: connector
+          securityContext:
+            {{- toYaml .Values.security.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.connector.image.repository }}:{{ .Values.connector.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9091
+              protocol: TCP
+          env:
+            {{- range $key, $value := .Values.connector.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: CONNECTOR_DATA_DIR
+              value: /data
+            {{- if .Values.connector.spire.enabled }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.connector.spire.endpointSocket | quote }}
+            {{- end }}
+            {{- if .Values.connector.microd.enabled }}
+            - name: CONNECTOR_MICROD_SOCK
+              value: {{ .Values.connector.microd.socketPath | quote }}
+            - name: CONNECTOR_MICROD_READY_FILE
+              value: {{ .Values.connector.microd.readyFilePath | quote }}
+            {{- end }}
+          {{- with .Values.connector.envFromSecrets }}
+          envFrom:
+            {{- range . }}
+            - secretRef:
+                name: {{ .name }}
+                optional: {{ .optional | default false }}
+            {{- end }}
+          {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.connector.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.connector.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.connector.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.connector.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.connector.spire.enabled }}
+            - name: spire-workload-api
+              mountPath: {{ .Values.connector.spire.socketMountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.connector.microd.enabled }}
+            - name: microd-socket
+              mountPath: {{ .Values.connector.microd.socketPath }}
+            - name: microd-ready
+              mountPath: {{ .Values.connector.microd.readyFilePath }}
+              readOnly: true
+            {{- end }}
+        {{- if .Values.observability.otelCollector.enabled }}
+        - name: otel-collector
+          image: "{{ .Values.observability.otelCollector.image.repository }}:{{ .Values.observability.otelCollector.image.tag }}"
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+          volumeMounts:
+            - name: otel-config
+              mountPath: /etc/otelcol
+        {{- end }}
+      volumes:
+        - name: data
+          {{- if .Values.connector.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "connector.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.connector.spire.enabled }}
+        - name: spire-workload-api
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
+        {{- end }}
+        {{- if .Values.connector.microd.enabled }}
+        - name: microd-socket
+          hostPath:
+            path: {{ .Values.connector.microd.socketPath }}
+            type: Socket
+        - name: microd-ready
+          hostPath:
+            path: {{ .Values.connector.microd.readyFilePath }}
+            type: File
+        {{- end }}
+        {{- if .Values.observability.otelCollector.enabled }}
+        - name: otel-config
+          configMap:
+            name: {{ include "connector.fullname" . }}-otel
+        {{- end }}
+      {{- with .Values.connector.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connector.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.connector.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,34 @@
+# Connector
+
+> Connector is a self-hosted operating substrate for intelligence: identity, admission, isolation, memory, and audit on one node.
+
+Agents, models, tools, and workflows run on it. Isolate, govern, stop, prove. Three institutions are ready to try in 90 minutes: DevGuard, TraceTramp, WitnessCtl. Seven more workflows are the plan. Institutions sit on the OS. They are not the OS.
+
+## Honesty
+- Not a coding-agent product (DevGuard is one institution)
+- Not Firecracker-by-default (world dials use dest-pinned Landlock children)
+- HMAC-chained receipts a reviewer can inspect — not a sold SOC 2 / HIPAA / FedRAMP checkbox
+- Stop is not undo
+- Memory and journals stay on the node; vendor LLM HTTP may leave when a model is granted
+- Default listen is :9091 (`connector-platform`)
+
+## Best for
+- Platform teams operating internal agents
+- Security and compliance teams who need inspectable receipts, not a certificate
+- Engineering teams running agentic workflows in production
+
+## Primary pages
+- Homepage: https://cnktros.com/
+- For developers: https://cnktros.com/developers
+- About the OS: https://cnktros.com/about-os
+- AI agent governance: https://cnktros.com/ai-agent-governance/
+- Agentic workflow security: https://cnktros.com/agentic-workflow-security/
+- AI agent audit: https://cnktros.com/ai-agent-audit/
+
+## Brand
+- Connector / ConnectorOS
+- Website: https://cnktros.com/
+- Playground: https://try.cnktros.com/trial
+
+## Contact
+- Email: connectorprotoos@gmail.com

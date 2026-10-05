@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connector · 45s power demo</title>
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --panel: #12151c;
+      --line: #2a3140;
+      --text: #e8eaef;
+      --muted: #8b93a7;
+      --accent: #5eead4;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --ok: #34d399;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: #e8eaef;
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, #14302c 0%, transparent 55%),
+        radial-gradient(ellipse 60% 40% at 90% 100%, #1a2030 0%, transparent 50%),
+        var(--bg);
+    }
+    .bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 12, 16, 0.85);
+      backdrop-filter: blur(8px);
+    }
+    .brand {
+      font-size: 0.7rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .timer {
+      margin-left: auto;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .dots { display: flex; gap: 0.4rem; }
+    .dot {
+      width: 0.45rem; height: 0.45rem; border-radius: 999px;
+      background: var(--line);
+    }
+    .dot.on { background: var(--accent); }
+    .stage {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      position: relative;
+    }
+    .slide {
+      display: none;
+      width: min(920px, 100%);
+      animation: in 0.35s ease;
+    }
+    .slide.active { display: block; }
+    @keyframes in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    .kicker {
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    h1 {
+      font-size: clamp(1.75rem, 4vw, 2.75rem);
+      line-height: 1.15;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      max-width: 18ch;
+    }
+    .sub {
+      margin-top: 0.9rem;
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 42ch;
+      line-height: 1.45;
+    }
+    .grid {
+      margin-top: 1.5rem;
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    .card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 0.5rem;
+      padding: 0.9rem 1rem;
+    }
+    .card strong {
+      display: block;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.35rem;
+    }
+    .card p { font-size: 0.92rem; color: #c4cad6; line-height: 1.35; }
+    .flow {
+      margin-top: 1.4rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.82rem;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      background: #0e1218;
+      padding: 0.35rem 0.65rem;
+      border-radius: 0.35rem;
+      color: #d7dce8;
+    }
+    .pill.ok { border-color: #14532d; color: var(--ok); }
+    .pill.warn { border-color: #854d0e; color: var(--warn); }
+    .pill.bad { border-color: #9f1239; color: var(--bad); }
+    .arrow { color: var(--muted); }
+    .meter {
+      margin-top: 1.35rem;
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      background: #0e1218;
+    }
+    .meter-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.65rem 0.9rem;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.9rem;
+    }
+    .meter-row:last-child { border-bottom: 0; }
+    .meter-row span:last-child { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.8rem; }
+    .tag {
+      display: inline-block;
+      margin-left: 0.4rem;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.25rem;
+      border: 1px solid #14532d;
+      color: var(--ok);
+      vertical-align: middle;
+    }
+    .tag.bad { border-color: #9f1239; color: var(--bad); }
+    .progress {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 3px;
+      background: var(--line);
+    }
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.05s linear;
+    }
+    .hint {
+      padding: 0.55rem 1.25rem 0.85rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+    }
+    .hint kbd {
+      font-family: ui-monospace, monospace;
+      border: 1px solid var(--line);
+      padding: 0.05rem 0.35rem;
+      border-radius: 0.25rem;
+      color: #c8cedc;
+    }
+    button.ctrl {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 0.35rem;
+      padding: 0.25rem 0.55rem;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+    button.ctrl:hover { color: #e8eaef; border-color: #4b5568; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <div class="brand">Connector · power demo</div>
+    <div class="dots" id="dots"></div>
+    <div class="timer" id="timer">0.0s / 45s</div>
+    <button class="ctrl" id="restart" type="button">Restart</button>
+  </div>
+
+  <div class="stage">
+    <!-- 1 Whoami ~8s -->
+    <section class="slide active" data-sec="8">
+      <p class="kicker">01 · Who am I</p>
+      <h1>Connector is the OS for agent effects.</h1>
+      <p class="sub">
+        Not a chatbot. Intelligence proposes. Connector admits.
+        The world only changes after PATE → ToolDispatch.
+      </p>
+      <div class="flow">
+        <span class="pill">BankOps / any principal</span>
+        <span class="arrow">→</span>
+        <span class="pill">Talk proposes</span>
+        <span class="arrow">→</span>
+        <span class="pill ok">Admit is law</span>
+      </div>
+    </section>
+
+    <!-- 2 Capabilities ~8s -->
+    <section class="slide" data-sec="8">
+      <p class="kicker">02 · Capabilities</p>
+      <h1>What this agent may do.</h1>
+      <p class="sub">Identity + registered tools + world grants — visible before any effect.</p>
+      <div class="grid">
+        <div class="card"><strong>Who</strong><p>BankOps — fraud/ops principal on this tenant.</p></div>
+        <div class="card"><strong>Tools</strong><p>score · hold · decide · ledger (MCP after Admit).</p></div>
+        <div class="card"><strong>World</strong><p>Expometer shows grants — addresses it may touch.</p></div>
+        <div class="card"><strong>LLM</strong><p>Stub or linked key — chips work without a vendor.</p></div>
+      </div>
+    </section>
+
+    <!-- 3 Tool exec ~9s -->
+    <section class="slide" data-sec="9">
+      <p class="kicker">03 · Tool execution</p>
+      <h1>Propose → Admit → receipt.</h1>
+      <p class="sub">$47,500 Cayman wire. Model never auto-runs tools.</p>
+      <div class="flow">
+        <span class="pill">order bank_score_tx</span>
+        <span class="arrow">→</span>
+        <span class="pill warn">pending HITL</span>
+        <span class="arrow">→</span>
+        <span class="pill ok">Admit</span>
+        <span class="arrow">→</span>
+        <span class="pill ok">PATE · ToolDispatch</span>
+        <span class="arrow">→</span>
+        <span class="pill">ledger mutates</span>
+      </div>
+      <div class="meter" style="margin-top:1.25rem">
+        <div class="meter-row"><span>Risk score</span><span>receipt · 0–100</span></div>
+        <div class="meter-row"><span>Hold funds</span><span>held_usd ↑ on tenant book</span></div>
+        <div class="meter-row"><span>Decide</span><span>APPROVE / DECLINE / REVIEW</span></div>
+      </div>
+    </section>
+
+    <!-- 4 Control ~10s -->
+    <section class="slide" data-sec="10">
+      <p class="kicker">04 · Control</p>
+      <h1>SpendCease. Admit dies.</h1>
+      <p class="sub">Model desire is irrelevant. Generation fenced. Next hop refuses.</p>
+      <div class="meter">
+        <div class="meter-row">
+          <span>Expometer verdict <span class="tag bad">CEASED</span></span>
+          <span>admit · REFUSED_GENERATION_FENCED</span>
+        </div>
+        <div class="meter-row"><span>World exposure</span><span>grants still listed — effects blocked</span></div>
+        <div class="meter-row"><span>LLM inflight</span><span>best-effort abort · cancel-tax may remain</span></div>
+      </div>
+      <div class="flow" style="margin-top:1rem">
+        <span class="pill">continue</span>
+        <span class="arrow">→</span>
+        <span class="pill bad">refuse + reason popup</span>
+      </div>
+    </section>
+
+    <!-- 5 Report ~10s -->
+    <section class="slide" data-sec="10">
+      <p class="kicker">05 · Report</p>
+      <h1>Action Trail proves the loop.</h1>
+      <p class="sub">Dedicated page — Orders · Evidence · Standing · HITL. Not a sidebar cosplay.</p>
+      <div class="grid">
+        <div class="card"><strong>Orders</strong><p>What was proposed and awaiting Admit.</p></div>
+        <div class="card"><strong>Evidence</strong><p>ToolDispatch · policy_denied · digests.</p></div>
+        <div class="card"><strong>Trail</strong><p>Journal + watch + activity, live.</p></div>
+        <div class="card"><strong>Honesty</strong><p>Playground ledger ≠ FedWire. Grade: playground_demo.</p></div>
+      </div>
+      <div class="flow" style="margin-top:1.1rem">
+        <span class="pill">try.cnktros.com/run/trail</span>
+        <span class="arrow">·</span>
+        <span class="pill">GET …/expometer</span>
+      </div>
+    </section>
+
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+
+  <div class="hint">
+    Auto-runs ~45s · <kbd>Space</kbd> pause/resume · <kbd>←</kbd><kbd>→</kbd> step · live path:
+    trial → BankOps Workbench → Admit → Cease → Action Trail
+  </div>
+
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    const dots = document.getElementById("dots");
+    const timerEl = document.getElementById("timer");
+    const bar = document.getElementById("bar");
+    const total = slides.reduce((s, el) => s + Number(el.dataset.sec), 0);
+
+    slides.forEach((_, i) => {
+      const d = document.createElement("div");
+      d.className = "dot" + (i === 0 ? " on" : "");
+      dots.appendChild(d);
+    });
+
+    let idx = 0;
+    let elapsed = 0;
+    let slideLeft = Number(slides[0].dataset.sec);
+    let slideDur = slideLeft;
+    let paused = false;
+    let last = performance.now();
+
+    function show(i) {
+      slides.forEach((s, n) => s.classList.toggle("active", n === i));
+      [...dots.children].forEach((d, n) => d.classList.toggle("on", n === i));
+      idx = i;
+      slideDur = Number(slides[i].dataset.sec);
+      slideLeft = slideDur;
+    }
+
+    function tick(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (!paused) {
+        elapsed += dt;
+        slideLeft -= dt;
+        if (slideLeft <= 0) {
+          if (idx < slides.length - 1) show(idx + 1);
+          else {
+            elapsed = total;
+            slideLeft = 0;
+            paused = true;
+          }
+        }
+      }
+      const slideProgress = 1 - slideLeft / slideDur;
+      const overall = Math.min(1, elapsed / total);
+      bar.style.width = (overall * 100).toFixed(2) + "%";
+      timerEl.textContent = elapsed.toFixed(1) + "s / " + total + "s"
+        + (paused && idx === slides.length - 1 ? " · done" : paused ? " · paused" : "");
+      requestAnimationFrame(tick);
+    }
+
+    document.getElementById("restart").onclick = () => {
+      elapsed = 0;
+      paused = false;
+      show(0);
+      last = performance.now();
+    };
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        paused = !paused;
+        last = performance.now();
+      } else if (e.key === "ArrowRight") {
+        if (idx < slides.length - 1) show(idx + 1);
+      } else if (e.key === "ArrowLeft") {
+        if (idx > 0) show(idx - 1);
+      }
+    });
+
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

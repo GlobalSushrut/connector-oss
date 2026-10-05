@@ -1,0 +1,37 @@
+# Connector full reference
+
+## Short description
+Connector is a self-hosted operating substrate for intelligence. It sits between agents and the worlds they can reach so teams can isolate, govern, stop, and prove — on a node they operate.
+
+## What Connector is
+Identity, admission, isolation, memory, and audit on one `connector-platform` node (default :9091).
+
+Ready institutions (try in 90 minutes): DevGuard, TraceTramp, WitnessCtl.
+
+Planned SKUs: Conductor, AgentLoop, LedgerLens, AgentPassport, Relay, Engram, Support/CX.
+
+## What Connector is not
+- Not an LLM or a coding-agent product
+- Not an agent framework
+- Not Firecracker-by-default
+- Not a sold SOC 2 / HIPAA / FedRAMP certification
+- Stop is not undo of world effects that already happened
+
+## Search intents
+- AI agent governance / control plane
+- AI policy enforcement and audit trails
+- self-hosted agent isolation (world cage, Landlock pores)
+- HMAC-chained receipts for admitted actions
+
+## Important pages
+- https://cnktros.com/
+- https://cnktros.com/about-os
+- https://cnktros.com/ai-agent-governance/
+- https://cnktros.com/agentic-workflow-security/
+- https://cnktros.com/ai-agent-audit/
+
+## Brand
+Preferred name: Connector
+Alternate: ConnectorOS
+Website: https://cnktros.com/
+Contact: connectorprotoos@gmail.com

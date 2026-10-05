@@ -1,0 +1,41 @@
+{
+  "schema": "operator_surface.v1",
+  "display": {
+    "title": "PII Redaction Pipeline",
+    "subtitle": "DevGuard scan → LLM rewrite → redaction event",
+    "category": "safety",
+    "icon": "shield"
+  },
+  "accounting": {
+    "contract": "workflow_accounting.v1",
+    "mode": "action",
+    "source": "manifest",
+    "two_way": true
+  },
+  "institutions": ["devguard"],
+  "lifecycle": {
+    "primary_action": "dry_run",
+    "run_label": "Dry-run",
+    "enable_label": "Enable"
+  },
+  "panels": [
+    {
+      "id": "devguard_status",
+      "title": "DevGuard",
+      "type": "institution_chips",
+      "source": "plugins_status",
+      "plugin_ids": ["devguard"]
+    }
+  ],
+  "console_links": [
+    {
+      "institution_id": "devguard",
+      "label": "DevGuard console",
+      "tier": "T1",
+      "path": "/plugins/devguard"
+    }
+  ],
+  "perform": ["devguard.connect.tool", "devguard.profile.local"],
+  "evidence": [],
+  "forensics": ["devguard.extension.status"]
+}

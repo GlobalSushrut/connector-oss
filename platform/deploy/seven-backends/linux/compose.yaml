@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE to an immutable image digest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - keycloak-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    security_opt:
+      - no-new-privileges:true
+
+  keycloak:
+    image: ${KEYCLOAK_IMAGE:?set KEYCLOAK_IMAGE to an immutable image digest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["start", "--health-enabled=true", "--metrics-enabled=true"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?set KEYCLOAK_HOSTNAME}
+      # Loopback inside the container is used only by bootstrap-keycloak.sh.
+      KC_HTTP_ENABLED: "true"
+      KC_HTTPS_CERTIFICATE_FILE: /run/tls/tls.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /run/tls/tls.key
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
+    ports:
+      - "127.0.0.1:${KEYCLOAK_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - ${KEYCLOAK_TLS_DIR:?set KEYCLOAK_TLS_DIR}:/run/tls:ro
+    # `start` rebuilds the server image when build-time settings (database,
+    # health, metrics) differ from the published image. That write is required.
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  otel-collector:
+    image: ${OTEL_COLLECTOR_IMAGE:?set OTEL_COLLECTOR_IMAGE to an immutable image digest}
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:13133:13133"
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  keycloak-db:

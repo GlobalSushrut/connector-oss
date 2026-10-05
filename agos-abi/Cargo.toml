@@ -1,0 +1,13 @@
+[package]
+name = "agos-abi"
+version = "0.1.0"
+edition = "2021"
+description = "AGOS semver-governed plugin ABI surface (Phase 6.1)"
+publish = false
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/connector-os/connector-private"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]

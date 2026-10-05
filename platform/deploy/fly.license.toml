@@ -1,0 +1,81 @@
+# Connector OS — License Server
+# fly.io app: connector-license
+#
+# Deploy:
+#   fly launch --no-deploy --config platform/deploy/fly.license.toml
+#   fly secrets set -a connector-license \
+#       DATABASE_URL="postgres://..." \
+#       CONNECTOR_LICENSE_ADMIN_KEY="..." \
+#       STRIPE_SECRET_KEY="sk_live_..." \
+#       STRIPE_WEBHOOK_SECRET="whsec_..." \
+#       SENDGRID_API_KEY="SG...."
+#   fly deploy --config platform/deploy/fly.license.toml
+#
+# Postgres (Neon or fly postgres):
+#   Neon: https://neon.tech  — free tier, serverless PG, 0.5GB
+#   fly:  fly postgres create --name connector-pg --region iad
+#         fly postgres attach connector-pg -a connector-license
+
+app      = "connector-license"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.license"
+
+[env]
+  CONNECTOR_LICENSE_ADDR    = "0.0.0.0:4100"
+  CONNECTOR_ADMIN_UI_DIR    = "/app/ui/admin"
+  CONNECTOR_WWW_DIR         = "/app/ui/www"
+  CONNECTOR_KEY_DIR         = "/data/keys"
+  CONNECTOR_PUBLIC_URL      = "https://portal.cnktros.com"
+  CONNECTOR_FROM_EMAIL      = "noreply@cnktros.com"
+  RUST_LOG                  = "info"
+
+# Secrets (set via `fly secrets set`):
+#   DATABASE_URL
+#   CONNECTOR_LICENSE_ADMIN_KEY
+#   STRIPE_SECRET_KEY
+#   STRIPE_WEBHOOK_SECRET
+#   STRIPE_PRICE_COMMUNITY
+#   STRIPE_PRICE_STARTUP
+#   STRIPE_PRICE_PROFESSIONAL
+#   STRIPE_PRICE_ENTERPRISE
+#   SENDGRID_API_KEY
+
+[mounts]
+  # Persistent volume for Ed25519 signing keys — NEVER delete this
+  # fly volumes create connector_keys --region iad --size 1 -a connector-license
+  source      = "connector_keys"
+  destination = "/data"
+
+[[services]]
+  internal_port = 4100
+  protocol      = "tcp"
+
+  [[services.ports]]
+    port     = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port     = 443
+    handlers = ["tls", "http"]
+
+  [services.tls_options]
+    alpn        = ["h2", "http/1.1"]
+    versions    = ["TLSv1.2", "TLSv1.3"]
+
+  [[services.http_checks]]
+    path              = "/health"
+    interval          = "15s"
+    timeout           = "5s"
+    grace_period      = "10s"
+    restart_limit     = 3
+
+[metrics]
+  port = 9091
+  path = "/metrics"
+
+[[vm]]
+  size   = "shared-cpu-1x"
+  memory = "512mb"

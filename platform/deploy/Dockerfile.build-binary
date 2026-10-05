@@ -1,0 +1,31 @@
+# Local-only: build connector-platform binary with bookworm glibc
+# Usage: docker build -f platform/deploy/Dockerfile.build-binary -t connector-builder .
+#        docker run --rm -v $(pwd)/platform/deploy/artifacts:/out connector-builder \
+#               cp /build/platform/server/target/docker/connector-platform /out/connector-platform
+FROM rust:1.88-slim-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    protobuf-compiler pkg-config libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+COPY platform/server           ./platform/server
+COPY platform/supervisor       ./platform/supervisor
+COPY platform/cpkg             ./platform/cpkg
+COPY platform/plugin-manifest  ./platform/plugin-manifest
+COPY platform/plugin-handshake ./platform/plugin-handshake
+COPY platform/plugin-runtime   ./platform/plugin-runtime
+COPY platform/microvm          ./platform/microvm
+COPY platform/licensing        ./platform/licensing
+COPY oss/vac/Cargo.toml        ./oss/vac/Cargo.toml
+COPY oss/vac/crates            ./oss/vac/crates
+COPY oss/connector/Cargo.toml  ./oss/connector/Cargo.toml
+COPY oss/connector/crates      ./oss/connector/crates
+COPY oss/aapi/Cargo.toml       ./oss/aapi/Cargo.toml
+COPY oss/aapi/crates           ./oss/aapi/crates
+COPY agos-abi                  ./agos-abi
+COPY agos-sdk                  ./agos-sdk
+
+ENV CARGO_BUILD_JOBS=2
+RUN cd platform/server && cargo build --profile docker --locked --bin connector-platform

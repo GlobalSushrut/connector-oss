@@ -1,0 +1,77 @@
+# Connector Node — systemd unit (Linux production)
+#
+# Binary name: connector-platform (not connector-node).
+# Install: sudo install -m644 connector-platform.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now connector-platform
+#
+# Requires Type=notify + NOTIFY_SOCKET (binary sends READY=1 / WATCHDOG=1).
+# Paths assume FHS-style layout from scripts/package-connector-os.sh install helper.
+
+[Unit]
+Description=Connector Platform node (single-node sovereign)
+Documentation=file:///usr/share/doc/connector-platform/PACKAGING.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=connector
+Group=connector
+SupplementaryGroups=kvm
+# Probe opens /dev/kvm. The VMM itself runs in connector-microd.
+DeviceAllow=/dev/kvm rw
+WorkingDirectory=/var/lib/connector
+
+ExecStart=/usr/local/bin/connector-platform
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
+TimeoutStopSec=60
+SuccessExitStatus=143
+
+Restart=on-failure
+RestartSec=5
+RestartPreventExitStatus=1
+
+WatchdogSec=60
+
+LimitNOFILE=65536
+MemoryMax=4G
+MemoryHigh=3G
+CPUQuota=200%
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ProtectProc=invisible
+ProcSubset=pid
+ReadWritePaths=/var/lib/connector
+ReadWritePaths=/var/log/connector
+
+Environment=CONNECTOR_ENV=production
+Environment=CONNECTOR_DATA_DIR=/var/lib/connector
+Environment=CONNECTOR_LOG_DIR=/var/log/connector
+Environment=CONNECTOR_CONFIG_FILE=/etc/connector/connector.yaml
+Environment=CONNECTOR_PORT=9091
+Environment=CONNECTOR_HOST=0.0.0.0
+Environment=CONNECTOR_UI_DIR=/var/lib/connector/ui
+Environment=RUST_LOG=info
+EnvironmentFile=-/etc/connector/env
+EnvironmentFile=-/etc/connector/platform.env
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=connector-platform
+
+[Install]
+WantedBy=multi-user.target

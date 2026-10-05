@@ -1,0 +1,20 @@
+[package]
+name = "connector-kerneld"
+version = "0.1.0"
+edition = "2021"
+description = "Host reconciler: systemd egress drop-ins + optional eBPF cgroup/skb mark-deny (bpftool)."
+publish = false
+
+[[bin]]
+name = "connector-kerneld"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "signal", "process"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

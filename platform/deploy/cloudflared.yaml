@@ -1,0 +1,65 @@
+# Cloudflare Tunnel configuration for Connector Platform
+# Phase R2/R3 — normal internet + protocol gateway + UI-RPC
+#
+# Prerequisites:
+#   1. Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
+#   2. Authenticate:        cloudflared tunnel login
+#   3. Create tunnel:       cloudflared tunnel create connector-node
+#   4. Set env var:         export CLOUDFLARE_TUNNEL_TOKEN=<token from step 3>
+#   5. Run:                 cloudflared tunnel --config platform/deploy/cloudflared.yaml run
+#
+# DNS records to create (in CF dashboard or via CLI):
+#   cloudflared tunnel route dns connector-node api.yourdomain.com
+#   cloudflared tunnel route dns connector-node protocols.yourdomain.com
+#   cloudflared tunnel route dns connector-node app.yourdomain.com
+
+tunnel: connector-node
+credentials-file: /etc/cloudflare/connector-node.json
+
+ingress:
+  # ── REST API (:9091) ─────────────────────────────────────────────────────────
+  # All standard API calls, dashboard SPA, webhooks.
+  # Cloudflare terminates HTTPS and WAF/DDoS — node only sees HTTP/1.1.
+  - hostname: api.yourdomain.com
+    service: http://localhost:9091
+    originRequest:
+      connectTimeout: 10s
+      tlsTimeout: 10s
+      tcpKeepAlive: 60s
+      noTLSVerify: false        # Node does NOT have TLS on :9091 (CF terminates)
+      httpHostHeader: api.yourdomain.com
+      originServerName: api.yourdomain.com
+    # Headers injected by CF → used by proxy trust middleware
+    # X-Forwarded-For, X-Forwarded-Proto: https, CF-Connecting-IP
+
+  # ── Protocol Gateway (:9092) — mTLS passthrough ──────────────────────────────
+  # MCP, A2A, ACP, ANP, AP2 endpoints.
+  # CF Tunnel forwards raw TCP with TLS passthrough so the node's rustls
+  # mTLS handshake reaches the client intact — peer certificates are preserved.
+  - hostname: protocols.yourdomain.com
+    service: https://localhost:9092
+    originRequest:
+      noTLSVerify: true         # Node has its own rustls cert — CF passes TLS through
+      connectTimeout: 10s
+      tlsTimeout: 30s           # mTLS handshake is slower than standard TLS
+      tcpKeepAlive: 300s        # Long-lived agent connections
+
+  # ── UI-RPC WebSocket Gateway (:9093) ─────────────────────────────────────────
+  # Dashboard WebSocket JSON-RPC 2.0 connection.
+  # CF terminates HTTPS, upgrades to WS, forwards to node.
+  - hostname: app.yourdomain.com
+    service: http://localhost:9093
+    originRequest:
+      connectTimeout: 10s
+      tcpKeepAlive: 300s        # Keep WS connections alive
+      noTLSVerify: false
+
+  # ── Catch-all: reject everything else ────────────────────────────────────────
+  - service: http_status:404
+
+# Logging — structured JSON, shipped to CF logpush or local file
+logLevel: info
+logFile: /var/log/connector/cloudflared.log
+
+# Metrics server for monitoring cloudflared itself
+metricsListenAddr: 127.0.0.1:9095

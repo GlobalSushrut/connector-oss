@@ -1,0 +1,19 @@
+[package]
+name = "connector-plugin-runtime"
+version = "0.1.0"
+edition = "2021"
+description = "Plugin isolation backends: subprocess, Docker lab, microVM, Wasmtime/WASI (Phase 5.1–5.6)"
+publish = false
+
+[dependencies]
+async-trait = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["process", "io-util", "macros", "rt", "time", "sync", "net"] }
+connector-microvm = { path = "../microvm" }
+wasmtime = "37"
+wasmtime-wasi = { version = "37", default-features = false, features = ["p1"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

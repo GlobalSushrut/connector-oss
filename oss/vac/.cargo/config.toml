@@ -1,0 +1,4 @@
+[env]
+# pyo3 requires a Python interpreter; point it at the system python3
+# since miniconda3 is not installed on this machine.
+PYO3_PYTHON = "/usr/bin/python3"

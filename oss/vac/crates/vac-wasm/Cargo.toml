@@ -1,0 +1,29 @@
+[package]
+name = "vac-wasm"
+description = "WASM bindings for VAC"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vac-core = { path = "../vac-core" }
+vac-store = { path = "../vac-store" }
+aapi-core = { path = "../../../aapi/crates/aapi-core" }
+wasm-bindgen = { workspace = true }
+js-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = "0.6"
+cid = { workspace = true }
+ciborium = { workspace = true }
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+wasmtime = "20"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+wat = "1"

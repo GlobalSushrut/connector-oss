@@ -1,0 +1,68 @@
+# ═══════════════════════════════════════════════════════════════
+# Patient Triage Agent — Configuration
+# ═══════════════════════════════════════════════════════════════
+#
+# WHO this agent is, WHERE it connects, WHAT model it uses,
+# and WHAT rules it follows.
+#
+# This file does NOT define behavior (that's contract.yaml).
+# This file does NOT define tools (that's tools.py).
+# This file does NOT define memory (that's memory.yaml).
+# ═══════════════════════════════════════════════════════════════
+
+# Agent identity — registered with the Connector kernel
+agent:
+  name: patient_triage
+  namespace: medical
+  role: triage_nurse
+  version: "1.0.0"
+  description: "Triage incoming patients by severity using clinical reasoning"
+  tags:
+    - medical
+    - triage
+    - clinical
+
+# Connector kernel connection
+connector:
+  url: ${CONNECTOR_URL:http://localhost:9090}
+  api_key: ${CONNECTOR_API_KEY:cpk_dev_demo}
+
+# LLM provider — routed through the Connector AI Gateway
+provider:
+  name: ${CONNECTOR_LLM_PROVIDER:openai}
+  model: ${CONNECTOR_LLM_MODEL:gpt-4o}
+  api_key: ${CONNECTOR_LLM_API_KEY}
+  temperature: 0.2
+  max_tokens: 4096
+
+# Security — kernel-enforced access control
+security:
+  clearance: 2
+  namespace_lock: true
+  signing: true
+  data_classification: PHI
+  allowed_tools:
+    - lookup_patient
+    - check_allergies
+    - assess_severity
+    - assign_priority
+    - notify_staff
+
+# Compliance rules — kernel-enforced, not advisory
+comply:
+  - hipaa
+  - phi
+  - audit_all_calls
+  - write_episodic_on_decision
+  - clinical_decision_support
+
+# Execution mode
+#   kernel — full kernel execution with governance + receipts (production)
+#   local  — local Python executor with stub handlers (dev/test)
+#   stub   — no LLM calls, mock responses (CI/offline)
+mode: ${CONNECTOR_MODE:kernel}
+
+# Token budget for this agent (kernel ACB level, separate from contract budget)
+resources:
+  token_budget: 16000
+  max_tool_calls_per_turn: 10

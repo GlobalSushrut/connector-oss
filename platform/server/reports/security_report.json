@@ -1,0 +1,50 @@
+{
+  "all_security_tests_pass": true,
+  "generated_at": "2026-03-09T02:48:56Z",
+  "report_type": "Enterprise Security Report",
+  "security_tests": [
+    {
+      "agent_a_objects": 1,
+      "agent_b_visible": 0,
+      "leaks_detected": 0,
+      "status": "PASS",
+      "test": "namespace_isolation"
+    },
+    {
+      "handle_issued_to": "rpt-secret-owner-b562a5c4cc3f",
+      "resolution_by_other": "denied",
+      "status": "PASS",
+      "test": "secret_boundary"
+    },
+    {
+      "http_status": 200,
+      "integrity": true,
+      "status": "PASS",
+      "test": "audit_chain_integrity"
+    },
+    {
+      "all_pass": true,
+      "grade": "A+",
+      "http_status": 200,
+      "invariants_checked": 6,
+      "status": "PASS",
+      "test": "formal_invariants"
+    },
+    {
+      "risk_score": 0.0,
+      "safe_content_blocked": true,
+      "status": "PASS",
+      "test": "firewall_no_false_positives"
+    },
+    {
+      "permissions_http": 200,
+      "roles_http": 200,
+      "status": "PASS",
+      "test": "rbac_accessible"
+    }
+  ],
+  "tests_passed": 6,
+  "tests_total": 6,
+  "total_latency_ms": 97,
+  "verdict": "SECURITY PASS — namespace isolation holds, secret boundaries enforced, audit integrity verified, invariants pass"
+}

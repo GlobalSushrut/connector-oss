@@ -1,0 +1,33 @@
+[Unit]
+Description=Connector MicroCell supervisor (Firecracker/KVM HostProbe + VMM lifecycle)
+Documentation=file:///usr/share/doc/connector/CONNECTOR_AGENT_ISOLATION.md
+After=network-online.target local-fs.target
+Wants=network-online.target
+Before=connector-platform.service connectord.service
+
+[Service]
+Type=simple
+User=root
+Group=kvm
+SupplementaryGroups=kvm
+# Pin assets via environment file; do not download latest on boot.
+EnvironmentFile=-/etc/connector/microd.env
+Environment=CONNECTOR_ENV=production
+Environment=CONNECTOR_MICROD_SOCK=/run/connector/microd.sock
+Environment=CONNECTOR_MICROD_READY_FILE=/run/connector/microd.ready
+Environment=CONNECTOR_MICROD_WARM_POOL=0
+PrivateDevices=no
+DeviceAllow=/dev/kvm rw
+DeviceAllow=/dev/net/tun rw
+DeviceAllow=/dev/vhost-vsock rw
+DeviceAllow=char-pts rw
+ExecStartPre=/usr/bin/connector-microd prepare
+ExecStart=/usr/bin/connector-microd serve
+Restart=on-failure
+RestartSec=3
+# Jailer needs to set up a chroot. Production still refuses a lab KVM override.
+AmbientCapabilities=
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

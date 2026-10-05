@@ -1,0 +1,75 @@
+# ── Builder stage ─ compiles all binaries inside Docker ───────────────────────
+FROM rust:1.88-slim-bookworm AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libssl-dev protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy all source code
+COPY platform /build/platform
+COPY plugins /build/plugins
+COPY oss /build/oss
+COPY agos-abi /build/agos-abi
+COPY agos-sdk /build/agos-sdk
+COPY cargo-connector /build/cargo-connector
+
+# Build platform
+RUN cargo build --manifest-path /build/platform/server/Cargo.toml --bin connector-platform --release 2>&1 | tail -20 \
+    && ls -la /build/platform/server/target/release/connector-platform
+
+# Build tracetramp
+RUN cargo build --manifest-path /build/plugins/tracetramp/Cargo.toml --bin tracetramp --release 2>&1 | tail -10 \
+    && ls -la /build/plugins/tracetramp/target/release/tracetramp
+
+# Build witnessctl  
+RUN cargo build --manifest-path /build/plugins/witnessctl/Cargo.toml --bin witnessctl --release 2>&1 | tail -10 \
+    && ls -la /build/plugins/witnessctl/target/release/witnessctl
+
+# ── Runtime stage ────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -r -s /usr/sbin/nologin -d /var/lib/connector -m connector
+
+# Copy binaries from builder
+COPY --from=builder /build/platform/server/target/release/connector-platform /usr/local/bin/connector-platform
+COPY --from=builder /build/plugins/tracetramp/target/release/tracetramp /usr/local/bin/tracetramp
+COPY --from=builder /build/plugins/witnessctl/target/release/witnessctl /usr/local/bin/witnessctl
+RUN chmod 755 /usr/local/bin/connector-platform /usr/local/bin/tracetramp /usr/local/bin/witnessctl
+
+# Dashboard UI assets
+RUN mkdir -p /var/lib/connector/ui
+COPY platform/ui-leptos/dashboard/dist/ /var/lib/connector/ui/
+
+# WitnessCtl migrations (run at startup)
+COPY plugins/witnessctl/migrations/ /var/lib/connector/witnessctl-migrations/
+
+# Supervisord config
+COPY platform/deploy/supervisord.playground.conf /etc/supervisor/conf.d/connector.conf
+
+RUN mkdir -p /var/log/supervisor
+
+# Entrypoint
+RUN printf '#!/bin/sh\nchown -R connector:connector /var/lib/connector 2>/dev/null || true\nexec /usr/bin/supervisord -c /etc/supervisor/conf.d/connector.conf -n "$@"\n' \
+    > /entrypoint.sh && chmod +x /entrypoint.sh
+
+WORKDIR /var/lib/connector
+
+ENV CONNECTOR_PRESET=playground \
+    CONNECTOR_HOST=0.0.0.0 \
+    CONNECTOR_PORT=8080 \
+    CONNECTOR_DATA_DIR=/var/lib/connector \
+    CONNECTOR_UI_DIR=/var/lib/connector/ui \
+    RUST_LOG=info
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=20s --timeout=5s --start-period=40s --retries=5 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]

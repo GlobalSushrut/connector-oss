@@ -1,0 +1,104 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# connector.toml.default — Sensible local defaults for Connector Platform
+#
+# Copy to ~/.connector/connector.toml and fill in your values.
+# All fields can also be set via environment variables (env var takes priority).
+#
+# Quick start: connector init --quickstart   (auto-generates this file)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[server]
+# Address to bind the API server
+addr = "127.0.0.1:9090"
+
+# Set to "development" to enable dev mode:
+#   - Pretty-printed JSON responses
+#   - Full error messages (not just codes)
+#   - MAC denials printed to stderr in plain English
+#   - BFT consensus skipped (single-node works without quorum)
+# env: CONNECTOR_ENV
+env = "development"
+
+[storage]
+# Ring 0 (kernel memory): redb CoW B-tree — fast, ACID, zero config
+# env: CONNECTOR_KERNEL_STORE_URI
+kernel_store = "redb:~/.connector/data/kernel.redb"
+
+# Ring 1-4 (engine state: audit, secrets, sessions, tools)
+# env: CONNECTOR_ENGINE_STORE_URI
+engine_store = "sqlite:~/.connector/data/engine.db"
+
+# Data directory (created automatically on first run)
+# env: CONNECTOR_DATA_DIR
+data_dir = "~/.connector/data"
+
+[llm]
+# LLM provider — leave blank to use stub mode (CONNECTOR_LLM_STUB=true)
+# env: CONNECTOR_LLM_PROVIDER
+# provider = "openai"
+
+# env: CONNECTOR_LLM_MODEL
+# model = "gpt-4o"
+
+# env: CONNECTOR_LLM_API_KEY
+# api_key = "sk-..."
+
+# Optional: custom base URL (for Ollama, LM Studio, Azure OpenAI, etc.)
+# env: CONNECTOR_LLM_ENDPOINT
+# endpoint = "http://localhost:11434/v1"
+
+# Stub mode: agents run full pipeline, returns "[stub response to: {input}]"
+# No LLM key needed — perfect for evaluating the platform with $0 spend.
+# env: CONNECTOR_LLM_STUB
+# stub = true
+
+[security]
+# Ed25519 packet signing — set to true in production
+# env: CONNECTOR_SECURITY_SIGNING
+signing = false
+
+# SCITT receipts on every MemPacket commit
+# env: CONNECTOR_SECURITY_SCITT
+scitt = false
+
+# MAC Guard clearance enforcement (always enabled)
+mac_guard = true
+
+[license]
+# License tier (auto-detected from license file or key)
+# Community: 10K tokens/day, 3 agents, no HIPAA
+# Set CONNECTOR_LICENSE_KEY=key_... for Startup/Team/Enterprise
+# env: CONNECTOR_LICENSE_KEY
+# key = ""
+
+# License server URL (for online activation)
+# env: CONNECTOR_LICENSE_SERVER
+license_server = "http://127.0.0.1:4100"
+
+# Offline grace period — how long to operate without license server contact
+# env: CONNECTOR_OFFLINE_GRACE_SECS
+offline_grace_secs = 259200  # 72 hours
+
+[health]
+# Health check interval in seconds
+# env: CONNECTOR_HEALTH_INTERVAL_SECS
+interval_secs = 30
+
+[observability]
+# OpenTelemetry OTLP endpoint (optional — enables distributed tracing)
+# env: OTEL_EXPORTER_OTLP_ENDPOINT
+# otlp_endpoint = "http://localhost:4317"
+
+# Prometheus metrics (always enabled at GET /metrics)
+metrics_enabled = true
+
+[dev]
+# LLM stub mode — full pipeline, canned responses, no API key needed
+# env: CONNECTOR_LLM_STUB
+llm_stub = false
+
+# Log request/response bodies (dev mode only)
+log_requests = true
+
+# Dev request log endpoint: GET /dev/requests (last 100 requests)
+request_log_enabled = true

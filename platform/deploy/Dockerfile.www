@@ -1,0 +1,57 @@
+# ── Stage 1: Build WASM UI ────────────────────────────────────────────────────
+FROM rust:1.88-slim-bookworm AS ui-builder
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    curl pkg-config libssl-dev nodejs npm ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://github.com/thedodd/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz \
+    | tar -xz -C /usr/local/bin && chmod +x /usr/local/bin/trunk
+
+RUN rustup target add wasm32-unknown-unknown
+
+WORKDIR /build
+COPY oss/ oss/
+COPY platform/ui-leptos/www/ platform/ui-leptos/www/
+COPY platform/ui-leptos/dashboard/tailwind.config.js platform/ui-leptos/www/
+
+WORKDIR /build/platform/ui-leptos/www
+RUN npm install --save-dev tailwindcss@^3 postcss autoprefixer 2>/dev/null || true
+RUN trunk build --release 2>&1
+
+# ── Stage 2: Build backend binary ─────────────────────────────────────────────
+FROM rust:1.88-slim-bookworm AS server-builder
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    pkg-config libssl-dev protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY oss/ oss/
+COPY platform/server/ platform/server/
+
+WORKDIR /build/platform/server
+RUN CARGO_TARGET_DIR=/build/target \
+    cargo build --profile docker --locked --bin connector-platform
+
+# ── Stage 3: Runtime ──────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -r -s /sbin/nologin connector
+
+COPY --from=server-builder /build/target/docker/connector-platform /usr/local/bin/connector-platform
+COPY --from=ui-builder /build/platform/ui-leptos/www/dist /app/ui/www
+
+RUN chown -R connector:connector /app/ui/www
+
+USER connector
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+# CONNECTOR_UI_DIR points platform binary to serve www SPA assets
+ENV CONNECTOR_UI_DIR=/app/ui/www
+CMD ["/usr/local/bin/connector-platform"]

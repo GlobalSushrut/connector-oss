@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 400" role="img" aria-labelledby="sd">
+  <title id="sd">How Connector isolates agents, governs decisions, and verifies outcomes with audit receipts</title>
+  <rect width="920" height="400" fill="#0d0d0f" rx="8"/>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#9898a4"/>
+    </marker>
+  </defs>
+  <text x="460" y="28" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" text-anchor="middle">Isolate - Govern - Verify</text>
+  <text x="460" y="48" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle">Self-hosted governance layer between agents and production</text>
+
+  <rect x="24" y="78" width="100" height="72" rx="6" fill="#141418" stroke="#2a2a30" stroke-width="1.5"/>
+  <text x="74" y="108" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle" font-weight="600">Company</text>
+  <text x="74" y="124" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">knowledge &amp;</text>
+  <text x="74" y="136" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">production</text>
+  <line x1="124" y1="114" x2="152" y2="114" stroke="#9898a4" stroke-width="2" marker-end="url(#arr)"/>
+
+  <rect x="152" y="68" width="200" height="268" rx="8" fill="#141418" stroke="#5ba8ff" stroke-width="1.5"/>
+  <text x="252" y="92" fill="#5ba8ff" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle">ISOLATE</text>
+  <text x="252" y="108" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">separate execution</text>
+  <rect x="168" y="118" width="168" height="26" rx="4" fill="#0d0d0f" stroke="#2a2a30"/>
+  <text x="252" y="135" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">Agent 1 - isolated vault</text>
+  <rect x="168" y="150" width="168" height="26" rx="4" fill="#0d0d0f" stroke="#2a2a30"/>
+  <text x="252" y="167" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">Agent 2 - isolated vault</text>
+  <rect x="168" y="182" width="168" height="26" rx="4" fill="#0d0d0f" stroke="#2a2a30"/>
+  <text x="252" y="199" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">Agent 3 - isolated vault</text>
+  <rect x="168" y="218" width="168" height="44" rx="4" fill="#0d0d0f" stroke="#5ba8ff" stroke-width="1"/>
+  <text x="252" y="236" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="7" text-anchor="middle" font-weight="600">MEMORY</text>
+  <text x="252" y="250" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="7" text-anchor="middle">decision logs, scoped, verifiable</text>
+  <line x1="352" y1="200" x2="378" y2="200" stroke="#9898a4" stroke-width="2" marker-end="url(#arr)"/>
+
+  <rect x="378" y="68" width="200" height="268" rx="8" fill="#141418" stroke="#ffb020" stroke-width="1.5"/>
+  <text x="478" y="92" fill="#ffb020" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle">GOVERN</text>
+  <text x="478" y="108" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">policy, budget, access</text>
+  <rect x="394" y="124" width="168" height="36" rx="4" fill="#0d0d0f" stroke="#3ecf8e"/>
+  <text x="478" y="142" fill="#3ecf8e" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" font-weight="600">Approved</text>
+  <text x="478" y="154" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="7" text-anchor="middle">within policy</text>
+  <rect x="394" y="170" width="168" height="36" rx="4" fill="#0d0d0f" stroke="#c44c4c"/>
+  <text x="478" y="188" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" font-weight="600">Cost / limit hit</text>
+  <text x="478" y="200" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="7" text-anchor="middle">blocked at runtime</text>
+  <rect x="394" y="216" width="168" height="36" rx="4" fill="#0d0d0f" stroke="#3ecf8e"/>
+  <text x="478" y="234" fill="#3ecf8e" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" font-weight="600">Safe to act</text>
+  <text x="478" y="246" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="7" text-anchor="middle">tool + scope OK</text>
+  <text x="478" y="312" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">Violations blocked, not flagged</text>
+  <line x1="578" y1="200" x2="604" y2="200" stroke="#9898a4" stroke-width="2" marker-end="url(#arr)"/>
+
+  <rect x="604" y="68" width="296" height="268" rx="8" fill="#141418" stroke="#3ecf8e" stroke-width="1.5"/>
+  <text x="752" y="92" fill="#3ecf8e" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle">VERIFY</text>
+  <text x="752" y="108" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">cryptographic receipts</text>
+  <rect x="622" y="118" width="124" height="32" rx="4" fill="#1a2e24" stroke="#3ecf8e"/>
+  <text x="684" y="138" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">Updated data</text>
+  <rect x="758" y="118" width="124" height="32" rx="4" fill="#1a2e24" stroke="#3ecf8e"/>
+  <text x="820" y="138" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">Sent email (ok)</text>
+  <rect x="622" y="158" width="260" height="28" rx="4" fill="#1a2e24" stroke="#3ecf8e"/>
+  <text x="752" y="176" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">Budget respected</text>
+  <rect x="622" y="200" width="260" height="52" rx="6" fill="#0d0d0f" stroke="#3ecf8e" stroke-width="2"/>
+  <text x="752" y="224" fill="#3ecf8e" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle">AUDIT RECEIPT</text>
+  <text x="752" y="242" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle">auditor-ready, not a raw log dump</text>
+  <text x="460" y="388" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle">Connector: prove what ran before production pays the price.</text>
+</svg>

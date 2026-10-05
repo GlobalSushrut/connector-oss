@@ -1,0 +1,26 @@
+[package]
+name = "cnktros"
+description = "cnktros — Connector native developer CLI (bind, surfaces, invoke, receipts, app package)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "cnktros"
+path = "src/main.rs"
+
+[dependencies]
+connector-client = { path = "../connector-client" }
+connector-native-contract = { workspace = true }
+connector-cpkg = { path = "../../../../platform/cpkg" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+clap = { version = "4", features = ["derive", "env"] }
+chrono = { workspace = true }
+sha2 = { workspace = true }
+hex = "0.4"
+ed25519-dalek = { workspace = true }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }

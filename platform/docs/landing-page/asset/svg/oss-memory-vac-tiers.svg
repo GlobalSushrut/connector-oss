@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" role="img" aria-labelledby="t1">
+  <title id="t1">VAC memory tiers: hot, warm, cold, archive</title>
+  <rect width="520" height="200" fill="#0d0d0f" rx="8"/>
+  <text x="260" y="28" fill="#e8e8ec" font-family="Inter, system-ui, sans-serif" font-size="13" text-anchor="middle" font-weight="600">Content-addressed memory, tiered storage</text>
+  <g font-family="Inter, system-ui, sans-serif" font-size="10">
+    <rect x="40" y="52" width="110" height="56" rx="6" fill="#141418" stroke="#ffb020" stroke-width="1.5"/>
+    <text x="95" y="78" fill="#e8e8ec" text-anchor="middle" font-weight="600">Hot</text>
+    <text x="95" y="94" fill="#9898a4" text-anchor="middle">RAM, fast</text>
+    <rect x="165" y="52" width="110" height="56" rx="6" fill="#141418" stroke="#2a2a30" stroke-width="1.5"/>
+    <text x="220" y="78" fill="#e8e8ec" text-anchor="middle" font-weight="600">Warm</text>
+    <text x="220" y="94" fill="#9898a4" text-anchor="middle">indexed</text>
+    <rect x="290" y="52" width="110" height="56" rx="6" fill="#141418" stroke="#2a2a30" stroke-width="1.5"/>
+    <text x="345" y="78" fill="#e8e8ec" text-anchor="middle" font-weight="600">Cold</text>
+    <text x="345" y="94" fill="#9898a4" text-anchor="middle">disk</text>
+    <rect x="415" y="52" width="75" height="56" rx="6" fill="#141418" stroke="#5ba8ff" stroke-width="1.5"/>
+    <text x="452" y="78" fill="#e8e8ec" text-anchor="middle" font-weight="600">Archive</text>
+    <text x="452" y="94" fill="#9898a4" text-anchor="middle">sealed</text>
+  </g>
+  <path d="M95 108 L95 128 L452 128 L452 108" fill="none" stroke="#3ecf8e" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="260" y="152" fill="#3ecf8e" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle">MemPacket, CID, namespace isolation (concept)</text>
+  <text x="260" y="178" fill="#9898a4" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle">Every packet addressable and auditable through kernel boundary</text>
+</svg>

@@ -1,0 +1,44 @@
+contract hitl_approve_audit {
+    identity {
+        name: "hitl_approve_audit"
+        version: "1.0.0"
+    }
+    interface {
+        input request: Json required
+        output decision: Json
+        tool tracetramp_record
+        tool witness_seal
+        tool human_approve
+        event audit_complete
+    }
+    state {
+        initial start
+        terminal done
+        start -> done on complete
+    }
+    governance {
+        require request is present
+        ensure decision is present
+        roles [operator, witness, human_reviewer]
+        clearance "high"
+        compliance [audit_trail, hitl_gate]
+    }
+    budget {
+        tokens: 8192
+        cost_usd: 2.00
+        tool_calls: 25
+    }
+    memory {
+        use case_context as ctx
+        use policy_decisions as policies
+    }
+    behavior {
+        step hitl_gate {
+            tool tracetramp_record { id: ${request} } -> trace_id
+            tool witness_seal { trace: ${trace_id} } -> seal_ref
+            tool human_approve { seal: ${seal_ref} } -> decision
+            transition done
+            emit audit_complete { trace: ${trace_id}, seal: ${seal_ref} }
+        }
+    }
+}

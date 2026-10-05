@@ -1,0 +1,42 @@
+contract incident_slack_jira {
+    identity {
+        name: "incident_slack_jira"
+        version: "1.0.0"
+    }
+    interface {
+        input incident: Json required
+        output ticket: Json
+        tool slack_post
+        tool jira_create_issue
+        event incident_routed
+    }
+    state {
+        initial start
+        terminal done
+        start -> done on complete
+    }
+    governance {
+        require incident is present
+        ensure ticket is present
+        roles [operator, incident_commander]
+        clearance "medium"
+        compliance [soc2_notification]
+    }
+    budget {
+        tokens: 2048
+        cost_usd: 0.25
+        tool_calls: 8
+    }
+    memory {
+        use incident_playbooks as playbooks
+        use escalation_routes as routes
+    }
+    behavior {
+        step route_incident {
+            tool slack_post { payload: ${incident} } -> slack_ts
+            tool jira_create_issue { incident: ${incident}, thread: ${slack_ts} } -> ticket
+            transition done
+            emit incident_routed { slack: ${slack_ts}, jira: ${ticket} }
+        }
+    }
+}

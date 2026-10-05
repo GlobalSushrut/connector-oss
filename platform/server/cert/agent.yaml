@@ -1,0 +1,3 @@
+name: cert-agent
+namespace: m/cert-agent
+role: worker

@@ -1,0 +1,754 @@
+{
+  "info": {
+    "name": "Connector Platform API",
+    "description": "Complete API collection for the Connector Platform - Enterprise AI Agent Operating System.\n\nIncludes V1 and V2 APIs for agents, memory, tools, sessions, audit, and compliance.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "connector-platform-api-v1"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agent_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memory_cid",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Liveness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/live",
+              "host": ["{{base_url}}"],
+              "path": ["health", "live"]
+            },
+            "description": "Kubernetes liveness probe - returns 200 if process is alive"
+          }
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/ready",
+              "host": ["{{base_url}}"],
+              "path": ["health", "ready"]
+            },
+            "description": "Kubernetes readiness probe - returns 200 if ready to accept traffic"
+          }
+        },
+        {
+          "name": "Startup Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/startup",
+              "host": ["{{base_url}}"],
+              "path": ["health", "startup"]
+            },
+            "description": "Kubernetes startup probe - returns 200 when boot sequence is complete"
+          }
+        }
+      ]
+    },
+    {
+      "name": "V2 API",
+      "description": "Simplified V2 API with consistent patterns and smart defaults",
+      "item": [
+        {
+          "name": "Agents",
+          "item": [
+            {
+              "name": "Create Agent",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData.ok && jsonData.data) {",
+                      "        pm.collectionVariables.set('agent_id', jsonData.data.id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {"key": "Content-Type", "value": "application/json"}
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"my-agent\",\n  \"namespace\": \"/m/my-agent\",\n  \"model\": \"gpt-4o\",\n  \"description\": \"My first agent\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v2/agents",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "agents"]
+                },
+                "description": "Create a new agent"
+              }
+            },
+            {
+              "name": "List Agents",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/agents?limit=100",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "agents"],
+                  "query": [
+                    {"key": "limit", "value": "100"},
+                    {"key": "status", "value": "", "disabled": true},
+                    {"key": "namespace", "value": "", "disabled": true}
+                  ]
+                },
+                "description": "List all agents with optional filters"
+              }
+            },
+            {
+              "name": "Get Agent",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/agents/{{agent_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "agents", "{{agent_id}}"]
+                },
+                "description": "Get agent details by ID"
+              }
+            },
+            {
+              "name": "Start Agent",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/agents/{{agent_id}}/start",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "agents", "{{agent_id}}", "start"]
+                },
+                "description": "Start an agent"
+              }
+            },
+            {
+              "name": "Stop Agent",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/agents/{{agent_id}}/stop",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "agents", "{{agent_id}}", "stop"]
+                },
+                "description": "Stop an agent"
+              }
+            },
+            {
+              "name": "Get Agent Health",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/agents/{{agent_id}}/health",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "agents", "{{agent_id}}", "health"]
+                },
+                "description": "Get agent health score (KECS)"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Memory",
+          "item": [
+            {
+              "name": "Write Memory",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData.ok && jsonData.data) {",
+                      "        pm.collectionVariables.set('memory_cid', jsonData.data.cid);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {"key": "Content-Type", "value": "application/json"}
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"agent_id\": \"{{agent_id}}\",\n  \"content\": {\n    \"type\": \"note\",\n    \"text\": \"Remember this important fact\",\n    \"importance\": \"high\"\n  },\n  \"tags\": [\"important\", \"fact\"],\n  \"summary\": \"An important note\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v2/memory",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "memory"]
+                },
+                "description": "Write memory to an agent"
+              }
+            },
+            {
+              "name": "List Memory",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/memory?agent_id={{agent_id}}&limit=100",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "memory"],
+                  "query": [
+                    {"key": "agent_id", "value": "{{agent_id}}"},
+                    {"key": "limit", "value": "100"},
+                    {"key": "namespace", "value": "", "disabled": true}
+                  ]
+                },
+                "description": "List memory entries"
+              }
+            },
+            {
+              "name": "Get Memory",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/memory/{{memory_cid}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "memory", "{{memory_cid}}"]
+                },
+                "description": "Get memory by CID with content"
+              }
+            },
+            {
+              "name": "Delete Memory",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/memory/{{memory_cid}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "memory", "{{memory_cid}}"]
+                },
+                "description": "Delete memory by CID"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sessions",
+          "item": [
+            {
+              "name": "Create Session",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData.ok && jsonData.data) {",
+                      "        pm.collectionVariables.set('session_id', jsonData.data.id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {"key": "Content-Type", "value": "application/json"}
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"agent_id\": \"{{agent_id}}\",\n  \"metadata\": {\n    \"purpose\": \"testing\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v2/sessions",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "sessions"]
+                },
+                "description": "Create a new session"
+              }
+            },
+            {
+              "name": "List Sessions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/sessions?agent_id={{agent_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "sessions"],
+                  "query": [
+                    {"key": "agent_id", "value": "{{agent_id}}"},
+                    {"key": "status", "value": "", "disabled": true}
+                  ]
+                },
+                "description": "List sessions"
+              }
+            },
+            {
+              "name": "Get Session",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/sessions/{{session_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "sessions", "{{session_id}}"]
+                },
+                "description": "Get session details"
+              }
+            },
+            {
+              "name": "Close Session",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/sessions/{{session_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "sessions", "{{session_id}}"]
+                },
+                "description": "Close a session"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tools",
+          "item": [
+            {
+              "name": "List Tools",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/tools",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "tools"],
+                  "query": [
+                    {"key": "category", "value": "", "disabled": true},
+                    {"key": "search", "value": "", "disabled": true}
+                  ]
+                },
+                "description": "List available tools"
+              }
+            },
+            {
+              "name": "Get Tool",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/tools/memory.write",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "tools", "memory.write"]
+                },
+                "description": "Get tool details"
+              }
+            },
+            {
+              "name": "Invoke Tool",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {"key": "Content-Type", "value": "application/json"}
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"agent_id\": \"{{agent_id}}\",\n  \"parameters\": {\n    \"content\": {\"message\": \"Hello from tool invocation\"}\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v2/tools/memory.write/invoke",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "tools", "memory.write", "invoke"]
+                },
+                "description": "Invoke a tool"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Audit",
+          "item": [
+            {
+              "name": "List Audit Entries",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/audit?limit=100",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "audit"],
+                  "query": [
+                    {"key": "limit", "value": "100"},
+                    {"key": "agent_id", "value": "", "disabled": true},
+                    {"key": "outcome", "value": "", "disabled": true},
+                    {"key": "format", "value": "json"}
+                  ]
+                },
+                "description": "List audit entries (JSON format)"
+              }
+            },
+            {
+              "name": "List Audit (OCSF)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/audit?format=ocsf&limit=100",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "audit"],
+                  "query": [
+                    {"key": "format", "value": "ocsf"},
+                    {"key": "limit", "value": "100"}
+                  ]
+                },
+                "description": "List audit entries in OCSF 1.3.0 format for SIEM integration"
+              }
+            },
+            {
+              "name": "Export Audit (OCSF)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/audit/export?format=ocsf",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "audit", "export"],
+                  "query": [
+                    {"key": "format", "value": "ocsf"}
+                  ]
+                },
+                "description": "Export audit log in OCSF format"
+              }
+            },
+            {
+              "name": "Export Audit (JSONL)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/audit/export?format=jsonl",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "audit", "export"],
+                  "query": [
+                    {"key": "format", "value": "jsonl"}
+                  ]
+                },
+                "description": "Export audit log in JSONL format for streaming ingestion"
+              }
+            },
+            {
+              "name": "Export Audit (CSV)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/audit/export?format=csv",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "audit", "export"],
+                  "query": [
+                    {"key": "format", "value": "csv"}
+                  ]
+                },
+                "description": "Export audit log in CSV format"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health (V2)",
+          "item": [
+            {
+              "name": "System Health",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/health",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "health"]
+                },
+                "description": "Get system health overview"
+              }
+            },
+            {
+              "name": "Maturity Score (KECS)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/health/maturity",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "health", "maturity"]
+                },
+                "description": "Get KECS maturity scores"
+              }
+            },
+            {
+              "name": "All Agents Health",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v2/health/agents",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "v2", "health", "agents"],
+                  "query": [
+                    {"key": "min_score", "value": "", "disabled": true},
+                    {"key": "grade", "value": "", "disabled": true}
+                  ]
+                },
+                "description": "Get health summary for all agents"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Compliance",
+      "item": [
+        {
+          "name": "Generate Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"framework\": \"soc2\",\n  \"include_audit_log\": true,\n  \"organization_name\": \"Acme Corp\",\n  \"prepared_by\": \"Security Team\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/compliance/report",
+              "host": ["{{base_url}}"],
+              "path": ["compliance", "report"]
+            },
+            "description": "Generate compliance report (SOC2, HIPAA, GDPR)"
+          }
+        },
+        {
+          "name": "Scorecard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/compliance/scorecard",
+              "host": ["{{base_url}}"],
+              "path": ["compliance", "scorecard"]
+            },
+            "description": "Get C-suite risk scorecard"
+          }
+        },
+        {
+          "name": "Findings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/compliance/findings",
+              "host": ["{{base_url}}"],
+              "path": ["compliance", "findings"],
+              "query": [
+                {"key": "framework", "value": "", "disabled": true},
+                {"key": "severity", "value": "", "disabled": true},
+                {"key": "status", "value": "", "disabled": true}
+              ]
+            },
+            "description": "Get compliance findings"
+          }
+        },
+        {
+          "name": "GDPR Data Subjects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/compliance/gdpr/data-subjects",
+              "host": ["{{base_url}}"],
+              "path": ["compliance", "gdpr", "data-subjects"]
+            },
+            "description": "List agents with potential PII"
+          }
+        },
+        {
+          "name": "GDPR Forget (Art.17)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/compliance/gdpr/forget/{{agent_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["compliance", "gdpr", "forget", "{{agent_id}}"]
+            },
+            "description": "GDPR Art.17 right-to-erasure"
+          }
+        },
+        {
+          "name": "GDPR Erasure Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/compliance/gdpr/erasure-log",
+              "host": ["{{base_url}}"],
+              "path": ["compliance", "gdpr", "erasure-log"]
+            },
+            "description": "Get GDPR erasure audit log"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Books (Accounting Ledger)",
+      "item": [
+        {
+          "name": "System Position",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/books",
+              "host": ["{{base_url}}"],
+              "path": ["books"]
+            },
+            "description": "Get system position report"
+          }
+        },
+        {
+          "name": "Journal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/books/journal?limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["books", "journal"],
+              "query": [
+                {"key": "limit", "value": "100"},
+                {"key": "format", "value": "json"}
+              ]
+            },
+            "description": "Get general journal entries"
+          }
+        },
+        {
+          "name": "Journal (OCSF)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/books/journal?format=ocsf&limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["books", "journal"],
+              "query": [
+                {"key": "format", "value": "ocsf"},
+                {"key": "limit", "value": "100"}
+              ]
+            },
+            "description": "Get journal in OCSF 1.3.0 format"
+          }
+        },
+        {
+          "name": "Journal (JSONL)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/books/journal?format=jsonl&limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["books", "journal"],
+              "query": [
+                {"key": "format", "value": "jsonl"},
+                {"key": "limit", "value": "100"}
+              ]
+            },
+            "description": "Get journal in JSONL format for streaming"
+          }
+        },
+        {
+          "name": "Costs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/books/costs",
+              "host": ["{{base_url}}"],
+              "path": ["books", "costs"]
+            },
+            "description": "Get cost statement"
+          }
+        },
+        {
+          "name": "Balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/books/balance",
+              "host": ["{{base_url}}"],
+              "path": ["books", "balance"]
+            },
+            "description": "Get reconciliation balance"
+          }
+        }
+      ]
+    }
+  ]
+}

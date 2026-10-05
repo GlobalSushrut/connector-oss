@@ -1,0 +1,65 @@
+# TraceTramp Helm values (production plan Phase 4)
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/connector-ai/tracetramp
+  tag: ""
+  pullPolicy: IfNotPresent
+
+service:
+  dataPlanePort: 9741
+  managementPort: 9742
+  type: ClusterIP
+
+ingress:
+  enabled: false
+  className: ""
+  hosts:
+    - host: tracetramp.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+
+env:
+  TRACETRAMP_CONTROL_MODE_ENABLED: "true"
+  TRACETRAMP_ALLOW_VIEW_PIPELINE: "false"
+  RUST_LOG: tracetramp=info
+
+connector:
+  baseUrl: http://connector:9091
+  existingSecret: ""
+  apiKeyKey: CONNECTOR_API_KEY
+
+witness:
+  handoffBaseUrl: ""
+  handoffSecret: ""
+
+jwt:
+  existingSecret: ""
+  secretKey: TRACETRAMP_JWT_SECRET
+
+admin:
+  existingSecret: ""
+  tokenKey: TRACETRAMP_ADMIN_TOKEN
+
+# Redis optional — omit or disable for PostgreSQL-only approvals
+redis:
+  enabled: false
+
+# Use external Postgres (in-cluster Service or managed RDS).
+externalDatabase:
+  host: postgresql
+  port: 5432
+  database: tracetramp
+  username: tracetramp
+  existingSecret: ""
+  existingSecretPasswordKey: password

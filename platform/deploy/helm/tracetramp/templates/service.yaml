@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tracetramp.fullname" . }}
+  labels:
+    {{- include "tracetramp.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "tracetramp.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: data
+      port: {{ .Values.service.dataPlanePort }}
+      targetPort: data
+    - name: mgmt
+      port: {{ .Values.service.managementPort }}
+      targetPort: mgmt

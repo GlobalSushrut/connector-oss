@@ -1,0 +1,414 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://connector.ai/schemas/connector.yaml",
+  "title": "connector.yaml",
+  "description": "JSON Schema for connector.yaml — the Connector Platform agent configuration file. Provides IDE autocomplete, validation, and documentation for all Tier 1/2/3 fields.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "properties": {
+
+    "connector": {
+      "description": "Tier 1+2: Global connector settings inherited by all agents and pipelines.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "provider":      { "type": "string", "description": "Tier 1 — REQUIRED. LLM provider: openai | anthropic | deepseek | groq | mistral | azure | bedrock | vertex", "examples": ["openai", "anthropic"] },
+        "model":         { "type": "string", "description": "Tier 1 — REQUIRED. Model name, e.g. gpt-4o, claude-3-5-sonnet-20241022", "examples": ["gpt-4o", "claude-3-5-sonnet-20241022"] },
+        "api_key":       { "type": "string", "description": "Tier 1 — REQUIRED. API key. Prefer $ENV{VAR} interpolation over inline values." },
+        "endpoint":      { "type": "string", "format": "uri", "description": "LLM API endpoint override. Required for Azure/Bedrock/self-hosted." },
+        "max_tokens":    { "type": "integer", "minimum": 1, "maximum": 1048576, "description": "Maximum tokens per LLM response." },
+        "temperature":   { "type": "number", "minimum": 0.0, "maximum": 2.0, "description": "LLM sampling temperature (0 = deterministic)." },
+        "system_prompt": { "type": "string", "description": "System prompt applied to every agent unless overridden." },
+        "storage":       { "type": "string", "description": "Storage URI: sqlite:<path> | memory:// | prolly:<path>", "examples": ["sqlite:./data/connector.db", "memory://"] },
+        "comply": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["hipaa", "soc2", "gdpr", "eu_ai_act", "dod", "pci_dss", "ccpa"] },
+          "description": "Compliance frameworks to enforce globally."
+        },
+        "fallbacks": {
+          "type": "array",
+          "description": "Ordered list of LLM fallback providers for circuit breaker.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "provider": { "type": "string" },
+              "model":    { "type": "string" },
+              "api_key":  { "type": "string" },
+              "endpoint": { "type": "string", "format": "uri" }
+            }
+          }
+        },
+        "router": {
+          "type": "object",
+          "description": "LLM router: retry, circuit breaker, cost tracking.",
+          "properties": {
+            "retry": {
+              "type": "object",
+              "properties": {
+                "max_retries":   { "type": "integer", "minimum": 0, "maximum": 10 },
+                "base_delay_ms": { "type": "integer", "minimum": 0 },
+                "max_delay_ms":  { "type": "integer", "minimum": 0 }
+              }
+            },
+            "circuit_breaker": {
+              "type": "object",
+              "properties": {
+                "failure_threshold": { "type": "integer", "minimum": 1 },
+                "cooldown_secs":     { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        },
+        "security": { "$ref": "#/$defs/SecurityConfig" },
+        "firewall":  { "$ref": "#/$defs/FirewallConfig" },
+        "behavior":  { "$ref": "#/$defs/BehaviorConfig" },
+        "checkpoint":{ "$ref": "#/$defs/CheckpointConfig" }
+      }
+    },
+
+    "agents": {
+      "description": "Tier 1+2: Named agent definitions. Keys are agent names.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/AgentConfig" }
+    },
+
+    "pipelines": {
+      "description": "Tier 2: Multi-agent pipeline definitions.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/PipelineConfig" }
+    },
+
+    "tools": {
+      "description": "Tier 2: External tool definitions.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/ToolConfig" }
+    },
+
+    "policies": {
+      "description": "Tier 2: Access control policies.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/PolicyConfig" }
+    },
+
+    "memory": {
+      "description": "Tier 2: Memory management settings.",
+      "$ref": "#/$defs/MemoryManagementConfig"
+    },
+
+    "judgment": {
+      "description": "Tier 2: TrustComputer judgment settings.",
+      "$ref": "#/$defs/JudgmentConfig"
+    },
+
+    "cluster": {
+      "description": "Tier 3: Multi-cell cluster settings. Absent = clustering OFF.",
+      "$ref": "#/$defs/ClusterConfig"
+    },
+
+    "swarm": {
+      "description": "Tier 3: Agent swarm settings.",
+      "type": "object",
+      "properties": {
+        "max_agents":     { "type": "integer", "minimum": 1 },
+        "topology":       { "type": "string", "enum": ["mesh", "ring", "star", "hierarchical"] },
+        "sync_interval":  { "type": "integer", "minimum": 100 }
+      }
+    },
+
+    "streaming": {
+      "description": "Tier 3: Server-sent events streaming.",
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "buffer_size": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "mcp": {
+      "description": "Tier 3: MCP server settings.",
+      "type": "object",
+      "properties": {
+        "server_name":    { "type": "string" },
+        "server_version": { "type": "string" },
+        "tools":          { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "server": {
+      "description": "Tier 3: Platform HTTP server settings.",
+      "type": "object",
+      "properties": {
+        "host": { "type": "string", "default": "0.0.0.0" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 8080 },
+        "tls":  { "type": "boolean", "default": false }
+      }
+    },
+
+    "observability": {
+      "description": "Tier 3: OpenTelemetry and metrics configuration.",
+      "type": "object",
+      "properties": {
+        "otlp_endpoint":   { "type": "string", "format": "uri" },
+        "metrics_enabled": { "type": "boolean" },
+        "tracing_enabled": { "type": "boolean" },
+        "service_name":    { "type": "string" }
+      }
+    },
+
+    "crypto": {
+      "description": "Tier 3 Military-Grade: Ed25519 signing + SCITT receipts.",
+      "type": "object",
+      "properties": {
+        "signing_key_path": { "type": "string" },
+        "scitt_endpoint":   { "type": "string", "format": "uri" }
+      }
+    },
+
+    "watchdog": {
+      "description": "Tier 3 Military-Grade: Autonomous agent watchdog.",
+      "type": "object",
+      "properties": {
+        "enabled":           { "type": "boolean" },
+        "check_interval_ms": { "type": "integer", "minimum": 100 },
+        "max_failures":      { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+
+  "$defs": {
+
+    "SecurityConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "signing":               { "type": "boolean", "description": "Sign every MemPacket with Ed25519." },
+        "scitt":                 { "type": "boolean", "description": "Register packets with a SCITT transparency log." },
+        "key_rotation_days":     { "type": "integer", "minimum": 1 },
+        "data_classification":   { "type": "string", "enum": ["Public", "Internal", "Confidential", "PHI", "Secret", "TopSecret"] },
+        "jurisdiction":          { "type": "string", "examples": ["US", "EU", "UK"] },
+        "retention_days":        { "type": "integer", "minimum": 1 },
+        "require_mfa":           { "type": "boolean" },
+        "max_delegation_depth":  { "type": "integer", "minimum": 0, "maximum": 10 },
+        "ip_allowlist":          { "type": "array", "items": { "type": "string" } },
+        "audit_export":          { "type": "string", "enum": ["json", "cbor", "csv", "none"] }
+      }
+    },
+
+    "FirewallConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preset":               { "type": "string", "enum": ["hipaa", "soc2", "dod", "default", "strict", "permissive"] },
+        "block_injection":      { "type": "boolean" },
+        "injection_threshold":  { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "pii_types":            { "type": "array", "items": { "type": "string" } },
+        "pii_threshold":        { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "blocked_tools":        { "type": "array", "items": { "type": "string" } },
+        "max_calls_per_minute": { "type": "integer", "minimum": 1 },
+        "max_input_length":     { "type": "integer", "minimum": 1 },
+        "weights": {
+          "type": "object",
+          "properties": {
+            "injection":          { "type": "number" },
+            "pii":                { "type": "number" },
+            "anomaly":            { "type": "number" },
+            "policy_violation":   { "type": "number" },
+            "rate_pressure":      { "type": "number" },
+            "boundary_crossing":  { "type": "number" }
+          }
+        },
+        "thresholds": {
+          "type": "object",
+          "properties": {
+            "warn":   { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+            "review": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+            "block":  { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+          }
+        }
+      }
+    },
+
+    "BehaviorConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "window_ms":               { "type": "integer", "minimum": 1000 },
+        "baseline_sample_size":    { "type": "integer", "minimum": 1 },
+        "anomaly_threshold":       { "type": "number", "minimum": 0.0 },
+        "max_actions_per_window":  { "type": "integer", "minimum": 1 },
+        "max_tool_diversity":      { "type": "integer", "minimum": 1 },
+        "max_error_rate":          { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "max_data_volume":         { "type": "integer", "minimum": 1 },
+        "detect_contamination":    { "type": "boolean" }
+      }
+    },
+
+    "CheckpointConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "write_through":               { "type": "boolean" },
+        "wal_enabled":                 { "type": "boolean" },
+        "auto_checkpoint_threshold":   { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "AgentConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "instructions":     { "type": "string", "description": "Tier 1 — System prompt for this agent." },
+        "role":             { "type": "string", "enum": ["proposer", "executor", "reviewer", "validator", "observer"] },
+        "tools":            { "type": "array", "items": { "type": "string" } },
+        "deny_tools":       { "type": "array", "items": { "type": "string" } },
+        "allow_data":       { "type": "array", "items": { "type": "string" } },
+        "deny_data":        { "type": "array", "items": { "type": "string" } },
+        "require_approval": { "type": "array", "items": { "type": "string" } },
+        "comply":           { "type": "array", "items": { "type": "string" } },
+        "rate_limit":       { "type": "integer", "minimum": 1, "description": "Max requests per minute." },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "max_tokens":   { "type": "integer", "minimum": 1 },
+            "max_cost_usd": { "type": "number", "minimum": 0.0 }
+          }
+        },
+        "output_guards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "pattern"],
+            "properties": {
+              "name":    { "type": "string" },
+              "pattern": { "type": "string", "description": "Regex pattern." },
+              "negate":  { "type": "boolean", "default": false }
+            }
+          }
+        },
+        "security": { "$ref": "#/$defs/SecurityConfig" },
+        "llm": {
+          "type": "object",
+          "description": "Per-agent LLM override.",
+          "properties": {
+            "provider":    { "type": "string" },
+            "model":       { "type": "string" },
+            "api_key":     { "type": "string" },
+            "max_tokens":  { "type": "integer" },
+            "temperature": { "type": "number" }
+          }
+        }
+      }
+    },
+
+    "PipelineConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "actors": {
+          "type": "array",
+          "description": "Ordered list of pipeline steps.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name":             { "type": "string" },
+              "instructions":     { "type": "string" },
+              "tools":            { "type": "array", "items": { "type": "string" } },
+              "deny_tools":       { "type": "array", "items": { "type": "string" } },
+              "allow_data":       { "type": "array", "items": { "type": "string" } },
+              "deny_data":        { "type": "array", "items": { "type": "string" } },
+              "require_approval": { "type": "array", "items": { "type": "string" } },
+              "memory_from":      { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "flow":    { "type": "string", "description": "Flow expression, e.g. 'intake -> diagnosis -> treatment'." },
+        "comply":  { "type": "array", "items": { "type": "string" } },
+        "hipaa":   { "type": "object" },
+        "gdpr":    { "type": "object" },
+        "security":{ "$ref": "#/$defs/SecurityConfig" },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "max_tokens":   { "type": "integer" },
+            "max_cost_usd": { "type": "number" }
+          }
+        },
+        "rate_limit": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "ToolConfig": {
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "endpoint":    { "type": "string", "format": "uri" },
+        "auth":        { "type": "string", "enum": ["none", "bearer", "api_key", "basic"] },
+        "schema":      { "type": "object" }
+      }
+    },
+
+    "PolicyConfig": {
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "rules":       { "type": "array", "items": { "type": "object" } }
+      }
+    },
+
+    "MemoryManagementConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_packets_per_agent":       { "type": "integer", "minimum": 1 },
+        "eviction_policy":             { "type": "string", "enum": ["lru", "lfu", "arc", "fifo"] },
+        "hot_tier_limit":              { "type": "integer", "minimum": 1 },
+        "warm_tier_limit":             { "type": "integer", "minimum": 1 },
+        "cold_tier_limit":             { "type": "integer", "minimum": 1 },
+        "gc_interval_secs":            { "type": "integer", "minimum": 1 },
+        "session_ttl_secs":            { "type": "integer", "minimum": 1 },
+        "compression_enabled":         { "type": "boolean" },
+        "compression_threshold_tokens":{ "type": "integer", "minimum": 1 },
+        "context_window_tokens":       { "type": "integer", "minimum": 1 },
+        "seal_on_session_close":       { "type": "boolean" }
+      }
+    },
+
+    "JudgmentConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preset":            { "type": "string", "enum": ["medical", "legal", "financial", "default", "strict"] },
+        "decay_half_life_ms":{ "type": "number", "minimum": 1 },
+        "min_operations":    { "type": "integer", "minimum": 1 },
+        "min_trust_gate":    { "type": "number", "minimum": 0, "maximum": 100 },
+        "weights": {
+          "type": "object",
+          "properties": {
+            "cid_integrity":      { "type": "number" },
+            "audit_coverage":     { "type": "number" },
+            "access_control":     { "type": "number" },
+            "evidence_quality":   { "type": "number" },
+            "claim_coverage":     { "type": "number" },
+            "temporal_freshness": { "type": "number" },
+            "contradiction_score":{ "type": "number" },
+            "source_credibility": { "type": "number" }
+          }
+        }
+      }
+    },
+
+    "ClusterConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cell_id":           { "type": "string", "description": "Unique identifier for this cell." },
+        "peers":             { "type": "array", "items": { "type": "string", "format": "uri" }, "description": "Peer cell endpoint URIs." },
+        "replication_topic": { "type": "string", "default": "cluster.repl" },
+        "virtual_nodes":     { "type": "integer", "minimum": 1, "default": 150, "description": "Virtual nodes per cell in the consistent hash ring." }
+      }
+    }
+  }
+}

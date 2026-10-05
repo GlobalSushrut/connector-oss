@@ -1,0 +1,5 @@
+# OCI image index for tag v1.6.0.
+# Fetched from cr.agentgateway.dev on 2026-10-05.
+# The Docker-Content-Digest header matched the sha256 of the index body.
+# This pin does not install the process and does not pass the acceptance suite.
+cr.agentgateway.dev/agentgateway@sha256:9d3e6044ddcdc0878b1787f77bd401252b95e22684203fb5e874c4c42d2ed90c

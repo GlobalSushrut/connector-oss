@@ -1,0 +1,306 @@
+# DevGuard — Demo Lab Policy
+# Copy to .connector/policy.yaml in your project root, or point connectorctl at this file:
+#   connectorctl guard claude --policy platform/docs/projects/plugin-test/lab/policy.yaml
+#
+# Three roles with distinct access tiers, all sharing the same secret-shielding
+# and audit config. Demonstrates real policy enforcement, not mocked responses.
+
+version: "1.0"
+workspace: demo-lab
+
+identity:
+  provider: local
+  require_auth: false
+
+# ---------------------------------------------------------------------------
+# Roles
+# ---------------------------------------------------------------------------
+roles:
+  # builder — standard coding agent.  Can write src/ + tests/, run build/test
+  # commands, but must get approval before pushing to remote.
+  builder:
+    clearance: 4
+    files:
+      read:  ["src/**", "tests/**", "docs/**", "*.toml", "*.json", "*.yaml", "*.md", "Makefile"]
+      write: ["src/**", "tests/**"]
+      hidden:
+        - ".env*"
+        - "*.key"
+        - "*.pem"
+        - "*.p12"
+        - "secrets/**"
+        - ".connector/tokens/**"
+      read_only: ["database/migrations/**", "infra/**"]
+      suggest_only: ["database/**"]
+      no_delete: ["migrations/**", "LICENSE", "README.md", "CHANGELOG.md"]
+      max_lines_per_file: 500
+    execution:
+      allow:
+        - "cargo build"
+        - "cargo test"
+        - "cargo check"
+        - "cargo clippy"
+        - "cargo fmt"
+        - "npm test"
+        - "npm run build"
+        - "npm run lint"
+        - "npm run dev"
+        - "pytest"
+        - "make"
+        - "git status"
+        - "git diff"
+        - "git log -n *"
+        - "git add *"
+        - "git commit *"
+      deny:
+        - "rm -rf*"
+        - "sudo*"
+        - "curl | bash"
+        - "wget | sh"
+        - "eval*"
+        - "chmod -R*"
+        - "ssh*"
+        - "scp*"
+        - "nc *"
+      require_approval:
+        - "git push*"
+        - "npm publish"
+        - "cargo publish"
+    branches:
+      allow: ["feature/*", "fix/*", "refactor/*", "chore/*"]
+      deny:  ["main", "master", "production", "release/*"]
+    secrets:
+      allowed_via_broker: ["OPENAI_API_KEY", "DATABASE_URL"]
+      direct_access: deny
+    budget:
+      max_tokens_per_task: 200000
+      max_cost_usd_per_day: 2.00
+      model: "gpt-4o-mini"
+
+  # reviewer — read-only audit role.  No writes, no destructive commands.
+  # Can run linters and check commands but cannot commit, push, or modify files.
+  reviewer:
+    clearance: 2
+    files:
+      read:  ["**"]
+      write: []
+      hidden:
+        - ".env*"
+        - "*.key"
+        - "*.pem"
+        - "secrets/**"
+    execution:
+      allow:
+        - "cargo check"
+        - "cargo clippy"
+        - "npm run lint"
+        - "git diff"
+        - "git log*"
+        - "git status"
+      deny:
+        - "git commit*"
+        - "git push*"
+        - "rm*"
+        - "sudo*"
+    branches:
+      allow: []
+      deny:  ["**"]
+    budget:
+      max_tokens_per_task: 50000
+      max_cost_usd_per_day: 0.50
+      model: "gpt-4o-mini"
+
+  # release — elevated role for cut-release tasks.  Broader write access and
+  # can publish packages, but git push requires TWO approvals (quorum: 2).
+  release:
+    clearance: 7
+    files:
+      read:  ["**"]
+      write: ["src/**", "tests/**", "docs/**", "CHANGELOG.md", "package.json", "Cargo.toml"]
+      hidden:
+        - ".env*"
+        - "*.key"
+        - "*.pem"
+        - "secrets/**"
+      no_delete: ["migrations/**", "LICENSE"]
+      max_lines_per_file: 1000
+    execution:
+      allow:
+        - "cargo build"
+        - "cargo test"
+        - "cargo publish"
+        - "npm test"
+        - "npm run build"
+        - "npm publish"
+        - "git*"
+        - "make*"
+      deny:
+        - "rm -rf*"
+        - "sudo*"
+        - "eval*"
+    branches:
+      allow: ["release/*", "hotfix/*", "main", "master"]
+      deny:  []
+    secrets:
+      allowed_via_broker: ["NPM_TOKEN", "CARGO_REGISTRY_TOKEN", "OPENAI_API_KEY"]
+      direct_access: deny
+    budget:
+      max_tokens_per_task: 500000
+      max_cost_usd_per_day: 10.00
+      model: "gpt-4o"
+
+default_role: builder
+
+# ---------------------------------------------------------------------------
+# Workspace-wide file rules (applied before role rules)
+# ---------------------------------------------------------------------------
+files:
+  always_hidden:
+    - ".env*"
+    - "*.key"
+    - "*.pem"
+    - "*.p12"
+    - "secrets/**"
+    - ".connector/tokens/**"
+    - "**/.git/config"
+  always_read_only:
+    - "database/migrations/**"
+    - "infra/**"
+    - "*.lock"
+
+# ---------------------------------------------------------------------------
+# Workspace-wide write boundaries
+# ---------------------------------------------------------------------------
+writes:
+  allow:  ["src/**", "tests/**", "docs/**"]
+  deny:   ["*.lock", ".github/**", "infra/**"]
+  suggest_only: ["database/**"]
+  no_delete: ["migrations/**", "LICENSE", "README.md"]
+  max_files_per_change: 20
+
+# ---------------------------------------------------------------------------
+# Shell execution defaults (role rules take priority)
+# ---------------------------------------------------------------------------
+execution:
+  allowed:
+    - "cargo*"
+    - "npm test"
+    - "npm run*"
+    - "pytest"
+    - "make"
+    - "git status"
+    - "git diff"
+  denied:
+    - "rm -rf*"
+    - "sudo*"
+    - "chmod -R*"
+    - "curl | bash"
+    - "wget | sh"
+    - "eval*"
+    - "ssh*"
+  require_approval:
+    - "git push*"
+    - "npm publish"
+    - "cargo publish"
+  limits:
+    max_runtime_seconds: 300
+    max_output_bytes: 1048576
+    deny_background: true
+
+# ---------------------------------------------------------------------------
+# Secret shielding
+# ---------------------------------------------------------------------------
+secrets:
+  detect_and_redact: true
+  patterns: default         # built-in: API keys, SSN, credit cards, JWTs, PEM blocks
+  vault_broker: false       # set true + configure vault_url to use a secrets broker
+
+# ---------------------------------------------------------------------------
+# Context assembly
+# ---------------------------------------------------------------------------
+context:
+  scope:      ["src/**"]
+  max_tokens: 32000
+  exclude:    ["node_modules/**", "dist/**", "target/**", ".git/**", "*.lock"]
+
+# ---------------------------------------------------------------------------
+# Git governance
+# ---------------------------------------------------------------------------
+git:
+  allowed_branches: ["feature/*", "fix/*", "refactor/*", "chore/*"]
+  denied_branches:  ["main", "master", "production"]
+  require_pr:       false
+  no_force_push:    true
+  max_diff_lines:   2000
+
+# ---------------------------------------------------------------------------
+# Approval gates
+# ---------------------------------------------------------------------------
+approvals:
+  write_protected:
+    require: [code_owner]
+    quorum: 1
+    expiry_minutes: 60
+  publish:
+    require: [tech_lead]
+    quorum: 1
+    expiry_minutes: 30
+  release_push:
+    require: [tech_lead, code_owner]
+    quorum: 2                          # both must approve
+    expiry_minutes: 120
+
+# ---------------------------------------------------------------------------
+# Budget defaults (overridden by role-specific budgets above)
+# ---------------------------------------------------------------------------
+budget:
+  max_tokens_per_day: 1000000
+  max_cost_usd: 10.00
+
+# ---------------------------------------------------------------------------
+# Audit
+# ---------------------------------------------------------------------------
+audit:
+  level: full
+  receipts: true
+  proof: true
+  retention_days: 30
+  # witnessctl_handoff: true     # uncomment to push receipts to WitnessCtl
+
+# ---------------------------------------------------------------------------
+# Verification gates (run after agent makes changes)
+# ---------------------------------------------------------------------------
+verification:
+  after_changes: [compiles]
+  # after_changes: [compiles, tests_pass, lint_clean]   # stricter
+
+# ---------------------------------------------------------------------------
+# Role assignments — map tool identities to roles
+# ---------------------------------------------------------------------------
+assignments:
+  - identity: "claude-code"
+    role: builder
+    tools: [claude_code]
+  - identity: "cursor"
+    role: builder
+    tools: [cursor]
+  - identity: "windsurf"
+    role: builder
+    tools: [windsurf]
+  - identity: "reviewer-bot"
+    role: reviewer
+    tools: [generic]
+  - identity: "release-bot"
+    role: release
+    tools: [generic]
+
+# ---------------------------------------------------------------------------
+# Enforcement defaults
+# ---------------------------------------------------------------------------
+defaults:
+  deny_by_default: true
+  least_privilege: true
+  no_raw_secret_exposure: true
+  all_actions_receipted: true
+  environment: local             # local | sandbox | dev
+  production: deny

@@ -1,0 +1,17 @@
+[package]
+name = "agos-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "AGOS public plugin SDK — ABI + manifest + handshake (Phase 6.2)"
+publish = false
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/connector-os/connector-private"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+agos-abi = { path = "../agos-abi" }
+connector-plugin-handshake = { path = "../platform/plugin-handshake" }
+connector-plugin-manifest = { path = "../platform/plugin-manifest" }
+thiserror = "2"

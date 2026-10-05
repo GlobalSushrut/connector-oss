@@ -1,0 +1,74 @@
+{
+  "beta_benchmark_pass": true,
+  "generated_at": "2026-03-09T02:48:50Z",
+  "invariants_after_stress": {
+    "all_pass": true,
+    "check_latency_ms": 16,
+    "grade": "A+",
+    "http_status": 200,
+    "violations": 0
+  },
+  "report_type": "Enterprise Benchmark Report",
+  "summary": {
+    "formal_invariants_pass": true,
+    "total_workloads_tested": 3,
+    "verdict": "BETA BENCHMARK PASS — stable at pilot scale, invariants hold",
+    "workloads_passed": 3
+  },
+  "workloads": [
+    {
+      "concurrency": 5,
+      "failure_count": 0,
+      "latency_avg_ms": "54",
+      "latency_max_ms": 64,
+      "latency_min_ms": 41,
+      "latency_p50_ms": 53,
+      "latency_p95_ms": 61,
+      "latency_p99_ms": 64,
+      "name": "mixed_read_ops",
+      "requests": 50,
+      "status": "PASS",
+      "success_count": 50,
+      "success_rate_pct": "100.0",
+      "target_p95_ms": 300,
+      "target_success_pct": 99.0,
+      "throughput_rps": "18.5"
+    },
+    {
+      "concurrency": 5,
+      "failure_count": 0,
+      "latency_avg_ms": "41",
+      "latency_max_ms": 51,
+      "latency_min_ms": 21,
+      "latency_p50_ms": 42,
+      "latency_p95_ms": 50,
+      "latency_p99_ms": 51,
+      "name": "memory_writes",
+      "requests": 30,
+      "status": "PASS",
+      "success_count": 30,
+      "success_rate_pct": "100.0",
+      "target_p95_ms": 200,
+      "target_success_pct": 100.0,
+      "throughput_rps": "24.5"
+    },
+    {
+      "concurrency": 3,
+      "failure_count": 0,
+      "latency_avg_ms": "29",
+      "latency_max_ms": 33,
+      "latency_min_ms": 20,
+      "latency_p50_ms": 30,
+      "latency_p95_ms": 33,
+      "latency_p99_ms": 33,
+      "name": "proof_generation",
+      "requests": 10,
+      "status": "PASS",
+      "success_count": 10,
+      "success_rate_pct": "100.0",
+      "target_p95_ms": 500,
+      "target_success_pct": 100.0,
+      "throughput_rps": "34.5"
+    }
+  ]
+}

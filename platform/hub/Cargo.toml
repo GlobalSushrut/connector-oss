@@ -1,0 +1,24 @@
+[package]
+name = "connector-hub"
+version = "0.1.0"
+edition = "2021"
+description = "Minimal Connector Hub HTTP server — search, download, publish .cpkg (Phase 4.3)"
+publish = false
+
+[[bin]]
+name = "connector-hub"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tower-http = { version = "0.5", features = ["trace"] }
+sha2 = "0.10"
+hex = "0.4"
+connector-cpkg = { path = "../cpkg" }
+connector-plugin-manifest = { path = "../plugin-manifest" }
+semver = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

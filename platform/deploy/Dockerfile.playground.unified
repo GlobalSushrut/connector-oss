@@ -1,0 +1,61 @@
+# ── Runtime — all 3 processes + supervisord (binaries pre-built on host) ──────
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -r -s /usr/sbin/nologin -d /var/lib/connector -m connector
+
+# connector-platform (pre-built on host)
+COPY platform/deploy/artifacts/connector-platform /usr/local/bin/connector-platform
+RUN chmod 755 /usr/local/bin/connector-platform
+
+# tracetramp + witnessctl (pre-built on host via: cargo build --release in plugins/tracetramp + plugins/witnessctl)
+COPY platform/deploy/artifacts/tracetramp  /usr/local/bin/tracetramp
+COPY platform/deploy/artifacts/witnessctl  /usr/local/bin/witnessctl
+RUN chmod 755 /usr/local/bin/tracetramp /usr/local/bin/witnessctl
+
+# Dashboard UI assets (manifest-backed playground release)
+RUN mkdir -p /var/lib/connector/ui
+COPY platform/ui-leptos/dashboard/dist/playground/ /var/lib/connector/ui/
+RUN test -f /var/lib/connector/ui/asset-manifest.json && \
+    test -f /var/lib/connector/ui/index.html && \
+    test -f /var/lib/connector/ui/trial-app/index.html && \
+    test -f /var/lib/connector/ui/connector-ui.js && \
+    test -f /var/lib/connector/ui/connector-ui.wasm && \
+    test -f /var/lib/connector/ui/trial-app/connector-trial.js && \
+    test -f /var/lib/connector/ui/trial-app/connector-trial_bg.wasm || \
+    (echo "ERROR: incomplete UI release — run build_release.py before deploy" && exit 1)
+
+# WitnessCtl migrations (run at startup)
+COPY plugins/witnessctl/migrations/ /var/lib/connector/witnessctl-migrations/
+
+# Supervisord config
+COPY platform/deploy/supervisord.playground.conf /etc/supervisor/conf.d/connector.conf
+COPY platform/deploy/playground-health-watchdog.sh /usr/local/bin/playground-health-watchdog.sh
+RUN chmod 755 /usr/local/bin/playground-health-watchdog.sh
+
+RUN mkdir -p /var/log/supervisor
+
+# Entrypoint: fix ownership, ensure shared plugin admin tokens, then exec supervisord.
+# The platform proxy and plugin processes run as separate supervisord programs,
+# so tokens must exist before supervisord expands %(ENV_...) placeholders.
+RUN printf '#!/bin/sh\nset -eu\nmk_token() { prefix="$1"; if [ -r /proc/sys/kernel/random/uuid ]; then printf "%s_%s" "$prefix" "$(cat /proc/sys/kernel/random/uuid | tr -d -)"; else printf "%s_%s_%s" "$prefix" "$(date +%s)" "$$"; fi; }\nif [ -z "${CONNECTOR_TRACETRAMP_ADMIN_TOKEN:-}" ]; then export CONNECTOR_TRACETRAMP_ADMIN_TOKEN="$(mk_token cpk_tracetramp_admin)"; fi\nif [ -z "${TRACETRAMP_ADMIN_TOKEN:-}" ]; then export TRACETRAMP_ADMIN_TOKEN="$CONNECTOR_TRACETRAMP_ADMIN_TOKEN"; fi\nif [ -z "${CONNECTOR_WITNESSCTL_ADMIN_TOKEN:-}" ]; then export CONNECTOR_WITNESSCTL_ADMIN_TOKEN="$(mk_token cpk_witnessctl_admin)"; fi\nif [ -z "${WITNESSCTL_ADMIN_TOKEN:-}" ]; then export WITNESSCTL_ADMIN_TOKEN="$CONNECTOR_WITNESSCTL_ADMIN_TOKEN"; fi\nchown -R connector:connector /var/lib/connector 2>/dev/null || true\nexec /usr/bin/supervisord -c /etc/supervisor/conf.d/connector.conf -n "$@"\n' \
+    > /entrypoint.sh && chmod +x /entrypoint.sh
+
+WORKDIR /var/lib/connector
+
+ENV CONNECTOR_PRESET=playground \
+    CONNECTOR_HOST=0.0.0.0 \
+    CONNECTOR_PORT=8080 \
+    CONNECTOR_DATA_DIR=/var/lib/connector/data \
+    CONNECTOR_UI_DIR=/var/lib/connector/ui \
+    RUST_LOG=info
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=20s --timeout=5s --start-period=40s --retries=5 \
+    CMD curl -sf http://localhost:8080/healthz || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,0 +1,26 @@
+[package]
+name = "connector-api"
+description = "Ring 4: Developer API — simple, noob-friendly surface for building agents"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository = "https://github.com/GlobalSushrut/connector-oss"
+homepage = "https://connector.ai"
+keywords = ["agent", "llm", "memory", "mcp", "a2a"]
+categories = ["science", "api-bindings"]
+
+[dependencies]
+connector-engine = { path = "../connector-engine" }
+vac-core = { workspace = true }
+aapi-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+cid = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = { workspace = true }

@@ -1,0 +1,8 @@
+{
+  "name": "@connector/native",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "description": "TypeScript NativeClient — package-gated /api/v1/native/* parity with Python connector_sdk.native"
+}

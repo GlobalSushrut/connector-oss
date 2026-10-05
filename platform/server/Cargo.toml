@@ -1,0 +1,210 @@
+[package]
+name = "connector-platform"
+version = "0.1.0"
+edition = "2021"
+description = "Connector Platform — Self-hosted AI governance server (commercial)"
+publish = false
+
+[features]
+default = []
+# Optional L5 cell fabric — links vac-cluster without changing default boot.
+# Enable with: cargo build -p connector-platform --features cluster
+cluster = ["dep:vac-cluster"]
+
+[[bin]]
+name = "connector-platform"
+path = "src/main.rs"
+
+[[bin]]
+name = "connectorctl"
+path = "src/bin/connectorctl/main.rs"
+
+[dependencies]
+# ── Terminal detection ──
+atty = "0.2"
+# ── Connector OSS kernel (path dep for dev, git dep for CI) ──
+vac-core = { path = "../../oss/vac/crates/vac-core" }
+# Optional: L5 vac-cluster (feature = "cluster") — local Cell boot; mesh soak open.
+vac-cluster = { path = "../../oss/vac/crates/vac-cluster", optional = true }
+connector-engine = { path = "../../oss/connector/crates/connector-engine" }
+connector-api = { path = "../../oss/connector/crates/connector-api" }
+connector-protocols = { path = "../../oss/connector/crates/connector-protocols" }
+connector-protocol = { path = "../../oss/connector/crates/connector-protocol" }
+connector-native-contract = { path = "../../oss/connector/crates/connector-native-contract" }
+connector-caps = { path = "../../oss/connector/crates/connector-caps" }
+connector-trust = { path = "../../oss/connector/crates/connector-trust" }
+aapi-adapters = { path = "../../oss/aapi/crates/aapi-adapters" }
+connector-supervisor = { path = "../supervisor" }
+connector-cpkg = { path = "../cpkg" }
+connector-plugin-manifest = { path = "../plugin-manifest" }
+connector-plugin-runtime = { path = "../plugin-runtime" }
+connector-microvm = { path = "../microvm" }
+agos-abi = { path = "../../agos-abi" }
+agos-sdk = { path = "../../agos-sdk" }
+serde_yaml = "0.9"
+
+# ── Web framework (match OSS versions) ──
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "fs", "compression-gzip", "limit"] }
+
+# ── Serialization ──
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+redb = "2.4"
+
+# ── Auth + Security ──
+dashmap = "5"
+jsonwebtoken = "9"
+argon2 = "0.5"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+base64 = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+csv = "1.3"
+aes-gcm = "0.10"
+bytes = "1"
+totp-rs = { version = "5", features = ["gen_secret"] }
+
+# ── Metrics (match OSS) ──
+prometheus-client = "0.22"
+
+# ── Content addressing (match OSS) ──
+cid = { version = "0.11", features = ["serde"] }
+
+# ── Logging + OpenTelemetry OTLP export ──
+tracing = "0.1"
+async-trait = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+opentelemetry = { version = "0.22", features = ["trace"] }
+opentelemetry_sdk = { version = "0.22", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.15", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.23"
+
+# ── Time ──
+chrono = { version = "0.4", features = ["serde"] }
+
+# ── Tarball export (Phase 5 P1-22 — playground session snapshot) ──
+flate2 = "1.0"
+tar = "0.4"
+
+# ── Text processing ──
+regex = "1"
+glob = "0.3"
+
+# ── Unique ID ──
+uuid = { version = "1.6", features = ["v4"] }
+semver = "1"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+# ── URL encoding (SSO OIDC redirect URL construction) ──
+urlencoding = "2"
+lazy_static = "1"
+include_dir = "0.7"
+
+# ── Async ──
+tokio-stream = "0.1"
+futures = "0.3"
+async-stream = "0.3"
+
+# ── R2: mTLS for protocol gateway ──
+rustls = { version = "0.23", features = ["ring"] }
+tokio-rustls = "0.26"
+rustls-pemfile = "2"
+webpki-roots = "0.26"
+x509-parser = "0.16"
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+
+# ── R3: QUIC cell-to-cell transport ──
+quinn = "0.11"
+bincode = "1"
+rcgen = "0.13"
+
+# ── Payment processing (async-stripe — open source Rust Stripe client) ──
+# https://github.com/arlyon/async-stripe  |  Apache-2.0 / MIT
+# Modular: only pull in what we use — checkout sessions, billing portal, webhooks
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "blocking"], default-features = false }
+async-stripe = { version = "=0.40.0", default-features = false, features = [
+    "runtime-tokio-hyper-rustls",
+    "checkout",
+    "billing",
+    "webhook-events",
+    "connect",
+] }
+printpdf = { version = "0.7", default-features = false }
+
+# ── Compliance PDF rendering (Phase 8 — styled report) ──
+# `connector-report-pdf` wraps an HTML fragment in a print-optimised
+# document and runs headless Chromium / wkhtmltopdf to produce
+# `application/pdf` bytes. `pulldown-cmark` renders the Markdown
+# we build inside `services::compliance::compliance_report_pdf` to
+# the HTML fragment fed into it.
+connector-report-pdf = { path = "../../oss/connector/crates/connector-report-pdf" }
+pulldown-cmark = { version = "0.10", default-features = false, features = ["html"] }
+
+[[test]]
+name = "enterprise_truth"
+path = "tests/enterprise_truth.rs"
+
+[[test]]
+name = "enterprise_scenarios"
+path = "tests/enterprise_scenarios.rs"
+
+[[test]]
+name = "enterprise_benchmark"
+path = "tests/enterprise_benchmark.rs"
+
+[[test]]
+name = "enterprise_security"
+path = "tests/enterprise_security.rs"
+
+[[test]]
+name = "enterprise_beta_gate"
+path = "tests/enterprise_beta_gate.rs"
+
+[[test]]
+name = "enterprise_capabilities_2"
+path = "tests/enterprise_capabilities_2.rs"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde_urlencoded = "0.7"
+serde_json = "1.0"
+uuid = { version = "1.6", features = ["v4"] }
+serde = { version = "1.0", features = ["derive"] }
+base64 = "0.22"
+env_logger = "0.11"
+log = "0.4"
+connector-trust = { path = "../../oss/connector/crates/connector-trust" }
+
+[build-dependencies]
+serde_json = "1.0"
+
+[profile.release]
+strip = true
+lto = true
+opt-level = 3
+codegen-units = 1
+panic = "abort"
+
+# Remote Docker/Fly builds: avoid OOM from LTO + single codegen unit
+[profile.docker]
+inherits = "release"
+lto = false
+codegen-units = 16
+strip = true
+
+[profile.dist]
+inherits = "release"
+debug = false
+strip = "symbols"
+
+[patch.crates-io]
+core2 = { git = "https://github.com/technocreatives/core2", branch = "main" }

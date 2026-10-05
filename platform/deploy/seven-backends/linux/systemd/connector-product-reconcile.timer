@@ -1,0 +1,12 @@
+[Unit]
+Description=Reconcile Connector's Linux/KVM backends every 30 seconds
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Persistent=true
+Unit=connector-product-reconcile.service
+
+[Install]
+WantedBy=timers.target

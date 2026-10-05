@@ -1,0 +1,37 @@
+[build]
+target = "./index.html"
+dist   = "dist"
+
+[tools]
+wasm_bindgen = "0.2.123"
+
+[[hooks]]
+stage   = "pre_build"
+command = "npx"
+command_arguments = ["--yes", "tailwindcss@3.4.17", "-i", "./input.css", "-o", "./tailwind.out.css", "--minify"]
+
+
+[serve]
+port = 1420
+open = false
+ws_protocol = "ws"
+
+# Trunk replaces the matched `rewrite` prefix with the backend URL path.
+# backend MUST keep `/api` (etc.) or `/api/v1/...` is forwarded as `/v1/...`,
+# which hits the platform SPA catch-all HTML — and playground-auth-gate
+# hard-redirects to /login in a reload loop.
+[[proxy]]
+rewrite = "/api"
+backend = "http://localhost:9091/api"
+
+[[proxy]]
+rewrite = "/v1"
+backend = "http://localhost:9091/v1"
+
+[[proxy]]
+rewrite = "/health"
+backend = "http://localhost:9091/health"
+
+[[proxy]]
+rewrite = "/readyz"
+backend = "http://localhost:9091/readyz"

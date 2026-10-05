@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use Connector OSS in your research, please cite it as below."
+type: software
+title: "Connector OSS — Tamper-Proof Memory for AI Agents"
+authors:
+  - family-names: Adhikari
+    given-names: Umesh
+    email: umeshlamton@gmail.com
+repository-code: "https://github.com/GlobalSushrut/connector-oss"
+url: "https://github.com/GlobalSushrut/connector-oss"
+license: Apache-2.0
+version: "0.2.0"
+date-released: "2026-03-01"
+keywords:
+  - ai-agents
+  - tamper-proof-memory
+  - audit-trail
+  - trust-scoring
+  - cryptography
+  - ed25519
+abstract: >-
+  Connector OSS is an Apache-2.0 Rust workspace for agent memory,
+  action policy, and cryptographic audit trails. Memory packets are
+  content-addressed. This repository is not a certification and it
+  does not include the commercial Connector OS node.

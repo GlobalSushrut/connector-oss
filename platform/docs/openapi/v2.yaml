@@ -1,0 +1,1153 @@
+openapi: 3.1.0
+info:
+  title: Connector Platform API
+  description: |
+    Enterprise AI Agent Operating System API.
+    
+    The V2 API provides a simplified, developer-friendly interface with:
+    - Consistent response envelopes (`{ok, data, error, meta}`)
+    - Smart defaults for common operations
+    - Self-documenting responses with next actions
+    - RFC 9457 Problem Details for errors
+  version: 2.0.0
+  contact:
+    name: Connector Team
+    url: https://connector.ai
+    email: support@connector.ai
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8080/api/v2
+    description: Local development
+  - url: https://api.connector.ai/v2
+    description: Production
+
+tags:
+  - name: Agents
+    description: Agent lifecycle management
+  - name: Memory
+    description: Memory read/write operations
+  - name: Sessions
+    description: Session management
+  - name: Tools
+    description: Tool registry and invocation
+  - name: Audit
+    description: Audit log access (OCSF format)
+  - name: Health
+    description: System and agent health
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+paths:
+  # ============================================================================
+  # Agents
+  # ============================================================================
+  /agents:
+    post:
+      tags: [Agents]
+      summary: Create agent
+      operationId: createAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '200':
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [Agents]
+      summary: List agents
+      operationId: listAgents
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [running, stopped, suspended]
+        - name: namespace
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentListResponse'
+
+  /agents/{id}:
+    get:
+      tags: [Agents]
+      summary: Get agent
+      operationId: getAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /agents/{id}/start:
+    post:
+      tags: [Agents]
+      summary: Start agent
+      operationId: startAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      responses:
+        '200':
+          description: Agent started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+
+  /agents/{id}/stop:
+    post:
+      tags: [Agents]
+      summary: Stop agent
+      operationId: stopAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      responses:
+        '200':
+          description: Agent stopped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+
+  /agents/{id}/health:
+    get:
+      tags: [Agents]
+      summary: Get agent health
+      operationId: getAgentHealth
+      parameters:
+        - $ref: '#/components/parameters/AgentId'
+      responses:
+        '200':
+          description: Agent health score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentHealthResponse'
+
+  # ============================================================================
+  # Memory
+  # ============================================================================
+  /memory:
+    post:
+      tags: [Memory]
+      summary: Write memory
+      operationId: writeMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteMemoryRequest'
+      responses:
+        '200':
+          description: Memory written
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryResponse'
+    get:
+      tags: [Memory]
+      summary: List memory
+      operationId: listMemory
+      parameters:
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+        - name: namespace
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of memories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryListResponse'
+
+  /memory/{cid}:
+    get:
+      tags: [Memory]
+      summary: Get memory by CID
+      operationId: getMemory
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Content Identifier
+      responses:
+        '200':
+          description: Memory with content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryWithContentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Memory]
+      summary: Delete memory
+      operationId: deleteMemory
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Memory deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedMemoryResponse'
+
+  # ============================================================================
+  # Sessions
+  # ============================================================================
+  /sessions:
+    post:
+      tags: [Sessions]
+      summary: Create session
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '200':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+    get:
+      tags: [Sessions]
+      summary: List sessions
+      operationId: listSessions
+      parameters:
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, closed, expired]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+
+  /sessions/{id}:
+    get:
+      tags: [Sessions]
+      summary: Get session
+      operationId: getSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+    delete:
+      tags: [Sessions]
+      summary: Close session
+      operationId: closeSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+
+  # ============================================================================
+  # Tools
+  # ============================================================================
+  /tools:
+    get:
+      tags: [Tools]
+      summary: List tools
+      operationId: listTools
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tools
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolListResponse'
+
+  /tools/{id}:
+    get:
+      tags: [Tools]
+      summary: Get tool
+      operationId: getTool
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+
+  /tools/{id}/invoke:
+    post:
+      tags: [Tools]
+      summary: Invoke tool
+      operationId: invokeTool
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvokeToolRequest'
+      responses:
+        '200':
+          description: Tool invocation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolInvocationResponse'
+
+  # ============================================================================
+  # Audit
+  # ============================================================================
+  /audit:
+    get:
+      tags: [Audit]
+      summary: List audit entries
+      operationId: listAudit
+      parameters:
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+        - name: operation
+          in: query
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, ocsf, jsonl]
+            default: json
+          description: Output format (ocsf for SIEM integration)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Audit entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditListResponse'
+            application/x-ndjson:
+              schema:
+                type: string
+                description: JSONL format for streaming
+
+  /audit/export:
+    get:
+      tags: [Audit]
+      summary: Export audit log
+      operationId: exportAudit
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [ocsf, jsonl, csv]
+            default: ocsf
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10000
+      responses:
+        '200':
+          description: Audit export
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OcsfExport'
+            application/x-ndjson:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+
+  /audit/{id}:
+    get:
+      tags: [Audit]
+      summary: Get audit entry
+      operationId: getAuditEntry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit entry details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEntryDetailResponse'
+
+  # ============================================================================
+  # Health
+  # ============================================================================
+  /health:
+    get:
+      tags: [Health]
+      summary: System health
+      operationId: getHealth
+      responses:
+        '200':
+          description: System health overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemHealthResponse'
+
+  /health/maturity:
+    get:
+      tags: [Health]
+      summary: KECS maturity score
+      operationId: getMaturity
+      responses:
+        '200':
+          description: Maturity scores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaturityResponse'
+
+  /health/agents:
+    get:
+      tags: [Health]
+      summary: All agents health
+      operationId: getAgentsHealth
+      parameters:
+        - name: min_score
+          in: query
+          schema:
+            type: number
+        - name: grade
+          in: query
+          schema:
+            type: string
+            enum: [A, B, C, D, F]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Agents health summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentsHealthResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  parameters:
+    AgentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Agent ID
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    # Base response envelope
+    V2Response:
+      type: object
+      required: [ok, meta]
+      properties:
+        ok:
+          type: boolean
+        data:
+          type: object
+        error:
+          $ref: '#/components/schemas/V2Error'
+        meta:
+          $ref: '#/components/schemas/V2Meta'
+
+    V2Error:
+      type: object
+      required: [code, message, docs]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        hint:
+          type: string
+        docs:
+          type: string
+          format: uri
+
+    V2Meta:
+      type: object
+      required: [request_id, version, timestamp]
+      properties:
+        request_id:
+          type: string
+        version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        next_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/NextAction'
+
+    NextAction:
+      type: object
+      properties:
+        action:
+          type: string
+        method:
+          type: string
+        path:
+          type: string
+        description:
+          type: string
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457 Problem Details
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+        hint:
+          type: string
+        example:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # Agent schemas
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        namespace:
+          type: string
+        status:
+          type: string
+          enum: [running, stopped, suspended, failed]
+        health_score:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        model:
+          type: string
+        description:
+          type: string
+
+    CreateAgentRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        namespace:
+          type: string
+        model:
+          type: string
+        description:
+          type: string
+
+    AgentResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Agent'
+
+    AgentListResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Agent'
+
+    AgentHealth:
+      type: object
+      properties:
+        agent_id:
+          type: string
+        score:
+          type: number
+        grade:
+          type: string
+        components:
+          type: object
+          properties:
+            reliability:
+              type: number
+            compliance:
+              type: number
+            efficiency:
+              type: number
+            security:
+              type: number
+        last_updated:
+          type: string
+          format: date-time
+
+    AgentHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AgentHealth'
+
+    # Memory schemas
+    Memory:
+      type: object
+      properties:
+        cid:
+          type: string
+        agent_id:
+          type: string
+        namespace:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        summary:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    WriteMemoryRequest:
+      type: object
+      required: [agent_id, content]
+      properties:
+        agent_id:
+          type: string
+        content:
+          type: object
+        namespace:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+
+    MemoryResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Memory'
+
+    MemoryListResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Memory'
+
+    MemoryWithContent:
+      allOf:
+        - $ref: '#/components/schemas/Memory'
+        - type: object
+          properties:
+            content:
+              type: object
+
+    MemoryWithContentResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/MemoryWithContent'
+
+    DeletedMemoryResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                cid:
+                  type: string
+                deleted:
+                  type: boolean
+                deleted_at:
+                  type: string
+                  format: date-time
+
+    # Session schemas
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        agent_id:
+          type: string
+        status:
+          type: string
+          enum: [active, closed, expired]
+        created_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+        token_count:
+          type: integer
+
+    CreateSessionRequest:
+      type: object
+      required: [agent_id]
+      properties:
+        agent_id:
+          type: string
+        metadata:
+          type: object
+
+    SessionResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Session'
+
+    SessionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Session'
+
+    # Tool schemas
+    Tool:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        parameters:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type_:
+                type: string
+              required:
+                type: boolean
+              description:
+                type: string
+
+    ToolResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Tool'
+
+    ToolListResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Tool'
+
+    InvokeToolRequest:
+      type: object
+      required: [agent_id, parameters]
+      properties:
+        agent_id:
+          type: string
+        parameters:
+          type: object
+
+    ToolInvocationResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                tool_id:
+                  type: string
+                success:
+                  type: boolean
+                result:
+                  type: object
+                duration_ms:
+                  type: integer
+                audit_cid:
+                  type: string
+
+    # Audit schemas
+    AuditEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        operation:
+          type: string
+        agent_id:
+          type: string
+        outcome:
+          type: string
+        severity:
+          type: string
+        target:
+          type: string
+        error:
+          type: string
+        duration_us:
+          type: integer
+
+    AuditListResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditEntry'
+
+    AuditEntryDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/AuditEntry'
+                - type: object
+                  properties:
+                    reason:
+                      type: string
+                    vakya_id:
+                      type: string
+                    before_hash:
+                      type: string
+                    after_hash:
+                      type: string
+                    merkle_root:
+                      type: string
+                    natural_language:
+                      type: string
+                    business_impact:
+                      type: string
+                    remediation_hint:
+                      type: string
+                    causal_chain:
+                      type: array
+                      items:
+                        type: string
+
+    OcsfExport:
+      type: object
+      properties:
+        schema:
+          type: string
+          example: ocsf
+        version:
+          type: string
+          example: "1.3.0"
+        class_uid:
+          type: integer
+          example: 1001
+        class_name:
+          type: string
+          example: System Activity
+        events:
+          type: array
+          items:
+            type: object
+
+    # Health schemas
+    SystemHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        uptime_seconds:
+          type: integer
+        version:
+          type: string
+        components:
+          type: object
+        metrics:
+          type: object
+
+    SystemHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/SystemHealth'
+
+    MaturityScore:
+      type: object
+      properties:
+        overall_score:
+          type: number
+        grade:
+          type: string
+        dimensions:
+          type: object
+          properties:
+            knowledge:
+              type: number
+            epistemic:
+              type: number
+            compliance:
+              type: number
+            security:
+              type: number
+        trend:
+          type: object
+          properties:
+            direction:
+              type: string
+            change_7d:
+              type: number
+            change_30d:
+              type: number
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    MaturityResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/MaturityScore'
+
+    AgentsHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/V2Response'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  agent_id:
+                    type: string
+                  name:
+                    type: string
+                  score:
+                    type: number
+                  grade:
+                    type: string
+                  status:
+                    type: string

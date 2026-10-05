@@ -1,0 +1,19 @@
+{{- if and .Values.observability.prometheus.enabled .Values.observability.prometheus.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "connector.fullname" . }}
+  labels:
+    {{- include "connector.labels" . | nindent 4 }}
+    {{- with .Values.observability.prometheus.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "connector.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      interval: {{ .Values.observability.prometheus.serviceMonitor.interval }}
+      path: /metrics
+{{- end }}

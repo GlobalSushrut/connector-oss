@@ -1,0 +1,25 @@
+apiVersion: k8s.keycloak.org/v2beta1
+kind: Keycloak
+metadata:
+  name: connector-keycloak
+  namespace: keycloak
+spec:
+  instances: 2
+  db:
+    vendor: postgres
+    host: ${KEYCLOAK_DB_HOST}
+    database: keycloak
+    usernameSecret:
+      name: keycloak-db
+      key: username
+    passwordSecret:
+      name: keycloak-db
+      key: password
+  http:
+    tlsSecret: keycloak-tls
+  hostname:
+    hostname: ${KEYCLOAK_HOSTNAME}
+  proxy:
+    headers: xforwarded
+  ingress:
+    enabled: false

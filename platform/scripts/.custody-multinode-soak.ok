@@ -1,0 +1,5 @@
+custody_multinode_soak_ok=1
+date_utc=2026-08-10T06:44:44Z
+t17=PASS
+distinct_nodes=3
+required_quorum=2

@@ -1,0 +1,59 @@
+# Fly.io — Connector Portal (www / customer-facing)
+# Serves: login, signup, dashboard, billing (beta), download, API keys, profile
+# Backend: connector-platform license server at /api/v1/portal/*
+#
+# fly deploy --config platform/deploy/fly.www.toml --app connector-portal
+
+app = "connector-portal"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.portal.runtime"
+
+[env]
+  CONNECTOR_PRESET                        = "multi-tenant"
+  CONNECTOR_HOST                          = "0.0.0.0"
+  CONNECTOR_PORT                          = "8080"
+  CONNECTOR_PUBLIC_URL                    = "https://portal.cnktros.com"
+  CONNECTOR_DATA_DIR                      = "/var/lib/connector"
+  CONNECTOR_UI_DIR                        = "/app/ui/www"
+  CONNECTOR_ULTIMATE_FREE                 = "0"
+  RUST_LOG                                = "info,connector_platform=info"
+
+[[services]]
+  internal_port = 8080
+  protocol      = "tcp"
+  auto_stop_machines  = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    handlers = ["http"]
+    port     = 80
+    force_https = true
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port     = 443
+
+  [services.concurrency]
+    type       = "connections"
+    hard_limit = 200
+    soft_limit = 150
+
+  [[services.http_checks]]
+    interval       = "15s"
+    timeout        = "5s"
+    grace_period   = "10s"
+    method         = "GET"
+    path           = "/health"
+    protocol       = "http"
+
+[mounts]
+  source      = "connector_portal_data"
+  destination = "/var/lib/connector"
+
+[[vm]]
+  memory   = "512mb"
+  cpu_kind = "shared"
+  cpus     = 1

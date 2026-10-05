@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://connector.ai/schemas/audit-v1.json",
+  "title": "Connector Audit Log v1",
+  "description": "Schema for exported Connector kernel audit log entries.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "audit_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "timestamp": {
+        "type": "integer"
+      },
+      "operation": {
+        "type": "string",
+        "minLength": 1
+      },
+      "agent_pid": {
+        "type": "string",
+        "minLength": 1
+      },
+      "target": {
+        "type": ["string", "null"]
+      },
+      "outcome": {
+        "type": "string",
+        "enum": ["success", "denied", "failed", "skipped", "pending"]
+      },
+      "reason": {
+        "type": ["string", "null"]
+      },
+      "error": {
+        "type": ["string", "null"]
+      },
+      "duration_us": {
+        "type": ["integer", "null"],
+        "minimum": 0
+      },
+      "vakya_id": {
+        "type": ["string", "null"]
+      },
+      "before_hash": {
+        "type": ["string", "null"]
+      },
+      "after_hash": {
+        "type": ["string", "null"]
+      },
+      "merkle_root": {
+        "type": ["string", "null"]
+      },
+      "scitt_receipt_cid": {
+        "type": ["string", "null"]
+      },
+      "natural_language": {
+        "type": ["string", "null"]
+      },
+      "business_impact": {
+        "type": ["string", "null"]
+      },
+      "remediation_hint": {
+        "type": ["string", "null"]
+      },
+      "causal_chain": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "severity": {
+        "type": "string",
+        "enum": ["debug", "info", "warn", "error", "critical", "fatal"]
+      },
+      "gen_ai_attrs": {
+        "type": ["object", "null"],
+        "additionalProperties": false,
+        "properties": {
+          "gen_ai_system": { "type": "string" },
+          "gen_ai_operation": { "type": "string" },
+          "gen_ai_agent_id": { "type": "string" },
+          "token_input": { "type": "integer", "minimum": 0 },
+          "token_output": { "type": "integer", "minimum": 0 },
+          "model": { "type": ["string", "null"] },
+          "threat_score": { "type": "number" },
+          "namespace": { "type": ["string", "null"] }
+        },
+        "required": [
+          "gen_ai_system",
+          "gen_ai_operation",
+          "gen_ai_agent_id",
+          "token_input",
+          "token_output",
+          "model",
+          "threat_score",
+          "namespace"
+        ]
+      }
+    },
+    "required": [
+      "audit_id",
+      "timestamp",
+      "operation",
+      "agent_pid",
+      "target",
+      "outcome",
+      "reason",
+      "error",
+      "duration_us",
+      "vakya_id",
+      "before_hash",
+      "after_hash",
+      "merkle_root",
+      "severity"
+    ]
+  }
+}

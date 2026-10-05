@@ -1,0 +1,32 @@
+{
+  "schema": "operator_surface.v1",
+  "display": {
+    "title": "Incident → Slack → Jira",
+    "subtitle": "Alert channel then open tracking ticket",
+    "category": "ops",
+    "icon": "bell"
+  },
+  "accounting": {
+    "contract": "workflow_accounting.v1",
+    "mode": "action",
+    "source": "manifest",
+    "two_way": true
+  },
+  "institutions": [],
+  "lifecycle": {
+    "primary_action": "dry_run",
+    "run_label": "Dry-run",
+    "enable_label": "Enable"
+  },
+  "panels": [
+    {
+      "id": "summary",
+      "title": "Bridge pattern",
+      "type": "summary",
+      "source": "static",
+      "text": "Community bridge: Slack notification then Jira ticket. No TT/WC institution required."
+    }
+  ],
+  "evidence": ["kernel.audit.export"],
+  "perform": []
+}

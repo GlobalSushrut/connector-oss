@@ -1,0 +1,24 @@
+global:
+  openshift: false
+  spire:
+    recommendations:
+      enabled: true
+    namespaces:
+      create: true
+    clusterName: connector-cluster
+    trustDomain: connector.example
+    caSubject:
+      country: US
+      organization: Connector
+      commonName: connector.example
+
+# Select a production StorageClass for the SPIRE server before installation.
+spire-server:
+  persistence:
+    enabled: true
+
+spiffe-csi-driver:
+  enabled: true
+
+spire-controller-manager:
+  enabled: true

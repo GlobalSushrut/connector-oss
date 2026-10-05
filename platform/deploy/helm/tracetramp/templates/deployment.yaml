@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tracetramp.fullname" . }}
+  labels:
+    {{- include "tracetramp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tracetramp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tracetramp.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: tracetramp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["tracetramp", "serve"]
+          ports:
+            - name: data
+              containerPort: {{ .Values.service.dataPlanePort }}
+            - name: mgmt
+              containerPort: {{ .Values.service.managementPort }}
+          env:
+            - name: TRACETRAMP_DATA_PLANE_PORT
+              value: {{ .Values.service.dataPlanePort | quote }}
+            - name: TRACETRAMP_MANAGEMENT_PLANE_PORT
+              value: {{ .Values.service.managementPort | quote }}
+            - name: TRACETRAMP_DATABASE_URL
+              value: {{ include "tracetramp.databaseUrl" . | quote }}
+            {{- if .Values.redis.enabled }}
+            - name: TRACETRAMP_REDIS_URL
+              value: {{ printf "redis://%s-redis-master:6379" .Release.Name | quote }}
+            {{- end }}
+            - name: TRACETRAMP_CONNECTOR_BASE_URL
+              value: {{ .Values.connector.baseUrl | quote }}
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- if .Values.witness.handoffBaseUrl }}
+            - name: TRACETRAMP_WITNESS_HANDOFF_BASE_URL
+              value: {{ .Values.witness.handoffBaseUrl | quote }}
+            {{- end }}
+          {{- if or .Values.connector.existingSecret .Values.jwt.existingSecret .Values.admin.existingSecret }}
+          envFrom:
+            {{- if .Values.connector.existingSecret }}
+            - secretRef:
+                name: {{ .Values.connector.existingSecret }}
+            {{- end }}
+            {{- if .Values.jwt.existingSecret }}
+            - secretRef:
+                name: {{ .Values.jwt.existingSecret }}
+            {{- end }}
+            {{- if .Values.admin.existingSecret }}
+            - secretRef:
+                name: {{ .Values.admin.existingSecret }}
+            {{- end }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: data
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: data
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

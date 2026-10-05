@@ -1,0 +1,13 @@
+[package]
+name = "connector-report-pdf"
+version = "0.2.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Print-optimized HTML shell + headless PDF rendering (Chrome/Chromium/wkhtmltopdf) for compliance exports"
+repository = "https://github.com/GlobalSushrut/connector-oss"
+publish = false
+
+[dependencies]
+thiserror = "1.0"
+uuid = { version = "1.6", features = ["v4"] }
+tracing = "0.1"

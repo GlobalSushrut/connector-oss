@@ -1,0 +1,17 @@
+# NVIDIA currently labels this chart experimental. Pin --version on install.
+replicaCount: 1
+
+workload:
+  kind: deployment
+
+# Pre-create this Secret with key `uri` containing a PostgreSQL connection URI.
+server:
+  externalDbSecret: openshell-postgres
+  sandboxNamespace: openshell-sandboxes
+
+# Combined is NVIDIA's full-enforcement topology.
+supervisor:
+  topology: combined
+
+image:
+  pullPolicy: IfNotPresent

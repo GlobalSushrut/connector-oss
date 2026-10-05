@@ -1,0 +1,17 @@
+[package]
+name = "seven-pillars-proofs"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Fast Seven Pillars PDF soak proofs (100-agent non-collision)."
+
+[[bin]]
+name = "seven-pillars-proofs"
+path = "src/main.rs"
+
+[dependencies]
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+serde_json = "1"
+connector-trust = { path = "../../oss/connector/crates/connector-trust" }

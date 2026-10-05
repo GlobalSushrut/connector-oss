@@ -1,0 +1,63 @@
+{
+  "schema": "connector.deployment.v1",
+  "profile": "linux-kvm",
+  "trust_domain": "connector.local",
+  "compatibility": {
+    "openshell_policy_schema": 1
+  },
+  "images": {
+    "postgres": "REPLACE_WITH_POSTGRES_IMAGE@sha256:REPLACE_WITH_64_HEX",
+    "keycloak": "REPLACE_WITH_KEYCLOAK_IMAGE@sha256:REPLACE_WITH_64_HEX",
+    "otel_collector": "REPLACE_WITH_OTEL_IMAGE@sha256:REPLACE_WITH_64_HEX"
+  },
+  "secrets": {
+    "keycloak_admin_password": "file:/var/lib/connector/deployment/secrets/keycloak-admin",
+    "keycloak_db_password": "file:/var/lib/connector/deployment/secrets/keycloak-db",
+    "sso_client_secret": "file:/var/lib/connector/deployment/secrets/sso-client"
+  },
+  "artifacts": {
+    "openshell_package": {
+      "path": "/var/lib/connector/artifacts/openshell.deb",
+      "sha256": "REPLACE_WITH_64_HEX"
+    },
+    "spire_server": {
+      "path": "/var/lib/connector/artifacts/spire-server",
+      "sha256": "REPLACE_WITH_64_HEX"
+    },
+    "spire_agent": {
+      "path": "/var/lib/connector/artifacts/spire-agent",
+      "sha256": "REPLACE_WITH_64_HEX"
+    },
+    "firecracker": {
+      "path": "/var/lib/connector/artifacts/firecracker",
+      "sha256": "REPLACE_WITH_64_HEX"
+    },
+    "jailer": {
+      "path": "/var/lib/connector/artifacts/jailer",
+      "sha256": "REPLACE_WITH_64_HEX"
+    },
+    "cosign": {
+      "path": "/var/lib/connector/artifacts/cosign",
+      "sha256": "REPLACE_WITH_64_HEX"
+    },
+    "connector_microd": {
+      "path": "/var/lib/connector/artifacts/connector-microd",
+      "sha256": "REPLACE_WITH_64_HEX"
+    }
+  },
+  "firecracker": {
+    "kernel_path": "/var/lib/connector/microvm/kernels/vmlinux",
+    "kernel_sha256": "REPLACE_WITH_64_HEX",
+    "rootfs_path": "/var/lib/connector/microvm/images/rootfs.ext4",
+    "rootfs_sha256": "REPLACE_WITH_64_HEX"
+  },
+  "keycloak": {
+    "hostname": "id.example",
+    "tls_dir": "/var/lib/connector/deployment/tls",
+    "redirect_uri": "https://connector.example/api/v1/auth/sso/callback",
+    "admin_user": "connector-admin"
+  },
+  "otel": {
+    "upstream_endpoint": "127.0.0.1:4317"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "_comment": "Connector Platform seccomp profile — blocks dangerous syscalls while allowing normal server operation",
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+  "syscalls": [
+    {
+      "names": [
+        "accept", "accept4", "access", "arch_prctl",
+        "bind", "brk",
+        "clock_getres", "clock_gettime", "clock_nanosleep", "clone", "clone3",
+        "close", "connect",
+        "dup", "dup2", "dup3",
+        "epoll_create", "epoll_create1", "epoll_ctl", "epoll_pwait", "epoll_wait",
+        "eventfd", "eventfd2", "execve",
+        "exit", "exit_group",
+        "fallocate", "fchmod", "fchown", "fcntl", "fdatasync",
+        "flock", "fstat", "fstatfs", "fsync", "ftruncate", "futex",
+        "getcwd", "getdents64", "getegid", "geteuid", "getgid",
+        "getpeername", "getpid", "getppid", "getrandom",
+        "getsockname", "getsockopt", "gettid", "getuid",
+        "ioctl",
+        "kill",
+        "lseek", "lstat",
+        "madvise", "membarrier", "mmap", "mprotect", "mremap", "munmap",
+        "nanosleep", "newfstatat",
+        "open", "openat", "openat2",
+        "pipe", "pipe2", "poll", "ppoll", "prctl", "pread64", "pselect6",
+        "pwrite64",
+        "read", "readlink", "readv", "recvfrom", "recvmsg",
+        "rseq",
+        "rt_sigaction", "rt_sigprocmask", "rt_sigreturn", "rt_sigsuspend",
+        "sched_getaffinity", "sched_yield",
+        "select", "sendmsg", "sendto", "set_robust_list", "set_tid_address",
+        "setgid", "setgroups", "setuid",
+        "setsockopt", "shutdown",
+        "sigaltstack", "socket", "socketpair", "stat", "statfs", "statx",
+        "sysinfo",
+        "tgkill", "timer_create", "timer_delete", "timer_settime",
+        "timerfd_create", "timerfd_settime",
+        "umask", "uname", "unlink", "unlinkat",
+        "wait4", "waitid", "write", "writev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "_comment": "Block dangerous syscalls that allow container escape or code injection",
+      "names": [
+        "ptrace",
+        "process_vm_readv", "process_vm_writev",
+        "kexec_load", "kexec_file_load",
+        "create_module", "init_module", "finit_module", "delete_module",
+        "mount", "umount2",
+        "pivot_root",
+        "swapon", "swapoff",
+        "perf_event_open",
+        "bpf",
+        "userfaultfd",
+        "io_uring_setup", "io_uring_enter", "io_uring_register"
+      ],
+      "action": "SCMP_ACT_ERRNO"
+    }
+  ]
+}

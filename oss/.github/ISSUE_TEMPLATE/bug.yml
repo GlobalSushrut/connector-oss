@@ -1,0 +1,23 @@
+name: Bug
+description: A defect in the public Connector OSS tree
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: input
+    id: crate
+    attributes:
+      label: Crate or command
+      placeholder: connector-server, connector doctor
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps
+    validations:
+      required: true

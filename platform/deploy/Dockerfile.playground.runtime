@@ -1,0 +1,33 @@
+# Playground runtime image — binary built on host (see fly-deploy.sh playground).
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -r -s /usr/sbin/nologin -d /var/lib/connector -m connector
+
+COPY platform/deploy/artifacts/connector-platform /usr/local/bin/connector-platform
+RUN chmod 755 /usr/local/bin/connector-platform
+
+RUN mkdir -p /var/lib/connector/ui
+# Copy pre-built dashboard assets (trunk build output)
+COPY platform/ui-leptos/dashboard/dist/ /var/lib/connector/ui/
+RUN chown -R connector:connector /var/lib/connector
+
+USER connector
+WORKDIR /var/lib/connector
+
+ENV CONNECTOR_PRESET=playground \
+    CONNECTOR_HOST=0.0.0.0 \
+    CONNECTOR_PORT=8080 \
+    CONNECTOR_DATA_DIR=/var/lib/connector \
+    CONNECTOR_UI_DIR=/var/lib/connector/ui \
+    RUST_LOG=info
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/connector-platform"]

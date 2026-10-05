@@ -1,0 +1,58 @@
+[package]
+name = "connector-ui"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "connector_ui"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[features]
+# Default profile = self-deploy. Build the playground bundle with:
+#   trunk build --release --no-default-features --features=playground
+# Build with the dev login bypass enabled (local-only) by adding
+# `--features=dev-bypass` on top of either profile.
+default = ["self-deploy"]
+# Self-hosted tarball / Compose distribution. Real admin pages, no
+# countdown timer, no playground conversion CTAs.
+self-deploy = ["full-pages"]
+# Vendor-hosted 90-min trial (`try.cnktros.com`). Countdown timer +
+# conversion flows + restricted admin surfaces.
+playground = ["full-pages"]
+# Minimal build - ONLY trial/login/overview/plugin pages. 70% smaller WASM.
+# Use for public-facing trial entry point to avoid browser JIT limits.
+minimal = []
+# Include all dashboard pages (50+ modules). Increases WASM size by ~10MB.
+full-pages = []
+# Development-only: compiles in the `auth::dev_bypass` shortcut and the
+# login page "Skip Auth" button. Production builds MUST never enable.
+dev-bypass = []
+
+[dependencies]
+leptos            = { version = "0.8", features = ["csr"] }
+leptos_router     = { version = "0.8" }
+wasm-bindgen      = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys           = { version = "0.3", features = [
+    "Window", "Storage", "Location", "Navigator",
+    "Clipboard", "console", "Document", "Element",
+    "HtmlElement", "HtmlInputElement", "HtmlTextAreaElement",
+    "HtmlSelectElement", "HtmlAnchorElement", "HtmlIFrameElement",
+    "EventTarget", "Event",
+    "KeyboardEvent", "MouseEvent", "DragEvent", "DataTransfer",
+    "Blob", "BlobPropertyBag", "Url",
+    "File", "FileList",
+] }
+js-sys            = "0.3"
+gloo-net          = { version = "0.6", features = ["http", "json"] }
+gloo-storage      = "0.3"
+gloo-timers       = { version = "0.3", features = ["futures"] }
+gloo-file         = { version = "0.3", features = ["futures"] }
+base64            = { version = "0.22", default-features = false, features = ["std"] }
+serde             = { version = "1", features = ["derive"] }
+serde_json        = { version = "1", features = ["preserve_order"] }
+futures           = "0.3"
+log               = "0.4"
+console_log       = { version = "1", features = ["color"] }
+console_error_panic_hook = "0.1"

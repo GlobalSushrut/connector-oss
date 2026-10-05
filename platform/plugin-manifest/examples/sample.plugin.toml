@@ -1,0 +1,61 @@
+# Example AGOS plugin.toml (CONNECTOR_OS_ROADMAP §6).
+
+[plugin]
+id = "acme/hello"
+name = "Hello"
+version = "0.1.0"
+author = "acme"
+license = "MIT"
+min_kernel = "0.1.0"
+agos_abi = "agos.v1"
+
+[addressing]
+scheme = "agos"
+base = "agos://plugin/acme/hello"
+
+[runtime]
+type = "subprocess"
+entrypoint = "bin/hello"
+memory_mb = 32
+vcpus = 1
+shared = false
+max_concurrency = 4
+idle_window = "30s"
+cold_start_budget_ms = 500
+
+[ports]
+admin = "127.0.0.1:0"
+
+[routes]
+prefix = "/plugins/hello"
+admin = "/plugins/hello/admin/*"
+
+[ui]
+pages = [
+  { path = "/plugins/hello", title = "Hello", role = "operator" },
+]
+
+[capabilities]
+required = [
+  "audit.write",
+  "network.outbound:api.example.com:443",
+]
+
+[depends]
+"connector/core" = "^0.1"
+
+[provides]
+hello = { protocol = "agos.hello.v1" }
+
+[migrations]
+dir = "migrations"
+
+[settings]
+schema = "schemas/settings.schema.json"
+
+[health]
+path = "/healthz"
+interval = "10s"
+
+[signing]
+pubkey = "age1example0example0example0example0example0example0example0example0ex"

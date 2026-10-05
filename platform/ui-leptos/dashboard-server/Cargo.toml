@@ -1,0 +1,17 @@
+[package]
+name = "connector-ui-server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "connector-ui-server"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.8"
+leptos = { version = "0.8", features = ["csr"] }
+log = "0.4"
+simple_logger = "4"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs"] }

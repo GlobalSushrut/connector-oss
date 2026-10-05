@@ -1,0 +1,45 @@
+# Rust build artifacts
+target/
+**/target/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.whl
+
+# Node / TypeScript
+node_modules/
+ui/dist/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+
+# License keys (never commit)
+*.license
+licenses/
+.license-seed
+data/keys/
+server/data/
+licensing/data/

@@ -1,0 +1,9 @@
+2026-08-10T18:08:42Z
+T25=PASS distinct_who_am_i
+T26=PASS namespace_isolation_403
+T27=PASS compliance_contract_distinct
+T28=PASS forensic_rollup_package
+AGENT_A=agent_82508f5cefd84869bdb934cf12fae134
+AGENT_B=agent_fc7808cef41d4ca191b1cc9161d5ca2f
+CONTRACT_DIGEST_A=f902a7590656171d05afb01e17a1290639a0c57f5f1051ea24ea61a111cb74b0
+PACKAGE_ROOT=69868385176910696533ff4f07fe4ac693b2da2b938a66eb9c35f94ee1447f17

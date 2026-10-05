@@ -1,0 +1,30 @@
+# Connector Portal — runtime image (pre-built binary + pre-built www SPA)
+# Build binary first: ./platform/deploy/build-portal-binary.sh
+FROM debian:bookworm-slim
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -r -s /sbin/nologin connector
+
+COPY artifacts/connector-platform /usr/local/bin/connector-platform
+COPY artifacts/www                /app/ui/www
+
+RUN chmod +x /usr/local/bin/connector-platform \
+    && chown -R connector:connector /app \
+    && mkdir -p /var/lib/connector \
+    && chown -R connector:connector /var/lib/connector
+
+USER connector
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+ENV CONNECTOR_HOST=0.0.0.0 \
+    CONNECTOR_PORT=8080 \
+    CONNECTOR_DATA_DIR=/var/lib/connector \
+    CONNECTOR_UI_DIR=/app/ui/www \
+    CONNECTOR_PRESET=multi-tenant
+
+CMD ["/usr/local/bin/connector-platform"]

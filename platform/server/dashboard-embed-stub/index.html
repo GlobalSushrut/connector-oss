@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Connector dashboard — build UI</title>
+  <link rel="stylesheet" href="/tailwind.out.css"/>
+</head>
+<body>
+  <h1>Dashboard assets not built</h1>
+  <p>This binary embeds <code>platform/ui-leptos/dashboard/dist</code>. That directory was missing at compile time, so a stub was embedded instead.</p>
+  <p>Build the real UI, then rebuild the server:</p>
+  <pre>cd platform/ui-leptos/dashboard && trunk build --release</pre>
+  <p>Then from repo root: <code>cargo build -p connector-platform --bin connector-platform</code></p>
+  <script src="/connector-ui.js"></script>
+</body>
+</html>

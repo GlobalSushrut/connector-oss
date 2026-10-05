@@ -1,0 +1,19 @@
+{{- if .Values.connector.persistence.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "connector.fullname" . }}-data
+  labels:
+    {{- include "connector.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.connector.persistence.accessMode }}
+  {{- if .Values.connector.persistence.storageClass }}
+  storageClassName: {{ .Values.connector.persistence.storageClass }}
+  {{- else if .Values.global.storageClass }}
+  storageClassName: {{ .Values.global.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.connector.persistence.size }}
+{{- end }}
