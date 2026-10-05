@@ -4,7 +4,11 @@
 
 import { Glue } from './core';
 import { GlueResult } from './result';
-import { v4 as uuidv4 } from 'uuid';
+function randomId(bytes = 16): string {
+  const buf = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 export class GlueSession {
   private readonly _glue: Glue;
@@ -16,7 +20,7 @@ export class GlueSession {
     this._glue = glue;
     this._policy = policy;
     this._namespace = namespace;
-    this._sessionId = `sess_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+    this._sessionId = `sess_${randomId(8).slice(0, 12)}`;
   }
 
   get id(): string {

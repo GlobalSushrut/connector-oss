@@ -98,14 +98,16 @@ pub use types::{
     AgentControlBlock, AgentStatus, AgentPhase, AgentRole,
     // Namespace
     AgentNamespace,
+    // Attestation
+    Signature, BlockHeader, BlockLinks, VaultPatch,
 };
 
 // --- CID and Encoding ---
-pub use cid::{compute_cid, build_prolly_key, parse_prolly_key};
+pub use cid::{compute_cid, build_prolly_key, parse_prolly_key, sha256, sha256_domain, compute_prolly_node_hash, compute_block_hash};
 pub use codec::ContentAddressable;
 
 // --- Errors ---
-pub use error::VacError;
+pub use error::{VacError, VacResult};
 
 // --- Knot Engine ---
 pub use knot::{KnotEngine, ConsolidationEngine, ConsolidationTickResult};

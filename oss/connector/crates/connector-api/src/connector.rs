@@ -98,6 +98,12 @@ fn normalize_storage_uri(uri: &str) -> Result<String, String> {
     Ok(resource.target())
 }
 
+/// `redb:./file.redb`, `redb://./file.redb`, and `redb:///abs/file.redb` all open a filesystem path.
+fn redb_path_from_uri(uri: &str) -> &str {
+    let rest = uri.strip_prefix("redb:").unwrap_or(uri);
+    rest.strip_prefix("//").unwrap_or(rest)
+}
+
 fn open_redb_store(path: &str, configured_uri: &str) -> Box<dyn KernelStore + Send> {
     if let Some(parent) = Path::new(path).parent() {
         if !parent.as_os_str().is_empty() {
@@ -1492,7 +1498,7 @@ impl ConnectorBuilder {
                 Box::new(InMemoryKernelStore::new())
             }
             Some(uri) if uri.starts_with("redb:") => {
-                let path = &uri[5..]; // strip "redb:" prefix
+                let path = redb_path_from_uri(uri);
                 eprintln!("[connector] KernelStore: redb at '{}'", path);
                 open_redb_store(path, uri)
             }
@@ -1609,7 +1615,6 @@ mod tests {
     fn test_connector_with_compliance() {
         let c = Connector::new()
             .llm("anthropic", "claude-3.5-sonnet", "sk-test")
-            .memory("sqlite://./test.db")
             .compliance(&["hipaa", "soc2"])
             .build();
 
@@ -1705,12 +1710,12 @@ mod tests {
     }
 
     #[test]
-    fn test_storage_sqlite_placeholder() {
-        let c = Connector::new()
+    #[should_panic(expected = "sqlite:")]
+    fn test_storage_sqlite_is_not_a_kernel_store() {
+        let _ = Connector::new()
             .llm("openai", "gpt-4o", "sk-test")
             .storage("sqlite:test.db")
             .build();
-        assert_eq!(c.storage_uri(), Some("sqlite:test.db"));
     }
 
     #[test]

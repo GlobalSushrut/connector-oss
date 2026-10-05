@@ -2,6 +2,7 @@
 name = "connector-plugin-manifest"
 version = "0.1.0"
 edition = "2021"
+license = "BUSL-1.1"
 description = "AGOS plugin.toml manifest — parse, validate, semver (Phase 1.3)"
 publish = false
 

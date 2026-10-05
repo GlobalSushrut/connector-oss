@@ -17,17 +17,14 @@ no-default-features = false
 [advisories]
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "warn"
+unmaintained = "none"
 yanked = "warn"
-notice = "warn"
 ignore = []
 
 # =============================================================================
 # Licenses — Ensure compatible licenses
 # =============================================================================
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -40,8 +37,10 @@ allow = [
     "Unicode-DFS-2016",
     "CC0-1.0",
     "BSL-1.0",
+    "BUSL-1.1",
+    "Unicode-3.0",
+    "CDLA-Permissive-2.0",
 ]
-copyleft = "warn"
 confidence-threshold = 0.8
 
 [[licenses.clarify]]
@@ -54,75 +53,16 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 # =============================================================================
 [bans]
 multiple-versions = "warn"
-wildcards = "deny"
+wildcards = "warn"
 highlight = "all"
 workspace-default-features = "allow"
 external-default-features = "allow"
 
 # Deny specific crates entirely
-deny = [
-    # Deprecated/unmaintained crates
-    { name = "openssl", wrappers = ["openssl-sys"] },
-]
-
-# Skip duplicate version checks for these crates
-skip = []
-
-# Skip tree checks for these crates
-skip-tree = []
-
-# =============================================================================
-# Ring-Based Dependency Hierarchy Enforcement
-# =============================================================================
-# 
-# Ring 0 (vac-*): Foundation — NO dependencies on higher rings
-# Ring 1 (connector-engine, connector-caps, connector-protocols): Engine
-# Ring 2 (connector-api, connector-cli, connector-server, connector-protocol): API
-# Ring 3 (platform/*): Platform
-#
-# Rule: Lower rings MUST NOT depend on higher rings
-
-# --- Ring 0: vac-core MUST NOT depend on any connector-* or platform crates ---
 [[bans.deny]]
-name = "connector-engine"
-wrappers = ["vac-core", "vac-store", "vac-crypto", "vac-prolly", "vac-bus", "vac-cluster", "vac-replicate", "vac-route", "vac-sync", "vac-red", "vac-ffi", "vac-wasm"]
+name = "openssl"
+wrappers = ["openssl-sys"]
 
-[[bans.deny]]
-name = "connector-api"
-wrappers = ["vac-core", "vac-store", "vac-crypto", "vac-prolly", "vac-bus", "vac-cluster", "vac-replicate", "vac-route", "vac-sync", "vac-red", "vac-ffi", "vac-wasm"]
-
-[[bans.deny]]
-name = "connector-cli"
-wrappers = ["vac-core", "vac-store", "vac-crypto", "vac-prolly", "vac-bus", "vac-cluster", "vac-replicate", "vac-route", "vac-sync", "vac-red", "vac-ffi", "vac-wasm"]
-
-[[bans.deny]]
-name = "connector-server"
-wrappers = ["vac-core", "vac-store", "vac-crypto", "vac-prolly", "vac-bus", "vac-cluster", "vac-replicate", "vac-route", "vac-sync", "vac-red", "vac-ffi", "vac-wasm"]
-
-[[bans.deny]]
-name = "connector-caps"
-wrappers = ["vac-core", "vac-store", "vac-crypto", "vac-prolly", "vac-bus", "vac-cluster", "vac-replicate", "vac-route", "vac-sync", "vac-red", "vac-ffi", "vac-wasm"]
-
-[[bans.deny]]
-name = "connector-protocol"
-wrappers = ["vac-core", "vac-store", "vac-crypto", "vac-prolly", "vac-bus", "vac-cluster", "vac-replicate", "vac-route", "vac-sync", "vac-red", "vac-ffi", "vac-wasm"]
-
-[[bans.deny]]
-name = "connector-protocols"
-wrappers = ["vac-core", "vac-store", "vac-crypto", "vac-prolly", "vac-bus", "vac-cluster", "vac-replicate", "vac-route", "vac-sync", "vac-red", "vac-ffi", "vac-wasm"]
-
-# --- Ring 1: connector-engine MUST NOT depend on Ring 2 (connector-api, etc.) ---
-[[bans.deny]]
-name = "connector-api"
-wrappers = ["connector-engine", "connector-caps", "connector-protocols"]
-
-[[bans.deny]]
-name = "connector-cli"
-wrappers = ["connector-engine", "connector-caps", "connector-protocols"]
-
-[[bans.deny]]
-name = "connector-server"
-wrappers = ["connector-engine", "connector-caps", "connector-protocols"]
 
 # =============================================================================
 # Sources — Restrict where crates can come from

@@ -2,6 +2,7 @@
 name = "connector-cpkg"
 version = "0.1.0"
 edition = "2021"
+license = "BUSL-1.1"
 description = "Connector .cpkg archive format — plugin.toml, payloads, SBOM, Ed25519 signing (Phase 4)"
 publish = false
 

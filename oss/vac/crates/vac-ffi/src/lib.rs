@@ -67,6 +67,9 @@ fn register_and_start(
         },
         reason: Some(format!("Agent '{}' registration", name)),
         vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
     });
     let pid = match result.value {
         SyscallValue::AgentPid(p) => p,
@@ -78,6 +81,9 @@ fn register_and_start(
         payload: SyscallPayload::Empty,
         reason: None,
         vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
     });
     Ok(pid)
 }
@@ -98,6 +104,9 @@ fn write_mem(
         },
         reason: None,
         vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
     });
     match r.value {
         SyscallValue::Cid(c) => Some(c),
@@ -283,6 +292,9 @@ impl Connector {
             payload: SyscallPayload::MemRead { packet_cid: cid },
             reason: Some("cross-namespace read attempt".to_string()),
             vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
         });
         match r.outcome {
             OpOutcome::Denied => format!("DENIED:{}", r.audit_entry.error.unwrap_or_default()),
@@ -316,6 +328,9 @@ impl Connector {
             },
             reason: Some("explicit access grant".to_string()),
             vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
         });
         format!("{:?}", r.outcome)
     }
@@ -337,6 +352,9 @@ impl Connector {
                 },
                 reason: Some("system agent for integrity check".to_string()),
                 vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
             });
             match r.value {
                 SyscallValue::AgentPid(p) => {
@@ -346,6 +364,9 @@ impl Connector {
                         payload: SyscallPayload::Empty,
                         reason: None,
                         vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
                     });
                     p
                 }
@@ -358,6 +379,9 @@ impl Connector {
             payload: SyscallPayload::IntegrityCheck,
             reason: None,
             vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
         });
         match r.value {
             SyscallValue::Bool(ok) => (ok, 0),
@@ -378,6 +402,9 @@ impl Connector {
             },
             reason: None,
             vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
         });
         match r.value {
             SyscallValue::Cid(c) => c.to_string(),

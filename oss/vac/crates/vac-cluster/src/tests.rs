@@ -167,7 +167,14 @@ async fn test_cluster_store_replicates_agent_register() {
         agent_priority: AgentPriority::default(),
         token_budget: None,
         expertise_ns: std::collections::HashMap::new(),
-        security_clearance: vac_core::namespace_types::SecurityLevel::Standard,
+            security_clearance: vac_core::namespace_types::SecurityLevel::Standard,
+        residency_region: String::new(),
+        residency_allow_regions: Vec::new(),
+        procedural_skills: std::collections::HashMap::new(),
+        last_reflection_cid: String::new(),
+        actions_since_reflection: 0,
+        last_reflected_at: 0,
+        boot_state: None,
     };
 
     store.store_agent(&acb).unwrap();

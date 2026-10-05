@@ -120,8 +120,8 @@ export class Connector {
     return new Connector({ llm: '', serverUrl })
   }
 
-  agent(name: string, instructions: string): Agent {
-    return new Agent(this, name, instructions)
+  agent(name: string, instructions?: string): Agent {
+    return new Agent(name, instructions)
   }
 
   pipeline(name: string): Pipeline {

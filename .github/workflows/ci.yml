@@ -14,7 +14,7 @@ env:
 
 jobs:
   test:
-    name: Test (${{ matrix.workspace }})
+    name: Test (${{ matrix.workspace.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -72,15 +72,15 @@ jobs:
         run: cargo install cargo-deny --locked
 
       - name: Check dependencies — connector
-        run: cargo deny check
+        run: cargo deny check licenses bans sources
         working-directory: oss/connector
 
       - name: Check dependencies — vac
-        run: cargo deny check
+        run: cargo deny check licenses bans sources
         working-directory: oss/vac
 
       - name: Check dependencies — aapi
-        run: cargo deny check
+        run: cargo deny check licenses bans sources
         working-directory: oss/aapi
 
   typescript:

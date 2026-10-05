@@ -5,10 +5,10 @@
 import { Glue } from './core';
 import { GlueResult, createSuccessResult, createReceipt, ResourceInfo } from './result';
 import { GlueError } from './error';
-import { v4 as uuidv4 } from 'uuid';
-
 function generateTraceId(): string {
-  return uuidv4().replace(/-/g, '');
+  const buf = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function apiCall(
@@ -479,111 +479,6 @@ export async function executeLogs(glue: Glue, target?: string, tail: number = 10
 
   const result = createSuccessResult('logs', target ? 'agent' : 'node', target || 'local');
   result.data = data;
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-export async function agentPause(glue: Glue, name: string): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  await apiCall(glue, 'POST', `/agents/${name}/pause`, {});
-
-  const result = createSuccessResult('pause', 'agent', name);
-  result.resource = { id: name, uid: `agt_${traceId.slice(0, 12)}`, kind: 'agent', state: 'paused' };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-export async function agentResume(glue: Glue, name: string): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  await apiCall(glue, 'POST', `/agents/${name}/resume`, {});
-
-  const result = createSuccessResult('resume', 'agent', name);
-  result.resource = { id: name, uid: `agt_${traceId.slice(0, 12)}`, kind: 'agent', state: 'running' };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-// =============================================================================
-// Memory Operations
-// =============================================================================
-
-export async function memoryWrite(glue: Glue, namespace: string, content: string): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  await apiCall(glue, 'POST', '/memory/write', { namespace, content });
-
-  const result = createSuccessResult('write', 'memory', namespace);
-  result.data = { bytesWritten: content.length };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-export async function memoryRead(glue: Glue, namespace: string): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  const response = await apiCall(glue, 'GET', `/memory/${namespace}`, {});
-
-  const result = createSuccessResult('read', 'memory', namespace);
-  result.data = { content: ((response.data as Record<string, unknown>)?.content as unknown) || null };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-export async function memoryRange(glue: Glue, namespace: string, start: number, end: number): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  const response = await apiCall(glue, 'GET', `/memory/${namespace}/range`, { start, end });
-  const data = (response.data as Record<string, unknown>) || {};
-
-  const result = createSuccessResult('range', 'memory', namespace);
-  result.data = { start, end, items: (data.items as unknown[]) || [] };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-// =============================================================================
-// Tool Operations
-// =============================================================================
-
-export async function toolCall(glue: Glue, name: string, params: Record<string, unknown>): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  const response = await apiCall(glue, 'POST', `/tools/${name}/call`, { params });
-  const data = (response.data as Record<string, unknown>) || {};
-
-  const result = createSuccessResult('call', 'tool', name);
-  result.data = { params, output: data.output || null };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-export async function toolInfo(glue: Glue, name: string): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  const response = await apiCall(glue, 'GET', `/tools/${name}`, {});
-
-  const result = createSuccessResult('info', 'tool', name);
-  result.data = (response.data as Record<string, unknown>) || { name, available: true };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-// =============================================================================
-// Policy Operations
-// =============================================================================
-
-export async function policyBind(glue: Glue, policy: string, agent: string): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  await apiCall(glue, 'POST', `/policies/${policy}/bind`, { agent });
-
-  const result = createSuccessResult('bind', 'policy', policy);
-  result.data = { agent, bound: true };
-  result.receipt = createReceipt(traceId);
-  return result;
-}
-
-export async function policyCheck(glue: Glue, policy: string, agent: string): Promise<GlueResult> {
-  const traceId = generateTraceId();
-  const response = await apiCall(glue, 'POST', `/policies/${policy}/check`, { agent });
-  const data = (response.data as Record<string, unknown>) || {};
-
-  const result = createSuccessResult('check', 'policy', policy);
-  result.data = { agent, compliant: (data.compliant as boolean) ?? true };
   result.receipt = createReceipt(traceId);
   return result;
 }

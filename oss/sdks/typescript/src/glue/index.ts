@@ -23,7 +23,7 @@
  * ```
  */
 
-export { Glue, GlueConfig } from './core';
+export { Glue, glue, GlueConfig } from './core';
 export { cls, compile } from './cls';
 export { GlueResult, GlueReceipt, ResourceInfo, ResultIntent } from './result';
 export { GlueError, ErrorCode } from './error';
