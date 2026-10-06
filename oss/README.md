@@ -19,10 +19,10 @@
 | Market standard | In Connector |
 | --- | --- |
 | MCP, A2A, OpenAI-compatible chat | Bring an existing agent, or assemble one here. Pasting an address does not grant it. |
-| Keycloak, SPIFFE/SPIRE | Partial. Operator identity and workload identity. |
-| NVIDIA OpenShell, OPA, Firecracker | Partial. Runtime boundary, policy, and microVM isolation. `./up.sh` does not download them. |
-| OpenTelemetry, Sigstore cosign | Partial. Traces and signed artifacts. |
-| agentgateway | Target. Traffic forwarding is not integrated. |
+| SPIFFE/SPIRE, Sigstore cosign | `./up.sh` downloads these. The checked files are in the boot. The live join to an admitted effect is still partial. |
+| Keycloak, OpenTelemetry | `./up.sh` looks for them on this machine. It does not pull their images. |
+| NVIDIA OpenShell, OPA, Firecracker | Not downloaded. OPA sits inside OpenShell. Firecracker has no verified digest pinned here, so the boot will not fetch an unpinned binary. |
+| agentgateway | `./up.sh` can start the pinned image. Forwarding through it is still unproven, so this plane stays a target. |
 
 **Only in Connector.** One requested effect gets one PATE verdict: Proceed, Ask, Defer, Quarantine, or Block. Ask stays open for a person. The grant is that effect, not the whole agent. A receipt records what was observed. Cease revokes the next use. Knowledge, instructions, and memory are not permission.
 
@@ -46,6 +46,6 @@ On **Run**, open **Demo**. On **Bring your agent**, connect something you alread
 
 Needs Linux, Rust, Docker, Node.js, and [Trunk](https://trunkrs.dev/) (`rustup target add wasm32-unknown-unknown`). A smaller library server, without the operator UI: [docs/quickstart.md](docs/quickstart.md).
 
-**Here:** workspace, PATE, receipts, Cease. **Partial:** Keycloak, SPIRE, OpenShell, OPA, Firecracker, OpenTelemetry, cosign. **Target:** agentgateway and production coverage. `./up.sh` does not download Firecracker or OpenShell. This is not a claim of secure, correct, safe, compliant, or production-ready.
+**Here:** workspace, PATE, receipts, Cease. The seven backends and the traffic plane are the industry tools this node is built to join, not a second product. `./up.sh` downloads SPIRE and cosign. It can start the pinned agentgateway image, and forwarding there is still a target. It looks for Keycloak and OpenTelemetry and does not pull them. It does not download Firecracker or OpenShell. A tool on disk is not proof an admitted effect went through it, and this is not a claim of secure, correct, safe, compliant, or production-ready.
 
 Libraries under `oss/` are [Apache License 2.0](LICENSE). The node under `platform/` is [Business Source License 1.1](../platform/LICENSE). Report exploitable findings privately through [SECURITY.md](SECURITY.md).
