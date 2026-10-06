@@ -1,0 +1,15 @@
+{
+  "$schema": "witnessctl/receipt/v1",
+  "receipt_id": "{{ receipt_id }}",
+  "plugin": "witnessctl",
+  "session_id": "{{ session_id }}",
+  "agent_pid": "{{ agent_pid }}",
+  "sequence": {{ sequence }},
+  "timestamp": "{{ timestamp }}",
+  "event": "{{ event }}",
+  "payload_hash": "{{ payload | tojson | sha256 }}",
+  "payload": {{ payload | tojson }},
+  "prev_receipt_id": "{{ prev_receipt_id }}",
+  "prev_receipt_hash": "{{ prev_receipt_hash }}",
+  "hmac": "{{ hmac }}"
+}

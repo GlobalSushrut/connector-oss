@@ -1,0 +1,106 @@
+name: witnessctl
+version: "1.0.0"
+description: >
+  Universal API witness layer for Connector.
+  Captures, governs, seals, and proves any API interaction
+  — REST, LLM, webhook, or internal service call.
+  Every call gets a tamper-evident receipt, a policy verdict,
+  and a compliance report. No changes to your API client required.
+author: connector
+license: proprietary
+
+requires:
+  connector: ">=1.0.0"
+  modules:
+    - gateway           # intercept + proxy any HTTP call
+    - admission         # deny-before-forward gate
+    - guard_pipeline    # content + PII + schema firewall
+    - audit             # HMAC journal + chained receipts
+    - memory            # structured evidence storage
+    - agents            # agent registry (caller identity)
+    - billing           # per-call cost attribution
+    - compliance        # framework mapping + report export
+
+provides:
+  workflows: 7       # session_open, capture, inspect, seal, report, replay, verify
+  internal_workflows: 4  # chain_emit, schema_extract, policy_eval, compliance_map
+  templates: 3       # compliance_report.md, receipt.json, policy_schema.yaml
+  capabilities:
+    - universal_api_capture         # intercept any HTTP/REST call via proxy or SDK shim
+    - schema_extraction             # auto-infer request/response schema on first capture
+    - pii_field_detection           # detect + classify PII/PHI fields in any payload
+    - policy_admission_gate         # deny-before-forward based on operator rules
+    - content_firewall              # injection, exfil, and anomaly detection per call
+    - tamper_evident_receipt_chain  # HMAC-SHA256 chained receipts for every call
+    - call_replay                   # reproduce any past call from sealed evidence
+    - compliance_report_export      # SOC2 / HIPAA / GDPR / EU AI Act report per session
+    - drift_detection               # schema + behaviour change alerts across sessions
+    - cost_attribution              # token + API cost per caller identity
+
+optional_deps:
+  - observability   # Prometheus call metrics, Grafana dashboard
+  - sandbox         # isolated replay environment
+  - cicd            # CI gate: block PR if compliance report fails
+
+# How to connect an API:
+#   Option A — Proxy mode (zero client change):
+#     Set API_BASE_URL=http://localhost:7443/witness/<upstream>
+#     All calls pass through witnessctl automatically.
+#
+#   Option B — SDK shim (Python / Node):
+#     from witnessctl import WitnessSession
+#     session = WitnessSession(upstream="https://api.openai.com", role="analyst")
+#     # use session.client as a drop-in replacement
+#
+#   Option C — Webhook sink (for external systems):
+#     Register POST /api/v1/witnessctl/ingest as your webhook endpoint.
+#     Connector replays the event through the full pipeline.
+
+entrypoints:
+  cli:
+    - "connectorctl witness start"        # open a capture session
+    - "connectorctl witness inspect"      # live call stream with verdicts
+    - "connectorctl witness seal"         # close session, generate proof bundle
+    - "connectorctl witness report"       # export compliance report
+    - "connectorctl witness replay"       # replay a sealed call
+    - "connectorctl witness verify"       # verify a proof bundle
+    - "connectorctl witness diff"         # schema/behaviour diff between sessions
+  api:
+    - "POST   /api/v1/witnessctl/sessions"         # open a capture session
+    - "POST   /api/v1/witnessctl/ingest"           # ingest a raw call (webhook mode)
+    - "GET    /api/v1/witnessctl/sessions/:id"     # session status + live stats
+    - "POST   /api/v1/witnessctl/sessions/:id/seal"
+    - "GET    /api/v1/witnessctl/sessions/:id/report"
+    - "POST   /api/v1/witnessctl/sessions/:id/replay"
+    - "GET    /api/v1/witnessctl/sessions/:id/receipts"
+    - "POST   /api/v1/witnessctl/verify"
+
+compliance_frameworks:
+  hipaa:
+    required_controls:
+      - pii_detection
+      - access_logging
+      - minimum_necessary
+      - tamper_evident_audit
+    report_section: "HIPAA §164.312(b) — Audit Controls"
+  soc2_type2:
+    required_controls:
+      - access_control
+      - change_management
+      - availability_monitoring
+      - incident_response
+    report_section: "SOC2 CC6 / CC7"
+  gdpr:
+    required_controls:
+      - pii_detection
+      - purpose_limitation
+      - data_minimisation
+      - right_to_erasure_flag
+    report_section: "GDPR Art. 25 — Data Protection by Design"
+  eu_ai_act:
+    required_controls:
+      - human_oversight
+      - decision_logging
+      - traceability
+      - risk_classification
+    report_section: "EU AI Act Art. 13 — Transparency & Traceability"

@@ -1,0 +1,45 @@
+# WitnessCtl canonical compliance map generated from Rust
+version: 2026-04-27
+frameworks:
+  eu_ai_act:
+    - eu_ai_act.art9.risk_management
+    - eu_ai_act.art10.data_governance
+    - eu_ai_act.art11.technical_documentation
+    - eu_ai_act.art12.record_keeping
+    - eu_ai_act.art13.transparency
+    - eu_ai_act.art14.human_oversight
+  gdpr:
+    - gdpr.art5.1c.data_minimisation
+    - gdpr.art5.1f.integrity_confidentiality
+    - gdpr.art13.transparency
+    - gdpr.art17.erasure
+    - gdpr.art25.protection_by_design
+    - gdpr.art35.dpia
+  hipaa:
+    - hipaa.164.312.a1.access_control
+    - hipaa.164.312.b.audit_controls
+    - hipaa.164.312.c1.integrity
+    - hipaa.164.312.d.authentication
+    - hipaa.164.312.e1.transmission_security
+    - hipaa.164.530.c.phi_safeguards
+  iso_27001:
+    - iso27001.a5.control_policies
+    - iso27001.a8.data_handling
+    - iso27001.a9.access_control
+    - iso27001.a16.incident_management
+  nist_800_53:
+    - nist80053.ac_3.access_enforcement
+    - nist80053.au_2.event_logging
+    - nist80053.si_10.information_input_validation
+    - nist80053.ra_5.risk_assessment
+  pci_dss:
+    - pci_dss.7.access_by_need_to_know
+    - pci_dss.10.audit_trail
+    - pci_dss.3.cardholder_data_protection
+    - pci_dss.12.security_program
+  soc2:
+    - soc2.cc6.1.access_controls
+    - soc2.cc6.2.authentication
+    - soc2.cc7.1.change_management
+    - soc2.cc7.2.data_integrity
+    - soc2.cc8.1.incident_response

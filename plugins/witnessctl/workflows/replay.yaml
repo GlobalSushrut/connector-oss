@@ -1,0 +1,124 @@
+name: replay
+description: >
+  Replay any captured API call from a sealed session.
+  Reconstructs the original request from the sealed receipt,
+  re-runs it through the full witnessctl pipeline (schema check,
+  PII scan, admission, firewall), optionally forwards to upstream,
+  and proves the replayed response matches the sealed original.
+  Used for: incident investigation, audit replay, regression testing.
+version: "1.0.0"
+plugin: witnessctl
+
+triggers:
+  - api: "POST /api/v1/witnessctl/sessions/:id/replay"
+  - cli: "connectorctl witness replay"
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  agent_pid:
+    type: string
+    required: true
+  receipt_id:
+    type: string
+    required: false
+    description: "Replay a specific call by receipt_id. If omitted, replays the full session."
+  seq_range:
+    type: object
+    required: false
+    description: "{ from: N, to: M } — replay a sequence range"
+  forward:
+    type: boolean
+    required: false
+    default: false
+    description: "If true, re-send to upstream. If false, dry-run only."
+  assert_match:
+    type: boolean
+    required: false
+    default: true
+    description: "Assert that replayed response matches sealed original."
+
+steps:
+  # ── 1. Verify source chain before replay ─────────────────────────
+  - id: verify_source_chain
+    action: connector.proof.verify
+    params:
+      session_id: "{{ inputs.session_id }}"
+      checks: [hmac_integrity, hash_chain_continuity, no_gaps]
+
+  # ── 2. Fetch target receipts from sealed call log ─────────────────
+  - id: fetch_receipts
+    action: connector.memory.recall
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      namespace: "witness/{{ inputs.session_id }}/calls"
+      memory_type: evidence
+      filter:
+        receipt_id: "{{ inputs.receipt_id }}"
+        seq_range: "{{ inputs.seq_range }}"
+    depends_on: verify_source_chain
+
+  # ── 3. Reconstruct requests from receipts ────────────────────────
+  - id: reconstruct
+    action: connector.proof.reconstruct_calls
+    params:
+      receipts: "{{ steps.fetch_receipts.packets }}"
+      session_id: "{{ inputs.session_id }}"
+    depends_on: fetch_receipts
+
+  # ── 4. Re-run through capture pipeline (dry or live) ─────────────
+  - id: replay_capture
+    action: witnessctl.workflows.capture
+    params:
+      session_id: "replay-{{ inputs.session_id }}-{{ now_ms }}"
+      agent_pid: "{{ inputs.agent_pid }}"
+      request: "{{ steps.reconstruct.request }}"
+      upstream: "{{ steps.reconstruct.upstream }}"
+      forward: "{{ inputs.forward }}"
+    depends_on: reconstruct
+
+  # ── 5. Assert response match (if enabled) ────────────────────────
+  - id: assert_match
+    action: connector.proof.assert_equal
+    params:
+      original_hash: "{{ steps.fetch_receipts.packets[0].response_hash }}"
+      replayed_hash: "{{ steps.replay_capture.response.body | sha256 }}"
+      tolerance: exact   # or: status_only, schema_only
+    condition: "{{ inputs.assert_match and inputs.forward }}"
+    depends_on: replay_capture
+
+  # ── 6. Emit replay receipt ────────────────────────────────────────
+  - id: emit_replay_receipt
+    action: witnessctl.internal.chain_emit
+    params:
+      event: call.replayed
+      agent_pid: "{{ inputs.agent_pid }}"
+      session_id: "{{ inputs.session_id }}"
+      payload:
+        replayed_receipt: "{{ inputs.receipt_id }}"
+        source_chain_ok: "{{ steps.verify_source_chain.verified }}"
+        match: "{{ steps.assert_match.matched }}"
+        forward: "{{ inputs.forward }}"
+    depends_on: [replay_capture, assert_match]
+
+  # ── 7. Audit ──────────────────────────────────────────────────────
+  - id: audit_replay
+    action: connector.audit.record
+    params:
+      action: "witnessctl.call.replayed"
+      agent_pid: "{{ inputs.agent_pid }}"
+      details:
+        source_receipt: "{{ inputs.receipt_id }}"
+        match: "{{ steps.assert_match.matched }}"
+        forward: "{{ inputs.forward }}"
+        replay_receipt: "{{ steps.emit_replay_receipt.receipt_id }}"
+    depends_on: emit_replay_receipt
+
+outputs:
+  source_chain_ok: "{{ steps.verify_source_chain.verified }}"
+  replayed_calls: "{{ steps.fetch_receipts.count }}"
+  match: "{{ steps.assert_match.matched }}"
+  replay_receipt_id: "{{ steps.emit_replay_receipt.receipt_id }}"
+  admission_verdict: "{{ steps.replay_capture.admission_verdict }}"
+  firewall_blocked: "{{ steps.replay_capture.firewall_blocked }}"

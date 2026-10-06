@@ -1,0 +1,150 @@
+name: seal
+description: >
+  Close a capture session and generate an immutable evidence bundle.
+  Finalises the receipt chain, hashes the full call log, generates
+  a proof bundle, runs compliance mapping against all configured
+  frameworks, and writes the sealed bundle to the evidence store.
+  After seal, no new calls can be added to the session.
+version: "1.0.0"
+plugin: witnessctl
+
+triggers:
+  - api: "POST /api/v1/witnessctl/sessions/:id/seal"
+  - cli: "connectorctl witness seal"
+  - on_event: witnessctl.session.timeout
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  agent_pid:
+    type: string
+    required: true
+  output_dir:
+    type: string
+    required: false
+    default: "./witness-evidence"
+  frameworks:
+    type: array
+    required: false
+    default: [hipaa, soc2_type2]
+  include:
+    type: array
+    required: false
+    default: [receipts, call_log, pii_report, schema_map, compliance_verdicts, cost]
+
+steps:
+  # ── 1. Emit session-close receipt (final link in chain) ───────────
+  - id: close_receipt
+    action: witnessctl.internal.chain_emit
+    params:
+      event: session.close
+      agent_pid: "{{ inputs.agent_pid }}"
+      session_id: "{{ inputs.session_id }}"
+      payload:
+        reason: sealed
+
+  # ── 2. Verify full receipt chain integrity ────────────────────────
+  - id: verify_chain
+    action: connector.proof.verify
+    params:
+      session_id: "{{ inputs.session_id }}"
+      checks:
+        - hmac_integrity
+        - hash_chain_continuity
+        - sequence_monotonicity
+        - timestamp_monotonicity
+        - no_gaps
+    depends_on: close_receipt
+
+  # ── 3. Collect full call log from evidence store ──────────────────
+  - id: collect_calls
+    action: connector.memory.recall
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      namespace: "witness/{{ inputs.session_id }}/calls"
+      limit: 10000
+      memory_type: evidence
+    condition: "{{ 'call_log' in inputs.include }}"
+
+  # ── 4. Build PII exposure report ──────────────────────────────────
+  - id: pii_report
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: pii_detected
+      include_fields: true
+    condition: "{{ 'pii_report' in inputs.include }}"
+
+  # ── 5. Build schema map ───────────────────────────────────────────
+  - id: schema_map
+    action: connector.memory.recall
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      namespace: "witness/{{ inputs.session_id }}/schemas"
+      memory_type: evidence
+    condition: "{{ 'schema_map' in inputs.include }}"
+
+  # ── 6. Compliance mapping ─────────────────────────────────────────
+  - id: compliance_map
+    action: witnessctl.internal.compliance_map
+    params:
+      session_id: "{{ inputs.session_id }}"
+      frameworks: "{{ inputs.frameworks }}"
+      call_log: "{{ steps.collect_calls.packets }}"
+      pii_report: "{{ steps.pii_report.entries }}"
+      chain_verified: "{{ steps.verify_chain.verified }}"
+    depends_on: [collect_calls, pii_report, verify_chain]
+
+  # ── 7. Cost summary ───────────────────────────────────────────────
+  - id: cost_summary
+    action: connector.billing.session_cost
+    params:
+      session_id: "{{ inputs.session_id }}"
+    condition: "{{ 'cost' in inputs.include }}"
+
+  # ── 8. Generate proof bundle ──────────────────────────────────────
+  - id: bundle
+    action: connector.proof.bundle
+    params:
+      session_id: "{{ inputs.session_id }}"
+      output_dir: "{{ inputs.output_dir }}"
+      contents:
+        receipts: "{{ steps.verify_chain.receipts }}"
+        call_log: "{{ steps.collect_calls.packets }}"
+        pii_report: "{{ steps.pii_report.entries }}"
+        schema_map: "{{ steps.schema_map.packets }}"
+        compliance: "{{ steps.compliance_map.verdicts }}"
+        cost: "{{ steps.cost_summary }}"
+    depends_on:
+      - verify_chain
+      - collect_calls
+      - pii_report
+      - schema_map
+      - compliance_map
+      - cost_summary
+
+  # ── 9. Audit seal event ───────────────────────────────────────────
+  - id: audit_seal
+    action: connector.audit.record
+    params:
+      action: "witnessctl.session.sealed"
+      agent_pid: "{{ inputs.agent_pid }}"
+      details:
+        receipt_id: "{{ steps.close_receipt.receipt_id }}"
+        chain_verified: "{{ steps.verify_chain.verified }}"
+        bundle_path: "{{ steps.bundle.bundle_path }}"
+        proof_id: "{{ steps.bundle.proof_id }}"
+        compliance_pass: "{{ steps.compliance_map.all_pass }}"
+    depends_on: bundle
+
+outputs:
+  bundle_path: "{{ steps.bundle.bundle_path }}"
+  proof_id: "{{ steps.bundle.proof_id }}"
+  chain_verified: "{{ steps.verify_chain.verified }}"
+  receipt_count: "{{ steps.verify_chain.receipt_count }}"
+  total_calls: "{{ steps.collect_calls.count }}"
+  pii_hits: "{{ steps.pii_report.total_count }}"
+  compliance_pass: "{{ steps.compliance_map.all_pass }}"
+  compliance_verdicts: "{{ steps.compliance_map.verdicts }}"
+  cost_usd: "{{ steps.cost_summary.total_cost_usd }}"

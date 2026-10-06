@@ -1,0 +1,96 @@
+name: session_open
+description: >
+  Open a witnessctl capture session for an upstream API.
+  Registers a governed agent, loads policy, initialises the
+  receipt chain, and returns a session token the caller embeds
+  in every subsequent request (proxy header or SDK param).
+version: "1.0.0"
+plugin: witnessctl
+
+triggers:
+  - api: "POST /api/v1/witnessctl/sessions"
+  - cli: "connectorctl witness start"
+
+inputs:
+  upstream:
+    type: string
+    required: true
+    description: "Base URL of the API being witnessed (e.g. https://api.openai.com)"
+  role:
+    type: string
+    required: true
+    description: "Caller identity / role bound to this session"
+  policy_path:
+    type: string
+    required: false
+    default: ".connector/witnessctl.yaml"
+  frameworks:
+    type: array
+    required: false
+    default: [hipaa, soc2_type2]
+    description: "Compliance frameworks to evaluate against"
+  mode:
+    type: string
+    required: false
+    default: proxy
+    enum: [proxy, sdk_shim, webhook]
+    description: "How API calls will be ingested"
+
+steps:
+  - id: load_policy
+    action: witnessctl.internal.policy_eval
+    params:
+      path: "{{ inputs.policy_path }}"
+      role: "{{ inputs.role }}"
+      upstream: "{{ inputs.upstream }}"
+
+  - id: register_agent
+    action: connector.agents.create
+    params:
+      name: "witness-{{ inputs.role }}-{{ now_ms }}"
+      role: "{{ inputs.role }}"
+      clearance: "{{ steps.load_policy.clearance }}"
+      tags: [witnessctl, "upstream:{{ inputs.upstream }}"]
+    depends_on: load_policy
+
+  - id: init_receipt_chain
+    action: witnessctl.internal.chain_emit
+    params:
+      event: session.open
+      agent_pid: "{{ steps.register_agent.agent_pid }}"
+      session_id: "{{ steps.register_agent.session_id }}"
+      payload:
+        upstream: "{{ inputs.upstream }}"
+        role: "{{ inputs.role }}"
+        mode: "{{ inputs.mode }}"
+        frameworks: "{{ inputs.frameworks }}"
+    depends_on: register_agent
+
+  - id: init_schema_store
+    action: witnessctl.internal.schema_extract
+    params:
+      upstream: "{{ inputs.upstream }}"
+      session_id: "{{ steps.register_agent.session_id }}"
+      mode: discover   # will auto-populate on first real call
+    depends_on: register_agent
+
+  - id: audit_open
+    action: connector.audit.record
+    params:
+      action: "witnessctl.session.open"
+      agent_pid: "{{ steps.register_agent.agent_pid }}"
+      details:
+        upstream: "{{ inputs.upstream }}"
+        role: "{{ inputs.role }}"
+        mode: "{{ inputs.mode }}"
+        frameworks: "{{ inputs.frameworks }}"
+        receipt_id: "{{ steps.init_receipt_chain.receipt_id }}"
+    depends_on: init_receipt_chain
+
+outputs:
+  session_id: "{{ steps.register_agent.session_id }}"
+  agent_pid: "{{ steps.register_agent.agent_pid }}"
+  session_token: "{{ steps.register_agent.session_token }}"
+  receipt_id: "{{ steps.init_receipt_chain.receipt_id }}"
+  proxy_header: "X-Witness-Session: {{ steps.register_agent.session_token }}"
+  proxy_url: "http://localhost:7443/witness/{{ steps.register_agent.session_id }}"

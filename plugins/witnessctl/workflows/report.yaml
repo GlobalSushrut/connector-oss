@@ -1,0 +1,141 @@
+name: report
+description: >
+  Generate a human-readable + machine-parseable compliance report
+  for a sealed (or live) witnessctl session.
+  Produces per-framework verdicts, PII exposure summary, firewall
+  event log, schema drift history, cost breakdown, and a
+  pass/fail compliance posture. Exportable as JSON, Markdown, or PDF.
+version: "1.0.0"
+plugin: witnessctl
+
+triggers:
+  - api: "GET /api/v1/witnessctl/sessions/:id/report"
+  - cli: "connectorctl witness report"
+  - on_event: witnessctl.session.sealed
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  agent_pid:
+    type: string
+    required: true
+  frameworks:
+    type: array
+    required: false
+    default: [hipaa, soc2_type2, gdpr, eu_ai_act]
+  format:
+    type: string
+    required: false
+    default: json
+    enum: [json, markdown, pdf]
+  output_path:
+    type: string
+    required: false
+    default: "./witness-evidence/report.json"
+
+steps:
+  # ── 1. Pull compliance verdicts from seal bundle ──────────────────
+  - id: fetch_compliance
+    action: witnessctl.internal.compliance_map
+    params:
+      session_id: "{{ inputs.session_id }}"
+      frameworks: "{{ inputs.frameworks }}"
+      mode: report_only   # read existing verdicts, don't recompute
+
+  # ── 2. Pull receipt chain summary ────────────────────────────────
+  - id: fetch_chain
+    action: connector.proof.collect
+    params:
+      session_id: "{{ inputs.session_id }}"
+
+  # ── 3. Pull PII report ────────────────────────────────────────────
+  - id: fetch_pii
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: pii_detected
+      include_fields: true
+      include_urls: true
+
+  # ── 4. Pull firewall events ───────────────────────────────────────
+  - id: fetch_firewall
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: fw_blocked
+
+  # ── 5. Pull schema drift log ──────────────────────────────────────
+  - id: fetch_drift
+    action: connector.memory.recall
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      namespace: "witness/{{ inputs.session_id }}/schema_drift"
+      memory_type: evidence
+
+  # ── 6. Pull cost ──────────────────────────────────────────────────
+  - id: fetch_cost
+    action: connector.billing.session_cost
+    params:
+      session_id: "{{ inputs.session_id }}"
+
+  # ── 7. Render report ──────────────────────────────────────────────
+  - id: render
+    action: connector.template.render
+    params:
+      template: witnessctl/compliance_report
+      format: "{{ inputs.format }}"
+      data:
+        session_id: "{{ inputs.session_id }}"
+        generated_at: "{{ now_iso }}"
+        agent_pid: "{{ inputs.agent_pid }}"
+        chain_verified: "{{ steps.fetch_chain.chain_verified }}"
+        receipt_count: "{{ steps.fetch_chain.receipt_count }}"
+        total_calls: "{{ steps.fetch_chain.total_entries }}"
+        compliance: "{{ steps.fetch_compliance.verdicts }}"
+        compliance_pass: "{{ steps.fetch_compliance.all_pass }}"
+        pii_summary:
+          total_hits: "{{ steps.fetch_pii.total_count }}"
+          fields_detected: "{{ steps.fetch_pii.unique_fields }}"
+          affected_urls: "{{ steps.fetch_pii.affected_urls }}"
+        firewall_summary:
+          total_blocked: "{{ steps.fetch_firewall.total_count }}"
+          block_reasons: "{{ steps.fetch_firewall.reasons }}"
+        schema_drift:
+          events: "{{ steps.fetch_drift.count }}"
+          affected_endpoints: "{{ steps.fetch_drift.endpoints }}"
+        cost:
+          total_usd: "{{ steps.fetch_cost.total_cost_usd }}"
+          breakdown: "{{ steps.fetch_cost.breakdown }}"
+      output_path: "{{ inputs.output_path }}"
+    depends_on:
+      - fetch_compliance
+      - fetch_chain
+      - fetch_pii
+      - fetch_firewall
+      - fetch_drift
+      - fetch_cost
+
+  # ── 8. Audit report generation ────────────────────────────────────
+  - id: audit_report
+    action: connector.audit.record
+    params:
+      action: "witnessctl.report.generated"
+      agent_pid: "{{ inputs.agent_pid }}"
+      details:
+        format: "{{ inputs.format }}"
+        output_path: "{{ steps.render.output_path }}"
+        frameworks: "{{ inputs.frameworks }}"
+        compliance_pass: "{{ steps.fetch_compliance.all_pass }}"
+    depends_on: render
+
+outputs:
+  report_path: "{{ steps.render.output_path }}"
+  compliance_pass: "{{ steps.fetch_compliance.all_pass }}"
+  compliance_verdicts: "{{ steps.fetch_compliance.verdicts }}"
+  chain_verified: "{{ steps.fetch_chain.chain_verified }}"
+  total_calls: "{{ steps.fetch_chain.total_entries }}"
+  pii_hits: "{{ steps.fetch_pii.total_count }}"
+  blocked_calls: "{{ steps.fetch_firewall.total_count }}"
+  schema_drift_events: "{{ steps.fetch_drift.count }}"
+  cost_usd: "{{ steps.fetch_cost.total_cost_usd }}"

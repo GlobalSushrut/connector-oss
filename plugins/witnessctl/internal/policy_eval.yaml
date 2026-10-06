@@ -1,0 +1,86 @@
+name: policy_eval
+description: >
+  Internal: load and compile a witnessctl policy file.
+  Resolves role clearance, admission rules, PII sensitivity
+  classifications, framework bindings, and per-endpoint overrides.
+  Returns a compiled policy object consumed by session_open and capture.
+version: "1.0.0"
+plugin: witnessctl
+internal: true
+
+# Default policy structure (.connector/witnessctl.yaml):
+#
+# role: analyst
+# clearance: standard
+# upstream: https://api.example.com
+# frameworks: [hipaa, soc2_type2]
+#
+# admission:
+#   default: allow
+#   rules:
+#     - endpoint: /v1/admin/*
+#       action: deny
+#       reason: admin endpoints outside role scope
+#     - endpoint: /v1/users/*/pii
+#       action: require_approval
+#
+# pii:
+#   sensitivity: high       # low | medium | high | phi
+#   block_on_detect: false  # log only vs. block call
+#   fields:
+#     - name: email
+#       classification: pii
+#     - name: ssn
+#       classification: phi
+#       block: true
+#
+# cost:
+#   max_usd_per_session: 10.00
+#   alert_threshold_usd: 5.00
+
+inputs:
+  path:
+    type: string
+    required: true
+  role:
+    type: string
+    required: true
+  upstream:
+    type: string
+    required: false
+
+steps:
+  - id: load_file
+    action: connector.fs.read_yaml
+    params:
+      path: "{{ inputs.path }}"
+      fallback: {}   # empty policy = permissive defaults
+
+  - id: validate
+    action: connector.policy.validate
+    params:
+      policy: "{{ steps.load_file.content }}"
+      schema: witnessctl/policy_schema
+    depends_on: load_file
+
+  - id: compile
+    action: connector.policy.compile
+    params:
+      raw: "{{ steps.load_file.content }}"
+      role: "{{ inputs.role }}"
+      upstream: "{{ inputs.upstream }}"
+      defaults:
+        clearance: standard
+        admission_default: allow
+        pii_sensitivity: medium
+        block_on_detect: false
+        frameworks: [soc2_type2]
+    depends_on: validate
+
+outputs:
+  clearance: "{{ steps.compile.clearance }}"
+  admission_rules: "{{ steps.compile.admission_rules }}"
+  pii_config: "{{ steps.compile.pii_config }}"
+  frameworks: "{{ steps.compile.frameworks }}"
+  cost_limits: "{{ steps.compile.cost_limits }}"
+  compiled_policy: "{{ steps.compile.result }}"

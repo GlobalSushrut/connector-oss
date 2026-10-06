@@ -1,0 +1,152 @@
+# Real AI Infrastructure Lab — AI Agents + TraceTramp + WitnessCtl + DeepSeek
+#
+# Architecture:
+#   AI Agents (Researcher/Collector/Analyst) → TraceTramp (intercept) → DeepSeek API
+#   All traffic captured and audited in WitnessCtl.
+#
+# Run (from repo root):
+#   export DEEPSEEK_API_KEY=sk-...
+#   docker compose \
+#     -f lab/docker-compose.premium-lab.yml \
+#     -f lab/advanced.yml \
+#     up -d --build
+#
+# Host URLs:
+#   TraceTramp data:  http://127.0.0.1:19741
+#   TraceTramp admin: http://127.0.0.1:19742
+#   WitnessCtl:       http://127.0.0.1:17443
+#   OpenFang (lab):   http://127.0.0.1:14200  — AIOS agents → TraceTramp → DeepSeek
+#   Upstream OpenFang: https://github.com/RightNow-AI/openfang
+
+name: tracetramp-premium-lab
+
+services:
+
+  # ── Lab Postgres (LabDB) ─────────────────────────────────────────────────
+  labdb:
+    image: postgres:16-alpine
+    container_name: tt-premium-labdb
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: advanced_lab
+    ports:
+      - "16432:5432"
+    volumes:
+      - advanced-lab-db:/var/lib/postgresql/data
+      # Paths relative to this file (lab/)
+      - ../advanced-lab/migrations/001_labdb.sql:/docker-entrypoint-initdb.d/01_labdb.sql:ro
+    networks:
+      - tracetramp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d advanced_lab"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # ── Lab agent runner (Compose service name: openfang) ─────────────────────
+  # NOT the upstream Rust binary — see https://github.com/RightNow-AI/openfang
+  # and https://openfang.sh/docs/getting-started for real AIOS + Hands.
+  # Python agents (Researcher, Collector, Analyst): HTTP → TraceTramp only
+  # → DeepSeek (not direct OpenAI; DEEPSEEK_* keys). Optional adversarial probes
+  # when ENABLE_ATTACKS=true — not OpenFaaS; see advanced-lab/docs/LAB_FINAL_PLAN.md.
+  #
+  # APIs:
+  #   GET  /health        — liveness check
+  #   GET  /status        — live stats (calls, blocks, attacks detected)
+  #   GET  /agents        — list available agents
+  #   GET  /attacks       — list attack scenarios
+  #   POST /run/{agent}   — trigger a single agent call
+  #   POST /attack/{tag}  — fire a specific attack scenario
+  openfang:
+    build:
+      context: ../advanced-lab/agents
+      dockerfile: ../../lab/Dockerfile.agents
+    image: advanced-lab-agents:latest
+    container_name: tt-premium-openfang
+    ports:
+      - "14200:4200"
+    environment:
+      TRACETRAMP_URL: "http://tracetramp:9741"
+      LAB_AGENT_KEY: "lab-agent-runner-2026-secure"
+      AGENT_LOOP_INTERVAL: "25"
+      ENABLE_ATTACKS: "true"
+    depends_on:
+      tracetramp:
+        condition: service_healthy
+    networks:
+      - tracetramp-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4200/health').read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  # ── TraceTramp overrides for real DeepSeek upstream ─────────────────────
+  tracetramp:
+    environment:
+      # Lab DB volume may have older migration checksums after repo edits; dev-only repair.
+      TRACETRAMP_ALLOW_MIGRATION_CHECKSUM_REPAIR: "${TRACETRAMP_ALLOW_MIGRATION_CHECKSUM_REPAIR:-1}"
+      TRACETRAMP_ADMIN_TOKEN: lab_admin_token_static
+      TRACETRAMP_CONNECTOR_BASE_URL: http://connector:9735
+      TRACETRAMP_CONNECTOR_API_KEY: lab_dev_connector_key_change_me
+      CONNECTOR_KEY: lab_dev_connector_key_change_me
+      TRACETRAMP_WITNESS_HANDOFF_BASE_URL: http://witnessctl:7443
+      TRACETRAMP_WITNESS_HANDOFF_SECRET: lab_advanced_handoff_secret
+      # DeepSeek only — no mock upstream (unset DEEPSEEK_API_KEY fails compose interpolation).
+      TRACETRAMP_UPSTREAM_OPENAI_BASE_URL: "${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}"
+      TRACETRAMP_UPSTREAM_OPENAI_API_KEY: "${DEEPSEEK_API_KEY:?Set DEEPSEEK_API_KEY for advanced lab (DeepSeek required)}"
+      # PII scanner — redact SSN, credit cards, emails, phone numbers
+      TRACETRAMP_PII_SCAN_ENABLED: "true"
+      TRACETRAMP_PII_REDACT_ENABLED: "true"
+      # Injection scanner
+      TRACETRAMP_INJECTION_SCAN_ENABLED: "true"
+      # Default policy: audit-only (tighten via TraceTramp admin / policy bundle when needed)
+      TRACETRAMP_DEFAULT_POLICY_ACTION: "audit"
+
+  # ── WitnessCtl overrides ─────────────────────────────────────────────────
+  witnessctl:
+    environment:
+      WITNESSCTL_ADMIN_TOKEN: lab_admin_token_static
+      WITNESSCTL_TRACETRAMP_HANDOFF_SECRET: lab_advanced_handoff_secret
+      WITNESSCTL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/witnessctl
+      WITNESSCTL_AUTO_MIGRATE: "1"
+      WITNESSCTL_HMAC_SECRET: lab_hmac_secret_premium_2026
+
+  # ── Lab runner: YAML scenarios → outputs/lab-runs/<ts>/ (profile: lab) ─────
+  # Smoke: `docker compose ... run --rm lab-runner python -m lab_runner.smoke`
+  lab-runner:
+    profiles: ["lab"]
+    # Paths resolve from this file (lab/)
+    build:
+      context: ../advanced-lab
+      dockerfile: ../lab/Dockerfile.lab-runner
+    image: advanced-lab-runner:latest
+    container_name: tt-premium-lab-runner
+    environment:
+      TRACETRAMP_ADMIN_URL: http://tracetramp:9742
+      TRACETRAMP_DATA_URL: http://tracetramp:9741
+      WITNESSCTL_URL: http://witnessctl:7443
+      DEEPSEEK_BASE_URL: "${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}"
+      AGENT_RUNNER_URL: http://openfang:4200
+      TRACETRAMP_ADMIN_TOKEN: lab_admin_token_static
+      WITNESSCTL_ADMIN_TOKEN: lab_admin_token_static
+      LAB_HANDOFF_SECRET: lab_advanced_handoff_secret
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:?Set DEEPSEEK_API_KEY (real DeepSeek; no baked-in default)}"
+      SCENARIOS_DIR: /app/scenarios
+      OUTPUT_DIR: /out
+    volumes:
+      - ../advanced-lab/outputs/lab-runs:/out
+    depends_on:
+      labdb:
+        condition: service_healthy
+      tracetramp:
+        condition: service_healthy
+      witnessctl:
+        condition: service_healthy
+    networks:
+      - tracetramp-network
+
+volumes:
+  advanced-lab-db:

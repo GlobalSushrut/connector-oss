@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TraceTramp — Operator Dashboard</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color-scheme: dark; background: #0f1419; color: #e7ecf3; }
+    body { margin: 2rem auto; max-width: 52rem; line-height: 1.5; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .muted { color: #8b9bb0; font-size: 0.9rem; }
+    section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #2a3544; border-radius: 8px; }
+    a { color: #6eb5ff; }
+    code { background: #1a2330; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    ul { padding-left: 1.2rem; }
+    #stats { font-family: ui-monospace, monospace; font-size: 0.85rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>TraceTramp</h1>
+  <p class="muted">Management plane — approvals, budgets, and traces via Connector OS.</p>
+
+  <section>
+    <h2>Quick links</h2>
+    <ul>
+      <li><a href="/admin/approvals">Pending approvals (JSON)</a></li>
+      <li><a href="/admin/stats">Live stats</a></li>
+      <li><a href="/health">Health</a></li>
+    </ul>
+    <p class="muted">Use <code>Authorization: Bearer &lt;admin token&gt;</code> on admin routes. In Connector, open <strong>Apps → TraceTramp</strong> for same-origin proxy.</p>
+  </section>
+
+  <section>
+    <h2>Stats</h2>
+    <pre id="stats">Loading…</pre>
+  </section>
+
+  <script>
+    (async () => {
+      const el = document.getElementById('stats');
+      try {
+        const r = await fetch('/admin/stats', { headers: { Accept: 'application/json' } });
+        const j = await r.json();
+        el.textContent = JSON.stringify(j, null, 2);
+      } catch (e) {
+        el.textContent = 'Could not load stats (admin token may be required via Connector proxy).';
+      }
+    })();
+  </script>
+</body>
+</html>

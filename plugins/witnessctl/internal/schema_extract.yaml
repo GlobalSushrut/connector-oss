@@ -1,0 +1,96 @@
+name: schema_extract
+description: >
+  Internal: auto-infer and maintain a live schema map for every
+  endpoint seen in a capture session. On each call, compares the
+  incoming request/response shape against the stored schema.
+  Emits a drift event if field names, types, or required fields change.
+  Used to detect API changes and flag compliance-relevant mutations.
+version: "1.0.0"
+plugin: witnessctl
+internal: true
+
+schema_strategy:
+  method: structural_inference   # infer types from values, no spec required
+  track:
+    - request_body_fields
+    - response_body_fields
+    - status_codes
+    - required_headers
+    - pii_field_positions          # track which fields contained PII
+  drift_triggers:
+    - new_field_added
+    - field_removed
+    - type_changed
+    - pii_field_position_changed   # PII moved to a new path — flag for review
+    - new_status_code_observed
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  call:
+    type: object
+    required: false
+    description: "Current call { method, url, body, response }. Omit for session-init."
+  upstream:
+    type: string
+    required: false
+  mode:
+    type: string
+    required: false
+    default: update
+    enum: [discover, update, report]
+
+steps:
+  - id: load_existing_schema
+    action: connector.memory.recall
+    params:
+      namespace: "witness/{{ inputs.session_id }}/schemas"
+      filter: "{{ inputs.call.url }}"
+      memory_type: evidence
+
+  - id: infer_schema
+    action: connector.util.schema_infer
+    params:
+      call: "{{ inputs.call }}"
+      existing: "{{ steps.load_existing_schema.packets }}"
+    condition: "{{ inputs.mode in ['discover', 'update'] and inputs.call }}"
+    depends_on: load_existing_schema
+
+  - id: detect_drift
+    action: connector.util.schema_diff
+    params:
+      previous: "{{ steps.load_existing_schema.packets }}"
+      current: "{{ steps.infer_schema.schema }}"
+      drift_triggers: "{{ schema_strategy.drift_triggers }}"
+    condition: "{{ steps.load_existing_schema.count > 0 and inputs.mode == 'update' }}"
+    depends_on: infer_schema
+
+  - id: write_schema
+    action: connector.memory.write
+    params:
+      namespace: "witness/{{ inputs.session_id }}/schemas"
+      content: "{{ steps.infer_schema.schema | tojson }}"
+      memory_type: evidence
+      tags: [witnessctl, schema, "url:{{ inputs.call.url }}"]
+    condition: "{{ inputs.mode in ['discover', 'update'] and inputs.call }}"
+    depends_on: detect_drift
+
+  - id: emit_drift_event
+    action: connector.audit.record
+    params:
+      action: "witnessctl.schema.drift"
+      details:
+        url: "{{ inputs.call.url }}"
+        drift_type: "{{ steps.detect_drift.drift_type }}"
+        changed_fields: "{{ steps.detect_drift.changed_fields }}"
+        session_id: "{{ inputs.session_id }}"
+    condition: "{{ steps.detect_drift.drift_detected }}"
+    depends_on: detect_drift
+
+outputs:
+  schema: "{{ steps.infer_schema.schema }}"
+  drift_detected: "{{ steps.detect_drift.drift_detected }}"
+  drift_type: "{{ steps.detect_drift.drift_type }}"
+  changed_fields: "{{ steps.detect_drift.changed_fields }}"
+  endpoints_tracked: "{{ steps.load_existing_schema.count }}"

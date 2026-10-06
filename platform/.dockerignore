@@ -1,0 +1,9 @@
+.git
+**/target
+**/.cargo-target*
+**/.cargo-target-umesh
+**/node_modules
+**/dist
+**/*.redb
+*.log
+.env

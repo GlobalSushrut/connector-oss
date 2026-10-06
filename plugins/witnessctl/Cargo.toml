@@ -1,0 +1,85 @@
+[package]
+name = "witnessctl"
+version = "0.1.0"
+edition = "2021"
+authors = ["Connector Team"]
+description = "Universal API witness layer — capture, govern, seal, and prove any API interaction"
+license = "MIT"
+
+[dependencies]
+connector-plugin-handshake = { path = "../../platform/plugin-handshake" }
+connector-trust = { path = "../../oss/connector/crates/connector-trust" }
+
+tokio = { version = "1.35", features = ["full", "rt-multi-thread"] }
+
+axum = { version = "0.7", features = ["macros", "ws"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-br"] }
+hyper = { version = "1.0", features = ["full"] }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+reqwest = { version = "0.11", features = ["json", "rustls-tls", "stream"] }
+
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate", "json", "bigdecimal"] }
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+async-trait = "0.1"
+futures = "0.3"
+tokio-stream = "0.1"
+futures-util = "0.3"
+
+jsonwebtoken = "9.2"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+sha2 = "0.10"
+sha256 = "1.5"
+hex = "0.4"
+hmac = "0.12"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+thiserror = "1.0"
+anyhow = "1.0"
+
+config = { version = "0.14", features = ["toml"] }
+dotenvy = "0.15"
+
+bytes = "1.5"
+once_cell = "1.19"
+regex = "1.10"
+parking_lot = "0.12"
+dashmap = "5.5"
+csv = "1.3"
+base64 = "0.22"
+connector-report-pdf = { path = "../../oss/connector/crates/connector-report-pdf" }
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+wiremock = "0.6"
+mockall = "0.12"
+
+[lib]
+name = "witnessctl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "witnessctl"
+path = "src/main.rs"
+
+[[bin]]
+name = "witnessctl-verify"
+path = "src/bin/witnessctl-verify.rs"
+
+[[bin]]
+name = "witnessctl-node"
+path = "src/bin/witnessctl-node.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

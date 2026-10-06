@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracetramp.local/schemas/metadata.decision.schema.json",
+  "title": "TraceTramp trace_events.metadata.decision",
+  "description": "Per-step decision envelope merged under trace_events.metadata (Control and View pipelines).",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "pipeline": { "type": "string", "enum": ["control", "view"] },
+    "view_exempt": { "type": "boolean" },
+    "block_flags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "step_snapshot": { "type": "object" },
+    "action_trace": {
+      "type": "array",
+      "description": "Per-step entries; use GET /decision/:trace_id action_trace_cumulative for the joined timeline."
+    },
+    "ledger_contract": {
+      "type": "string",
+      "description": "Append-only trace_events + explicit admin commands for governance mutations (e.g. tracetramp_append_only_ledger_v1)."
+    }
+  },
+  "required": ["schema_version"]
+}

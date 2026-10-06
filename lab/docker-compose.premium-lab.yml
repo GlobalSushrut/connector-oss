@@ -1,0 +1,196 @@
+# Premium lab stack: Connector OSS, Postgres, Redis, TraceTramp, WitnessCtl.
+# Host ports are chosen to avoid clashing with local Postgres (5432), Redis (6379), etc.
+#
+# TraceTramp and WitnessCtl start empty. Restarting Postgres or Redis drops their
+# files. Restarting either service clears its own rows unless records are kept.
+# To keep records in production:
+#   docker compose -f lab/docker-compose.premium-lab.yml -f lab/docker-compose.keep-records.yml up -d
+#
+# From repo root:
+#   export CONNECTOR_KEY=your-connector-bearer-token   # optional; default lab key below
+#   docker compose -f lab/docker-compose.premium-lab.yml up -d --build
+#
+# Endpoints (host):
+#   TraceTramp data:      http://127.0.0.1:19741
+#   TraceTramp admin:   http://127.0.0.1:19742
+#   WitnessCtl:          http://127.0.0.1:17443
+#   Connector OSS:       http://127.0.0.1:19735
+#   Postgres:            localhost:15432  (db: tracetramp, witnessctl)
+#   Redis:               localhost:16379
+
+name: tracetramp-premium-lab
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tt-premium-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tracetramp
+    ports:
+      - "15432:5432"
+    # A container restart stops this filesystem. Postgres initializes empty,
+    # then the init scripts and app migrations rebuild tracetramp and witnessctl.
+    tmpfs:
+      - /var/lib/postgresql/data:uid=70,gid=70,mode=0700
+    volumes:
+      - ../plugins/tracetramp/docker-compose-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - tracetramp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tracetramp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: tt-premium-redis
+    ports:
+      - "16379:6379"
+    tmpfs:
+      - /data
+    networks:
+      - tracetramp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # Connector OSS (same API surface path as lab docs; listens on 9735 in-container).
+  connector:
+    build:
+      context: ../oss
+      dockerfile: ../lab/Dockerfile.connector
+    image: connector-oss:premium-lab
+    container_name: tt-premium-connector
+    ports:
+      - "19735:9735"
+    environment:
+      CONNECTOR_ADDR: "0.0.0.0:9735"
+      RUST_LOG: ${CONNECTOR_RUST_LOG:-info}
+    networks:
+      - tracetramp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/connector-server", "--health-check"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+
+  tracetramp:
+    build:
+      context: ../plugins/tracetramp
+      dockerfile: ../../lab/Dockerfile.tracetramp
+      additional_contexts:
+        # Cargo path deps: ../../oss/.../connector-report-pdf, ../../platform/plugin-handshake
+        oss: ../oss
+        platform: ../platform
+    image: tracetramp:premium-lab
+    container_name: tt-premium-tracetramp
+    command: ["tracetramp", "serve"]
+    ports:
+      - "19741:9741"
+      - "19742:9742"
+    environment:
+      TRACETRAMP_DATA_PLANE_PORT: "9741"
+      TRACETRAMP_MANAGEMENT_PLANE_PORT: "9742"
+      TRACETRAMP_DATABASE_URL: postgres://postgres:postgres@postgres:5432/tracetramp
+      TRACETRAMP_REDIS_URL: redis://redis:6379
+      TRACETRAMP_CONNECTOR_BASE_URL: http://connector:9735
+      TRACETRAMP_CONNECTOR_API_KEY: ${CONNECTOR_KEY:-lab_dev_connector_key_change_me}
+      CONNECTOR_KEY: ${CONNECTOR_KEY:-lab_dev_connector_key_change_me}
+      TRACETRAMP_JWT_SECRET: ${TRACETRAMP_JWT_SECRET:-lab_jwt_secret_change_me}
+      # Static bearer for management /admin/* — set the same value as CONNECTOR_TRACETRAMP_ADMIN_TOKEN on connector-platform for local UI.
+      TRACETRAMP_ADMIN_TOKEN: ${TRACETRAMP_ADMIN_TOKEN:-lab_tracetramp_admin_token_change_me}
+      TRACETRAMP_WITNESS_HANDOFF_BASE_URL: http://witnessctl:7443
+      TRACETRAMP_WITNESS_HANDOFF_SECRET: ${WITNESSCTL_TRACETRAMP_HANDOFF_SECRET:-lab_witness_handoff_secret_change_me}
+      TRACETRAMP_KEEP_RECORDS: "0"
+      RUST_LOG: tracetramp=info,tower_http=info
+    depends_on:
+      connector:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tracetramp-network
+    restart: unless-stopped
+    volumes:
+      - ../plugins/tracetramp/migrations:/app/migrations:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9741/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  witnessctl:
+    build:
+      context: ../plugins/witnessctl
+      dockerfile: ../../lab/Dockerfile.witnessctl
+      additional_contexts:
+        oss: ../oss
+        platform: ../platform
+    image: witnessctl:premium-lab
+    container_name: tt-premium-witnessctl
+    ports:
+      - "17443:7443"
+    environment:
+      WITNESSCTL_PORT: "7443"
+      WITNESSCTL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/witnessctl
+      WITNESSCTL_REDIS_URL: redis://redis:6379
+      CONNECTOR_BASE_URL: http://connector:9735
+      CONNECTOR_API_KEY: ${CONNECTOR_KEY:-lab_dev_connector_key_change_me}
+      CONNECTOR_KEY: ${CONNECTOR_KEY:-lab_dev_connector_key_change_me}
+      WITNESSCTL_HMAC_SECRET: ${WITNESSCTL_HMAC_SECRET:-lab_hmac_secret_change_me}
+      WITNESSCTL_TRACETRAMP_HANDOFF_SECRET: ${WITNESSCTL_TRACETRAMP_HANDOFF_SECRET:-lab_witness_handoff_secret_change_me}
+      WITNESSCTL_AUTO_MIGRATE: "1"
+      WITNESSCTL_KEEP_RECORDS: "0"
+      WITNESSCTL_REQUESTED_AGENTS: "1"
+      RUST_LOG: witnessctl=info
+    depends_on:
+      connector:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tracetramp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:7443/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  # Optional: Ollama for local models
+  ollama:
+    image: ollama/ollama:latest
+    container_name: tt-premium-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - tracetramp-network
+    restart: unless-stopped
+    profiles:
+      - with-ollama
+
+volumes:
+  ollama-data:
+
+networks:
+  tracetramp-network:
+    driver: bridge

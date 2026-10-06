@@ -1,0 +1,107 @@
+name: chain_emit
+description: >
+  Internal: emit a single HMAC-SHA256 chained receipt for any
+  witnessctl event. Fetches the previous receipt hash, constructs
+  the new receipt body, computes the HMAC, writes to the audit
+  journal, and returns the receipt_id + sequence number.
+  Called by every step that produces an auditable event.
+version: "1.0.0"
+plugin: witnessctl
+internal: true
+
+# Receipt format (witnessctl extension of devguard receipt_chain):
+#
+# {
+#   receipt_id:       "wrcpt_{uuid}",
+#   plugin:           "witnessctl",
+#   session_id:       "...",
+#   agent_pid:        "...",
+#   sequence:         N,
+#   timestamp:        ISO8601,
+#   event:            "api.call" | "session.open" | "session.close" | ...,
+#   payload_hash:     SHA256(payload | sorted_keys),
+#   payload:          { ... event-specific fields ... },
+#   prev_receipt_id:  "wrcpt_{prev}",
+#   prev_receipt_hash: SHA256(previous_receipt_body),
+#   hmac:             HMAC-SHA256(receipt_body_without_hmac, session_chain_key),
+# }
+
+chain_config:
+  algorithm: HMAC-SHA256
+  hash_algorithm: SHA256
+  key_source: session_key
+  chain_start: "witnessctl_genesis"
+  receipt_prefix: "wrcpt_"
+
+receipt_events:
+  - session.open
+  - session.close
+  - api.call
+  - call.blocked
+  - call.replayed
+  - pii.detected
+  - schema.drift
+  - compliance.evaluated
+  - chain.verify
+  - bundle.sealed
+
+inputs:
+  event:
+    type: string
+    required: true
+  agent_pid:
+    type: string
+    required: true
+  session_id:
+    type: string
+    required: true
+  payload:
+    type: object
+    required: true
+  mode:
+    type: string
+    required: false
+    default: emit
+    enum: [emit, verify_only]
+
+steps:
+  - id: fetch_prev
+    action: connector.audit.last_receipt
+    params:
+      session_id: "{{ inputs.session_id }}"
+      prefix: "wrcpt_"
+
+  - id: build_receipt
+    action: connector.proof.build_receipt
+    params:
+      plugin: witnessctl
+      event: "{{ inputs.event }}"
+      agent_pid: "{{ inputs.agent_pid }}"
+      session_id: "{{ inputs.session_id }}"
+      payload: "{{ inputs.payload }}"
+      prev_receipt_id: "{{ steps.fetch_prev.receipt_id }}"
+      prev_receipt_hash: "{{ steps.fetch_prev.receipt_hash }}"
+      algorithm: HMAC-SHA256
+      key_source: session_key
+    condition: "{{ inputs.mode == 'emit' }}"
+    depends_on: fetch_prev
+
+  - id: write_receipt
+    action: connector.audit.write_receipt
+    params:
+      receipt: "{{ steps.build_receipt.receipt }}"
+    condition: "{{ inputs.mode == 'emit' }}"
+    depends_on: build_receipt
+
+  - id: verify_chain
+    action: connector.proof.verify_last_n
+    params:
+      session_id: "{{ inputs.session_id }}"
+      n: 5
+    condition: "{{ inputs.mode == 'verify_only' }}"
+
+outputs:
+  receipt_id: "{{ steps.build_receipt.receipt.receipt_id }}"
+  sequence: "{{ steps.build_receipt.receipt.sequence }}"
+  receipt_hash: "{{ steps.build_receipt.receipt_hash }}"
+  chain_ok: "{{ steps.verify_chain.verified }}"

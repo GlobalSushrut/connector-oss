@@ -1,0 +1,97 @@
+name: inspect
+description: >
+  Live session inspector. Returns a real-time view of all captured
+  calls, admission verdicts, PII hits, firewall events, schema drift
+  alerts, and running cost for a session.
+  Used by: connectorctl witness inspect  /  GET /api/v1/witnessctl/sessions/:id
+version: "1.0.0"
+plugin: witnessctl
+
+triggers:
+  - cli: "connectorctl witness inspect"
+  - api: "GET /api/v1/witnessctl/sessions/:id"
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  last_n:
+    type: integer
+    required: false
+    default: 20
+    description: "Return the last N captured calls"
+  filter:
+    type: string
+    required: false
+    enum: [all, blocked, pii_hit, drift, admitted]
+    default: all
+
+steps:
+  - id: fetch_receipts
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: "witnessctl.api.call"
+      last_n: "{{ inputs.last_n }}"
+
+  - id: fetch_pii_events
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: pii_detected
+      last_n: "{{ inputs.last_n }}"
+
+  - id: fetch_firewall_events
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: fw_blocked
+      last_n: "{{ inputs.last_n }}"
+
+  - id: fetch_schema_drift
+    action: connector.memory.recall
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      namespace: "witness/{{ inputs.session_id }}/schema_drift"
+      limit: 10
+      memory_type: evidence
+
+  - id: fetch_cost
+    action: connector.billing.session_cost
+    params:
+      session_id: "{{ inputs.session_id }}"
+
+  - id: fetch_chain_status
+    action: witnessctl.internal.chain_emit
+    params:
+      event: chain.verify
+      session_id: "{{ inputs.session_id }}"
+      mode: verify_only   # no new receipt, just check integrity
+
+  - id: assemble_view
+    action: connector.util.merge
+    params:
+      receipts: "{{ steps.fetch_receipts.entries }}"
+      pii_events: "{{ steps.fetch_pii_events.entries }}"
+      firewall_events: "{{ steps.fetch_firewall_events.entries }}"
+      schema_drift: "{{ steps.fetch_schema_drift.packets }}"
+      cost: "{{ steps.fetch_cost }}"
+      chain_ok: "{{ steps.fetch_chain_status.chain_ok }}"
+      filter: "{{ inputs.filter }}"
+    depends_on:
+      - fetch_receipts
+      - fetch_pii_events
+      - fetch_firewall_events
+      - fetch_schema_drift
+      - fetch_cost
+      - fetch_chain_status
+
+outputs:
+  session_id: "{{ inputs.session_id }}"
+  total_calls: "{{ steps.fetch_receipts.total_count }}"
+  blocked_calls: "{{ steps.fetch_firewall_events.total_count }}"
+  pii_hits: "{{ steps.fetch_pii_events.total_count }}"
+  schema_drift_events: "{{ steps.fetch_schema_drift.count }}"
+  chain_ok: "{{ steps.fetch_chain_status.chain_ok }}"
+  cost_usd: "{{ steps.fetch_cost.total_cost_usd }}"
+  calls: "{{ steps.assemble_view.result }}"

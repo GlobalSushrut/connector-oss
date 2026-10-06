@@ -1,0 +1,90 @@
+name: verify
+description: >
+  Standalone bundle verification. Accepts a proof bundle path
+  and verifies the full receipt chain integrity, compliance verdicts,
+  and call-log hash consistency — without requiring a live session.
+  Usable offline, in CI/CD, or for third-party audit handoff.
+version: "1.0.0"
+plugin: witnessctl
+
+triggers:
+  - api: "POST /api/v1/witnessctl/verify"
+  - cli: "connectorctl witness verify"
+
+inputs:
+  bundle_path:
+    type: string
+    required: true
+    description: "Path to a sealed witnessctl evidence bundle (.json or directory)"
+  strict:
+    type: boolean
+    required: false
+    default: true
+    description: "Fail on any chain gap or HMAC mismatch (vs. warn-only)"
+  frameworks:
+    type: array
+    required: false
+    default: []
+    description: "Re-evaluate compliance verdicts. Empty = skip re-evaluation."
+
+steps:
+  - id: load_bundle
+    action: connector.proof.load_bundle
+    params:
+      path: "{{ inputs.bundle_path }}"
+
+  - id: verify_chain
+    action: connector.proof.verify
+    params:
+      receipts: "{{ steps.load_bundle.receipts }}"
+      checks:
+        - hmac_integrity
+        - hash_chain_continuity
+        - sequence_monotonicity
+        - timestamp_monotonicity
+        - no_gaps
+      strict: "{{ inputs.strict }}"
+    depends_on: load_bundle
+
+  - id: verify_call_hashes
+    action: connector.proof.assert_call_hashes
+    params:
+      call_log: "{{ steps.load_bundle.call_log }}"
+      receipts: "{{ steps.verify_chain.receipts }}"
+    depends_on: verify_chain
+
+  - id: re_evaluate_compliance
+    action: witnessctl.internal.compliance_map
+    params:
+      call_log: "{{ steps.load_bundle.call_log }}"
+      pii_report: "{{ steps.load_bundle.pii_report }}"
+      chain_verified: "{{ steps.verify_chain.verified }}"
+      frameworks: "{{ inputs.frameworks }}"
+      mode: recompute
+    condition: "{{ inputs.frameworks | length > 0 }}"
+    depends_on: verify_chain
+
+  - id: audit_verify
+    action: connector.audit.record
+    params:
+      action: "witnessctl.bundle.verified"
+      details:
+        bundle_path: "{{ inputs.bundle_path }}"
+        chain_ok: "{{ steps.verify_chain.verified }}"
+        call_hashes_ok: "{{ steps.verify_call_hashes.all_match }}"
+        compliance_recomputed: "{{ inputs.frameworks | length > 0 }}"
+        compliance_pass: "{{ steps.re_evaluate_compliance.all_pass }}"
+    depends_on: [verify_chain, verify_call_hashes]
+
+outputs:
+  chain_verified: "{{ steps.verify_chain.verified }}"
+  call_hashes_ok: "{{ steps.verify_call_hashes.all_match }}"
+  receipt_count: "{{ steps.verify_chain.receipt_count }}"
+  gaps_found: "{{ steps.verify_chain.gaps }}"
+  hmac_failures: "{{ steps.verify_chain.hmac_failures }}"
+  compliance_pass: "{{ steps.re_evaluate_compliance.all_pass }}"
+  compliance_verdicts: "{{ steps.re_evaluate_compliance.verdicts }}"
+  overall_pass: >
+    {{ steps.verify_chain.verified and
+       steps.verify_call_hashes.all_match and
+       (not inputs.frameworks or steps.re_evaluate_compliance.all_pass) }}

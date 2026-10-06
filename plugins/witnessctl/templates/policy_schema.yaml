@@ -1,0 +1,107 @@
+# witnessctl policy schema — .connector/witnessctl.yaml
+# All fields optional; defaults are applied by policy_eval internal workflow.
+
+$schema: witnessctl/policy/v1
+
+properties:
+
+  role:
+    type: string
+    description: "Caller identity bound to this session."
+    example: analyst
+
+  clearance:
+    type: string
+    enum: [minimal, standard, elevated, admin]
+    default: standard
+
+  upstream:
+    type: string
+    description: "Base URL of the API being witnessed."
+    example: "https://api.openai.com"
+
+  frameworks:
+    type: array
+    items:
+      type: string
+      enum: [hipaa, soc2_type2, gdpr, eu_ai_act]
+    default: [soc2_type2]
+
+  risk_level:
+    type: string
+    enum: [low, medium, high, critical]
+    default: medium
+    description: "Operator-declared risk level — used for EU AI Act Art. 9 mapping."
+
+  admission:
+    type: object
+    properties:
+      default:
+        type: string
+        enum: [allow, deny, require_approval]
+        default: allow
+      rules:
+        type: array
+        items:
+          type: object
+          required: [endpoint, action]
+          properties:
+            endpoint:
+              type: string
+              description: "Glob pattern — e.g. /v1/admin/*, /v1/users/*/pii"
+            action:
+              type: string
+              enum: [allow, deny, require_approval, log_only]
+            reason:
+              type: string
+
+  pii:
+    type: object
+    properties:
+      sensitivity:
+        type: string
+        enum: [low, medium, high, phi]
+        default: medium
+      block_on_detect:
+        type: boolean
+        default: false
+        description: "If true, block the call entirely when PII is found in payload."
+      fields:
+        type: array
+        items:
+          type: object
+          required: [name, classification]
+          properties:
+            name:
+              type: string
+            classification:
+              type: string
+              enum: [pii, phi, sensitive, public]
+            block:
+              type: boolean
+              default: false
+
+  cost:
+    type: object
+    properties:
+      max_usd_per_session:
+        type: number
+        default: 50.0
+      alert_threshold_usd:
+        type: number
+        default: 25.0
+      action_on_exceed:
+        type: string
+        enum: [alert, block_new_calls, seal_session]
+        default: alert
+
+  erasure:
+    type: object
+    description: "GDPR right-to-erasure configuration."
+    properties:
+      flag_on_detect:
+        type: boolean
+        default: false
+      subject_id_field:
+        type: string
+        description: "Field name that identifies the data subject."

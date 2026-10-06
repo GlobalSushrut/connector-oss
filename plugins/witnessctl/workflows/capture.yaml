@@ -1,0 +1,165 @@
+name: capture
+description: >
+  Core hot-path workflow. Intercepts a single API call, runs it
+  through schema extraction, PII detection, admission gate, and
+  content firewall BEFORE forwarding to upstream. On return,
+  validates the response, emits a chained receipt, and writes
+  structured evidence to memory.
+  Executes for every call — latency target <8 ms overhead.
+version: "1.0.0"
+plugin: witnessctl
+
+triggers:
+  - on_event: witnessctl.call.intercepted   # fired by proxy or SDK shim
+  - api: "POST /api/v1/witnessctl/ingest"   # webhook / manual push
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  agent_pid:
+    type: string
+    required: true
+  request:
+    type: object
+    required: true
+    description: >
+      Raw HTTP call: { method, url, headers, body, timestamp_ms }
+  upstream:
+    type: string
+    required: true
+
+steps:
+  # ── 1. Schema extraction & drift check ────────────────────────────
+  - id: extract_schema
+    action: witnessctl.internal.schema_extract
+    params:
+      session_id: "{{ inputs.session_id }}"
+      call: "{{ inputs.request }}"
+      mode: update   # upsert schema on each new call shape
+
+  # ── 2. PII / PHI detection on request payload ────────────────────
+  - id: detect_pii_request
+    action: connector.guard.pii_scan
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      content: "{{ inputs.request.body }}"
+      context: "{{ inputs.request.url }}"
+      classify: true   # returns field-level classifications
+    depends_on: extract_schema
+
+  # ── 3. Admission gate — deny before forward ───────────────────────
+  - id: admission
+    action: connector.admission.evaluate
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      action: "api.call"
+      resource: "{{ inputs.request.url }}"
+      method: "{{ inputs.request.method }}"
+      pii_fields: "{{ steps.detect_pii_request.classified_fields }}"
+      schema_drift: "{{ steps.extract_schema.drift_detected }}"
+    depends_on: [detect_pii_request, extract_schema]
+
+  # ── 4. Content firewall — injection / exfil / anomaly ─────────────
+  - id: firewall
+    action: connector.guard.firewall_inspect
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      content: "{{ inputs.request.body }}"
+      namespace: "{{ inputs.session_id }}"
+      checks: [injection, exfiltration, anomaly, schema_violation]
+    condition: "{{ steps.admission.verdict == 'ALLOW' }}"
+    depends_on: admission
+
+  # ── 5. Forward to upstream (only if admitted + firewall passes) ────
+  - id: forward
+    action: connector.gateway.proxy_forward
+    params:
+      upstream: "{{ inputs.upstream }}"
+      request: "{{ inputs.request }}"
+      strip_headers: [X-Witness-Session, X-Witness-Agent]
+    condition: >
+      {{ steps.admission.verdict == 'ALLOW' and
+         not steps.firewall.blocked }}
+    depends_on: firewall
+
+  # ── 6. PII detection on response ──────────────────────────────────
+  - id: detect_pii_response
+    action: connector.guard.pii_scan
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      content: "{{ steps.forward.response.body }}"
+      context: "{{ inputs.request.url }}"
+      classify: true
+    condition: "{{ steps.forward.ok }}"
+    depends_on: forward
+
+  # ── 7. Emit chained receipt ───────────────────────────────────────
+  - id: emit_receipt
+    action: witnessctl.internal.chain_emit
+    params:
+      event: api.call
+      agent_pid: "{{ inputs.agent_pid }}"
+      session_id: "{{ inputs.session_id }}"
+      payload:
+        method: "{{ inputs.request.method }}"
+        url: "{{ inputs.request.url }}"
+        request_hash: "{{ inputs.request.body | sha256 }}"
+        response_status: "{{ steps.forward.response.status }}"
+        response_hash: "{{ steps.forward.response.body | sha256 }}"
+        admission_verdict: "{{ steps.admission.verdict }}"
+        firewall_blocked: "{{ steps.firewall.blocked }}"
+        pii_fields_request: "{{ steps.detect_pii_request.classified_fields }}"
+        pii_fields_response: "{{ steps.detect_pii_response.classified_fields }}"
+        schema_drift: "{{ steps.extract_schema.drift_detected }}"
+        latency_ms: "{{ steps.forward.latency_ms }}"
+    depends_on: [forward, detect_pii_response]
+
+  # ── 8. Write structured evidence to memory ────────────────────────
+  - id: store_evidence
+    action: connector.memory.write
+    params:
+      agent_pid: "{{ inputs.agent_pid }}"
+      namespace: "witness/{{ inputs.session_id }}/calls"
+      content: |
+        {
+          "receipt_id": "{{ steps.emit_receipt.receipt_id }}",
+          "seq": {{ steps.emit_receipt.sequence }},
+          "method": "{{ inputs.request.method }}",
+          "url": "{{ inputs.request.url }}",
+          "admission": "{{ steps.admission.verdict }}",
+          "fw_blocked": {{ steps.firewall.blocked }},
+          "pii_request": {{ steps.detect_pii_request.classified_fields | tojson }},
+          "pii_response": {{ steps.detect_pii_response.classified_fields | tojson }},
+          "response_status": {{ steps.forward.response.status }},
+          "latency_ms": {{ steps.forward.latency_ms }},
+          "drift": {{ steps.extract_schema.drift_detected }}
+        }
+      memory_type: evidence
+      tags: [witnessctl, "session:{{ inputs.session_id }}", "url:{{ inputs.request.url }}"]
+    depends_on: emit_receipt
+
+  # ── 9. Audit record ────────────────────────────────────────────────
+  - id: audit_call
+    action: connector.audit.record
+    params:
+      action: "witnessctl.api.call"
+      agent_pid: "{{ inputs.agent_pid }}"
+      details:
+        receipt_id: "{{ steps.emit_receipt.receipt_id }}"
+        admission: "{{ steps.admission.verdict }}"
+        fw_blocked: "{{ steps.firewall.blocked }}"
+        pii_detected: "{{ steps.detect_pii_request.found or steps.detect_pii_response.found }}"
+    depends_on: store_evidence
+
+outputs:
+  receipt_id: "{{ steps.emit_receipt.receipt_id }}"
+  sequence: "{{ steps.emit_receipt.sequence }}"
+  admission_verdict: "{{ steps.admission.verdict }}"
+  firewall_blocked: "{{ steps.firewall.blocked }}"
+  forwarded: "{{ steps.forward.ok }}"
+  response: "{{ steps.forward.response }}"
+  pii_request: "{{ steps.detect_pii_request.classified_fields }}"
+  pii_response: "{{ steps.detect_pii_response.classified_fields }}"
+  schema_drift: "{{ steps.extract_schema.drift_detected }}"
+  latency_ms: "{{ steps.forward.latency_ms }}"

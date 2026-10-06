@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WitnessCtl — Operator Dashboard</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color-scheme: dark; background: #0d1117; color: #e6edf3; }
+    body { margin: 2rem auto; max-width: 52rem; line-height: 1.5; }
+    h1 { font-size: 1.4rem; }
+    .muted { color: #8b949e; font-size: 0.9rem; }
+    section { margin: 1.25rem 0; padding: 1rem; border: 1px solid #30363d; border-radius: 8px; }
+    a { color: #58a6ff; }
+    code { background: #161b22; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    pre { font-size: 0.85rem; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>WitnessCtl</h1>
+  <p class="muted">Evidence plane — sessions, receipts, compliance. Open via Connector <strong>Apps → WitnessCtl</strong>.</p>
+  <section>
+    <h2>API</h2>
+    <ul>
+      <li><a href="/health">Health (JSON)</a></li>
+      <li><code>GET /api/v1/sessions</code> — list sessions (auth required)</li>
+      <li><code>POST /api/v1/integrations/tracetramp/handoff</code> — TraceTramp enforcement ingest</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Status</h2>
+    <pre id="health">Loading…</pre>
+  </section>
+  <script>
+    fetch('/health').then(r => r.json()).then(j => {
+      document.getElementById('health').textContent = JSON.stringify(j, null, 2);
+    }).catch(() => {
+      document.getElementById('health').textContent = 'Could not load /health';
+    });
+  </script>
+</body>
+</html>

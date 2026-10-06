@@ -1,0 +1,53 @@
+# Two-cell Connector mesh lab (L5 T13/T15).
+# Prefer pre-built binary bind-mount for speed; or build from lab/Dockerfile.connector.
+#
+#   export CONNECTOR_BIN=/abs/path/to/connector-platform
+#   docker compose -f lab/docker-compose.mesh-two-node.yml up
+#   NODE_A=http://127.0.0.1:18080 NODE_B=http://127.0.0.1:18081 make l5-mesh-soak
+#
+# Honesty: leave CONNECTOR_MESH_FABRIC unset until soak PASS, then set =1.
+
+services:
+  cell-a:
+    image: ${CONNECTOR_IMAGE:-connector-platform:local}
+    network_mode: host
+    environment:
+      CONNECTOR_PRESET: local
+      CONNECTOR_DEV_MODE: "1"
+      CONNECTOR_LLM_STUB: "1"
+      CONNECTOR_OPEN_AUTH: "1"
+      CONNECTOR_PORT: "18080"
+      CONNECTOR_DATA_DIR: /data
+      CONNECTOR_CELL_ID: cell_a
+      CONNECTOR_CELL_REGION: lab-a
+      CONNECTOR_HA_PEER_URLS: http://127.0.0.1:18081
+      CONNECTOR_MESH_CHANNEL_SECRET: ${CONNECTOR_MESH_CHANNEL_SECRET:-mesh-soak-secret-32chars!!}
+    volumes:
+      - mesh-a:/data
+      - ${CONNECTOR_BIN:-/nonexistent}:/usr/local/bin/connector-platform:ro
+    command: ["/usr/local/bin/connector-platform"]
+    profiles: ["bindbin"]
+
+  cell-b:
+    image: ${CONNECTOR_IMAGE:-connector-platform:local}
+    network_mode: host
+    environment:
+      CONNECTOR_PRESET: local
+      CONNECTOR_DEV_MODE: "1"
+      CONNECTOR_LLM_STUB: "1"
+      CONNECTOR_OPEN_AUTH: "1"
+      CONNECTOR_PORT: "18081"
+      CONNECTOR_DATA_DIR: /data
+      CONNECTOR_CELL_ID: cell_b
+      CONNECTOR_CELL_REGION: lab-b
+      CONNECTOR_HA_PEER_URLS: http://127.0.0.1:18080
+      CONNECTOR_MESH_CHANNEL_SECRET: ${CONNECTOR_MESH_CHANNEL_SECRET:-mesh-soak-secret-32chars!!}
+    volumes:
+      - mesh-b:/data
+      - ${CONNECTOR_BIN:-/nonexistent}:/usr/local/bin/connector-platform:ro
+    command: ["/usr/local/bin/connector-platform"]
+    profiles: ["bindbin"]
+
+volumes:
+  mesh-a:
+  mesh-b:
