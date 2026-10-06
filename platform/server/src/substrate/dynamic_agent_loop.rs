@@ -236,6 +236,12 @@ pub fn svf_epoch(run: &AgentRunState) -> connector_trust::SvfEpoch {
     connector_trust::SvfEpoch::new(run.broker_epoch, run.iac_epoch, run.context_revision)
 }
 
+/// A cease bumps the broker generation. A loop stamped on the old generation must stop,
+/// even if the model still wants another step.
+pub fn loop_must_stop(stamped_epoch: u64, live_epoch: u64) -> bool {
+    stamped_epoch != 0 && live_epoch != stamped_epoch
+}
+
 /// Refuse Act when CIP inhibits or broker epoch drifted since stamp.
 pub fn assert_turn_allowed(
     state: &SharedState,
@@ -293,6 +299,16 @@ pub async fn run_turn(
     assistant_text: Option<&str>,
     reasoning: Option<&str>,
 ) -> Result<Value, ConnectorError> {
+    let live = crate::substrate::llm_context_broker::current_generation(state, &run.agent_pid);
+    if loop_must_stop(run.broker_epoch, live) {
+        run.stop(StopReason::OperatorCancel);
+        let _ = checkpoint(state.as_ref(), run);
+        return Err(ConnectorError::new(
+            DenialReason::PolicyDenied,
+            "operator_cease: this loop stopped. The model does not get another step.",
+        )
+        .with_denied_resource("dal.cease"));
+    }
     refresh_epochs(state, run);
     assert_turn_allowed(state, run)?;
 
@@ -515,6 +531,13 @@ mod tests {
         assert!(r.run_id.starts_with("dal_"));
         assert_eq!(r.phase, AgentPhase::Observe);
         assert_eq!(r.goal_digest.len(), 64);
+    }
+
+    #[test]
+    fn cease_stops_a_stamped_loop() {
+        assert!(!loop_must_stop(0, 1));
+        assert!(!loop_must_stop(2, 2));
+        assert!(loop_must_stop(1, 2));
     }
 
     #[test]

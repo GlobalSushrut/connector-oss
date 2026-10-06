@@ -1,6 +1,5 @@
 import { Nav } from '../components/Nav'
 import { Footer } from '../components/Footer'
-import { playgroundUrl } from '../config'
 import { useMeta } from '../hooks/useMeta'
 
 export function DevelopersPage() {
@@ -27,13 +26,18 @@ export function DevelopersPage() {
               Point the client at <code>/v1</code>. Ungranted destinations DROP.
             </p>
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.75rem', flexWrap: 'wrap' }}>
-              <a href={playgroundUrl} className="btn btn--primary">
-                Try 90 minutes
+              <a href="https://github.com/GlobalSushrut/connector-oss" className="btn btn--primary">
+                Clone and run ./up.sh
               </a>
-              <a href="/get-started" className="btn btn--ghost">
-                Self-host path
+              <a href="/#future" className="btn btn--ghost">
+                What is not proven
               </a>
             </div>
+            <p className="hero-sub" style={{ marginTop: '1.25rem' }}>
+              The first boot downloads the seven backends and the traffic-plane image.
+              Firecracker is the binary only. agentgateway forwarding is still unproven.
+              This is not a production-ready claim.
+            </p>
           </div>
         </section>
 
@@ -87,10 +91,10 @@ connectorctl doctor`}</pre>
             <p className="section-label">Go deeper</p>
             <ul className="devs-links">
               <li>
-                <a href="/about-os">About the OS</a> — substrate, institutions, world cage.
+                <a href="/about-os">What it is</a> — one admission, a receipt, and the limits.
               </li>
               <li>
-                <a href="/get-started">Get started</a> — playground, then a node you operate.
+                <a href="/get-started">Run it</a> — clone and <code>./up.sh</code>.
               </li>
               <li>
                 <a href="https://github.com/GlobalSushrut/connector-oss" target="_blank" rel="noopener noreferrer">

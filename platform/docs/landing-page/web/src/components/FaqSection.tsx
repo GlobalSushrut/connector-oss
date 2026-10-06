@@ -13,7 +13,7 @@ export function FaqSection() {
         <p className="section-label">FAQ</p>
         <h2 className="section__title">Straight answers.</h2>
         <p className="section__lead" style={{ maxWidth: '540px' }}>
-          Three institutions ready. Seven planned. Evidence, not a certificate.
+          What you get today, and what is still ahead.
         </p>
 
         {/* Category tabs */}
@@ -59,7 +59,7 @@ export function FaqSection() {
 
         <p className="faq-footer-note">
           More questions?{' '}
-          <a href="/#interest">Reach out through the pilot form</a> — we respond to every submission.
+          <a href="/#maintainer">Write the maintainer</a>. There is no application form.
         </p>
       </div>
     </section>

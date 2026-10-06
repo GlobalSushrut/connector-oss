@@ -19,6 +19,10 @@ pub struct NavigateBody {
     pub session_id: Option<String>,
     #[serde(default)]
     pub max_bytes: Option<usize>,
+    #[serde(default)]
+    pub goal_id: Option<String>,
+    #[serde(default)]
+    pub situation: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,8 +82,18 @@ pub async fn navigate(
     let url = body.url.clone();
     let sid = body.session_id.clone();
     let max = body.max_bytes;
+    let goal = body.goal_id.clone();
+    let situation = body.situation.clone();
     match tokio::task::spawn_blocking(move || {
-        browser_world::navigate(st.as_ref(), &pid, &url, sid.as_deref(), max)
+        browser_world::navigate(
+            st.as_ref(),
+            &pid,
+            &url,
+            sid.as_deref(),
+            max,
+            goal.as_deref(),
+            situation.as_deref(),
+        )
     })
     .await
     {
@@ -148,13 +162,19 @@ pub fn install_mcp_tools() {
                 "properties": {
                     "url": {"type": "string"},
                     "session_id": {"type": "string"},
-                    "max_bytes": {"type": "integer"}
+                    "max_bytes": {"type": "integer"},
+                    "goal_id": {"type": "string"},
+                    "situation": {"type": "array", "items": {"type": "number"}}
                 }
             }),
             Arc::new(|state: &SharedState, agent_pid: &str, args: Value| {
                 let url = args.get("url").and_then(|v| v.as_str()).unwrap_or("");
                 let sid = args.get("session_id").and_then(|v| v.as_str());
                 let max = args.get("max_bytes").and_then(|v| v.as_u64()).map(|n| n as usize);
+                let goal = args.get("goal_id").and_then(|v| v.as_str());
+                let situation: Option<Vec<f64>> = args.get("situation").and_then(|v| v.as_array()).map(|arr| {
+                    arr.iter().filter_map(|n| n.as_f64()).collect()
+                });
                 if let Err(e) = crate::kernel::action_binding::admit_tool_or_ask(
                     state,
                     agent_pid,
@@ -170,7 +190,15 @@ pub fn install_mcp_tools() {
                         is_error: Some(true),
                     };
                 }
-                match browser_world::navigate(state.as_ref(), agent_pid, url, sid, max) {
+                match browser_world::navigate(
+                    state.as_ref(),
+                    agent_pid,
+                    url,
+                    sid,
+                    max,
+                    goal,
+                    situation.as_deref(),
+                ) {
                     Ok(v) | Err(v) => connector_protocols::mcp_server::McpToolResult {
                         content: vec![connector_protocols::mcp_server::McpContent {
                             content_type: "text".into(),

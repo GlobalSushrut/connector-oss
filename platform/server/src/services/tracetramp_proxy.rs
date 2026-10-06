@@ -520,7 +520,7 @@ pub async fn tt_post_approve(
     if let Err((st, b)) = require_live_pending_hold(&state, &headers, &id).await {
         return json_err(st, b);
     }
-    match forward_admin(
+    let approved = match forward_admin(
         &state,
         &headers,
         reqwest::Method::POST,
@@ -531,8 +531,52 @@ pub async fn tt_post_approve(
     )
     .await
     {
-        Ok(v) => Json(v).into_response(),
-        Err((st, b)) => json_err(st, b),
+        Ok(v) => v,
+        Err((st, b)) => return json_err(st, b),
+    };
+    // Approve only flips the row. The held call stays blocked until the resume latch is armed.
+    let latch_path = format!("approvals/{id}/execute");
+    match forward_admin(
+        &state,
+        &headers,
+        reqwest::Method::POST,
+        &latch_path,
+        None,
+        Some(json!({})),
+        extract_tenant(&headers),
+    )
+    .await
+    {
+        Ok(latch) => Json(json!({
+            "ok": true,
+            "action": "approve",
+            "id": id,
+            "status": "approved",
+            "result_ready": latch.get("result_ready").cloned().unwrap_or(json!(true)),
+            "executed": false,
+            "resume_headers": {
+                "X-Approval-Resume": "approved",
+                "X-Approval-Id": id,
+            },
+            "tracetramp": approved,
+            "latch": latch,
+            "honesty": "TraceTramp hold approved and the resume latch is armed. This is not a PATE ask. Connector did not run the held request. The original caller retries with X-Approval-Resume: approved and X-Approval-Id.",
+        }))
+        .into_response(),
+        Err((st, b)) => (
+            st,
+            Json(json!({
+                "ok": false,
+                "action": "approve",
+                "id": id,
+                "status": "approved",
+                "result_ready": false,
+                "error": "tracetramp_latch_failed",
+                "execute": b,
+                "honesty": "The hold was marked approved, but the resume latch did not arm. A retry with X-Approval-Resume is refused until execute succeeds.",
+            })),
+        )
+            .into_response(),
     }
 }
 
@@ -558,7 +602,16 @@ pub async fn tt_post_reject(
     )
     .await
     {
-        Ok(v) => Json(v).into_response(),
+        Ok(v) => Json(json!({
+            "ok": true,
+            "action": "reject",
+            "id": id,
+            "status": "rejected",
+            "executed": false,
+            "tracetramp": v,
+            "honesty": "TraceTramp hold rejected. Nothing is resumed. This is not a PATE denial.",
+        }))
+        .into_response(),
         Err((st, b)) => json_err(st, b),
     }
 }

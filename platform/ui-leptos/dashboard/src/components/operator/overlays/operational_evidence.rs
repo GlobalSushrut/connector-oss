@@ -14,6 +14,20 @@ fn rows_of(body: &Value) -> Vec<Value> {
         .unwrap_or_default()
 }
 
+/// Addresses `./up.sh` uses on first boot. A changed CONNECTOR_OSS_WORK or port moves them.
+fn first_boot_address(id: &str) -> &'static str {
+    match id {
+        "iam" => "Keycloak https://127.0.0.1:18443/ · secrets in /tmp/connector-oss/keycloak.env",
+        "spire" => "socket /tmp/connector-oss/spire/agent.sock",
+        "openshell" => "gateway http://127.0.0.1:17671/healthz",
+        "opa" => "inside the OpenShell gateway",
+        "firecracker" => "/tmp/connector-oss/bin/firecracker · binary only, no microvm is started",
+        "otel" => "health http://127.0.0.1:13133 · OTLP 127.0.0.1:4317",
+        "cosign" => "/tmp/connector-oss/bin/cosign",
+        _ => "",
+    }
+}
+
 fn flag(body: &Value, key: &str) -> Option<bool> {
     body.get(key)
         .or_else(|| body.pointer(&format!("/data/{key}")))
@@ -26,8 +40,14 @@ pub fn OperationalEvidencePanel() -> impl IntoView {
     let (error, set_error) = signal(String::new());
     let (gateway, set_gateway) = signal(Value::Null);
     let (gateway_error, set_gateway_error) = signal(String::new());
+    let (catalog, set_catalog) = signal(Value::Null);
+    let (catalog_error, set_catalog_error) = signal(String::new());
     Effect::new(move |_| {
         spawn_local(async move {
+            match iia_api::runtime_backends().await {
+                Ok(value) => set_catalog.set(value),
+                Err(err) => set_catalog_error.set(format!("GET /runtime/backends — {err}")),
+            }
             match iia_api::deploy_verify().await {
                 Ok(value) => set_body.set(value),
                 Err(err) => set_error.set(format!("GET /runtime/deploy-verify — {err}")),
@@ -39,6 +59,47 @@ pub fn OperationalEvidencePanel() -> impl IntoView {
         });
     });
     view! {
+        <section class="mb-6 rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">"First boot"</p>
+            <h2 class="mt-1 text-lg font-semibold text-zinc-50">"Tools behind Connector"</h2>
+            <p class="mt-1 text-sm text-zinc-400">"./up.sh downloads, configures, and starts these. You do not need to touch them. Present means this node found the tool. Ready means it did the required operation, not that an effect went through it."</p>
+            <p class="mt-2 text-[11px] text-amber-200/80">{move || catalog_error.get()}</p>
+            <div class="mt-3 overflow-hidden rounded border border-zinc-800">
+                <table class="w-full text-left text-[11px]">
+                    <thead class="bg-zinc-900/70 text-zinc-500"><tr><th class="px-2 py-1">"Tool"</th><th>"Present"</th><th>"Ready"</th><th>"Manage at"</th></tr></thead>
+                    <tbody>
+                        {move || {
+                            let rows = rows_of(&catalog.get());
+                            if rows.is_empty() {
+                                view! { <tr><td colspan="4" class="px-2 py-3 text-zinc-500">"This node returned no tool rows."</td></tr> }.into_any()
+                            } else {
+                                rows.into_iter().map(|row| {
+                                    let id = row.get("id").and_then(|v| v.as_str()).unwrap_or("absent").to_string();
+                                    let present = row.get("present").and_then(|v| v.as_bool()).map(|v| v.to_string()).unwrap_or_else(|| "absent".into());
+                                    let ready = row.get("ready").and_then(|v| v.as_bool()).map(|v| v.to_string()).unwrap_or_else(|| "absent".into());
+                                    let detail = row.get("detail").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    let address = first_boot_address(&id);
+                                    view! {
+                                        <tr class="border-t border-zinc-800/80" title=detail>
+                                            <td class="px-2 py-1 text-zinc-100">{id}</td>
+                                            <td class="px-2 py-1 font-mono text-zinc-300">{present}</td>
+                                            <td class="px-2 py-1 font-mono text-zinc-300">{ready}</td>
+                                            <td class="px-2 py-1 font-mono text-zinc-400">{address}</td>
+                                        </tr>
+                                    }
+                                }).collect_view().into_any()
+                            }
+                        }}
+                        <tr class="border-t border-zinc-800/80">
+                            <td class="px-2 py-1 text-zinc-100">"agentgateway"</td>
+                            <td class="px-2 py-1 font-mono text-zinc-500" colspan="2">"see below"</td>
+                            <td class="px-2 py-1 font-mono text-zinc-400">"http://127.0.0.1:4000/ · forwarding is not proven"</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-2 text-[11px] text-zinc-500">"The full list, with ports and secret files, is /tmp/connector-oss/MANAGE.txt."</p>
+        </section>
         <section class="mb-6 rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
             <p class="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">"Operational evidence"</p>
             <h2 class="mt-1 text-lg font-semibold text-zinc-50">"Seven backends"</h2>

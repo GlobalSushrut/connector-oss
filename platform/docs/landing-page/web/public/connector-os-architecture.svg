@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="1220" viewBox="0 0 1680 1220" role="img" aria-labelledby="title desc">
+  <title id="title">Connector OS architecture</title>
+  <desc id="desc">One governed workspace for every agent. An agent is brought or assembled, described in seven governance dimensions, admitted once by PATE, enforced at runtime, observed, and recorded. Cease stops the next admission. Seven backends carry identity, enforcement, and evidence. agentgateway is a target and is not integrated.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#071422"/>
+      <stop offset="100%" stop-color="#050d16"/>
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#7fd7ea"/>
+    </marker>
+    <marker id="arrGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#e4b15a"/>
+    </marker>
+    <style>
+      .title { font: 700 42px "Segoe UI", Helvetica, Arial, sans-serif; fill: #f4fbff; letter-spacing: 1.5px; }
+      .sub { font: 400 18px "Segoe UI", Helvetica, Arial, sans-serif; fill: #d5e7f2; }
+      .outcome { font: 400 15px "Segoe UI", Helvetica, Arial, sans-serif; fill: #b7cddd; }
+      .h { font: 700 13px "Segoe UI", Helvetica, Arial, sans-serif; fill: #8fd4e6; letter-spacing: 1.4px; }
+      .cardt { font: 700 16px "Segoe UI", Helvetica, Arial, sans-serif; fill: #f4fbff; }
+      .body { font: 400 13px "Segoe UI", Helvetica, Arial, sans-serif; fill: #c5d7e4; }
+      .small { font: 400 12px "Segoe UI", Helvetica, Arial, sans-serif; fill: #9eb4c6; }
+      .gold { font: 700 15px "Segoe UI", Helvetica, Arial, sans-serif; fill: #f3d48a; }
+      .num { font: 700 13px "Segoe UI", Helvetica, Arial, sans-serif; fill: #071422; }
+      .foot { font: 400 12px "Segoe UI", Helvetica, Arial, sans-serif; fill: #7f96a8; }
+    </style>
+  </defs>
+  <rect width="1680" height="1220" fill="url(#bg)"/>
+
+  <text class="title" x="840" y="58" text-anchor="middle">CONNECTOR OS</text>
+  <text class="sub" x="840" y="88" text-anchor="middle">One governed workspace for every agent</text>
+  <text class="outcome" x="840" y="116" text-anchor="middle">Outcome: identity, purpose, and authority are set before an effect. One admission, then runtime enforcement, then a receipt. Cease can stop the next one.</text>
+
+  <!-- Two ways in -->
+  <rect x="250" y="142" width="480" height="58" rx="12" fill="#0d2436" stroke="#3ec6e0" stroke-width="1.5"/>
+  <text class="cardt" x="490" y="168" text-anchor="middle">Bring an existing agent</text>
+  <text class="small" x="490" y="188" text-anchor="middle">The agent already exists. Connector governs it.</text>
+
+  <rect x="950" y="142" width="480" height="58" rx="12" fill="#1a1408" stroke="#e4b15a" stroke-width="1.5"/>
+  <text class="gold" x="1190" y="168" text-anchor="middle">Assemble an agent here</text>
+  <text class="small" x="1190" y="188" text-anchor="middle">The agent is created inside the same workspace.</text>
+
+  <path d="M490 200 V228 H840 V248" fill="none" stroke="#7fd7ea" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M1190 200 V228 H840" fill="none" stroke="#e4b15a" stroke-width="1.6"/>
+
+  <!-- Workspace -->
+  <rect x="36" y="256" width="1328" height="430" rx="16" fill="#0b1b2c" stroke="#2f6f86" stroke-width="1.4"/>
+  <text class="h" x="56" y="286">REQUIRED AGENT WORKSPACE</text>
+  <text class="small" x="340" y="286">Seven governance dimensions. They are not the seven backends.</text>
+
+  <!-- row 1 -->
+  <g>
+    <rect x="56" y="306" width="410" height="132" rx="12" fill="#102536" stroke="#3a7f96"/>
+    <circle cx="84" cy="334" r="12" fill="#7fd7ea"/><text class="num" x="84" y="339" text-anchor="middle">1</text>
+    <text class="cardt" x="106" y="339">PRINCIPAL</text>
+    <text class="body" x="72" y="368">Canonical intelligence identity.</text>
+    <text class="small" x="72" y="392">Who this agent is. Missing identity stays</text>
+    <text class="small" x="72" y="410">absent. The projection does not invent one.</text>
+  </g>
+  <g>
+    <rect x="482" y="306" width="410" height="132" rx="12" fill="#102536" stroke="#3a7f96"/>
+    <circle cx="510" cy="334" r="12" fill="#7fd7ea"/><text class="num" x="510" y="339" text-anchor="middle">2</text>
+    <text class="cardt" x="532" y="339">PURPOSE</text>
+    <text class="body" x="498" y="368">Mission, goals, and non-goals.</text>
+    <text class="small" x="498" y="392">A blank or general-purpose sentence is</text>
+    <text class="small" x="498" y="410">not a purpose. It stays absent.</text>
+  </g>
+  <g>
+    <rect x="908" y="306" width="428" height="132" rx="12" fill="#102536" stroke="#3a7f96"/>
+    <circle cx="936" cy="334" r="12" fill="#7fd7ea"/><text class="num" x="936" y="339" text-anchor="middle">3</text>
+    <text class="cardt" x="958" y="339">PRESENCE</text>
+    <text class="body" x="924" y="368">Aliases, roles, and swarm bindings.</text>
+    <text class="small" x="924" y="392">Aliases resolve identity. A child keeps</text>
+    <text class="small" x="924" y="410">its own principal. Swarm membership</text>
+    <text class="small" x="924" y="428">does not grant authority.</text>
+  </g>
+
+  <!-- row 2 -->
+  <g>
+    <rect x="56" y="454" width="310" height="148" rx="12" fill="#102536" stroke="#3a7f96"/>
+    <circle cx="84" cy="482" r="12" fill="#7fd7ea"/><text class="num" x="84" y="487" text-anchor="middle">4</text>
+    <text class="cardt" x="106" y="487">KNOWLEDGE</text>
+    <text class="body" x="72" y="516">Sources, provenance, scope.</text>
+    <text class="small" x="72" y="540">A stored file is not model context.</text>
+    <text class="small" x="72" y="558">A knowledge document is not a</text>
+    <text class="small" x="72" y="576">directive and does not grant.</text>
+  </g>
+  <g>
+    <rect x="382" y="454" width="310" height="148" rx="12" fill="#102536" stroke="#3a7f96"/>
+    <circle cx="410" cy="482" r="12" fill="#7fd7ea"/><text class="num" x="410" y="487" text-anchor="middle">5</text>
+    <text class="cardt" x="432" y="487">DIRECTIVES</text>
+    <text class="body" x="398" y="516">Character, instructions, SOPs.</text>
+    <text class="small" x="398" y="540">Operator instructions can be stored.</text>
+    <text class="small" x="398" y="558">They do not admit an effect.</text>
+  </g>
+  <g>
+    <rect x="708" y="454" width="310" height="148" rx="12" fill="#102536" stroke="#3a7f96"/>
+    <circle cx="736" cy="482" r="12" fill="#7fd7ea"/><text class="num" x="736" y="487" text-anchor="middle">6</text>
+    <text class="cardt" x="758" y="487">AUTHORITY</text>
+    <text class="body" x="724" y="516">Contract, grants, budgets, HITL.</text>
+    <text class="small" x="724" y="540">What the agent may attempt.</text>
+    <text class="small" x="724" y="558">A grant is not the admission itself.</text>
+  </g>
+  <g>
+    <rect x="1034" y="454" width="302" height="148" rx="12" fill="#102536" stroke="#3a7f96"/>
+    <circle cx="1062" cy="482" r="12" fill="#7fd7ea"/><text class="num" x="1062" y="487" text-anchor="middle">7</text>
+    <text class="cardt" x="1084" y="487">SITUATION</text>
+    <text class="body" x="1050" y="516">MemPacket, state, generation.</text>
+    <text class="small" x="1050" y="540">Memory is a packet, not a trace.</text>
+    <text class="small" x="1050" y="558">Situation is not a second</text>
+    <text class="small" x="1050" y="576">admission authority.</text>
+  </g>
+  <text class="small" x="56" y="668">Aliases resolve identity. Children retain their own principals. Upload is not context. Knowledge is not a directive.</text>
+
+  <!-- Cease -->
+  <rect x="1384" y="256" width="260" height="430" rx="16" fill="#1a1408" stroke="#e4b15a" stroke-width="1.6"/>
+  <circle cx="1514" cy="340" r="36" fill="none" stroke="#e4b15a" stroke-width="2"/>
+  <rect x="1494" y="334" width="40" height="10" rx="2" fill="#e4b15a"/>
+  <text class="gold" x="1514" y="410" text-anchor="middle" font-size="22">CEASE</text>
+  <text class="body" x="1408" y="450">The operator fence.</text>
+  <text class="small" x="1408" y="482">Fence this generation.</text>
+  <text class="small" x="1408" y="504">Void the context.</text>
+  <text class="small" x="1408" y="526">Stop future admission.</text>
+  <text class="small" x="1408" y="566">Cease is recorded.</text>
+  <text class="small" x="1408" y="588">It is not refused.</text>
+  <text class="small" x="1408" y="628">A running task stops</text>
+  <text class="small" x="1408" y="650">even if a model is</text>
+  <text class="small" x="1408" y="672">still generating.</text>
+
+  <path d="M1364 470 H1384" fill="none" stroke="#e4b15a" stroke-width="1.5" marker-end="url(#arrGold)"/>
+
+  <!-- Consequence path -->
+  <text class="h" x="36" y="724">CONSEQUENCE PATH</text>
+  <text class="small" x="230" y="724">PATE is the only admission. Runtime may still deny after a permit.</text>
+
+  <rect x="36" y="744" width="210" height="64" rx="12" fill="#0d2436" stroke="#3ec6e0"/>
+  <text class="cardt" x="141" y="772" text-anchor="middle">Proposed effect</text>
+  <text class="small" x="141" y="792" text-anchor="middle">What the agent attempts</text>
+
+  <path d="M246 776 H292" fill="none" stroke="#7fd7ea" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <rect x="300" y="728" width="250" height="96" rx="12" fill="#1a1408" stroke="#e4b15a" stroke-width="1.6"/>
+  <text class="gold" x="425" y="762" text-anchor="middle">PATE ADMISSION</text>
+  <text class="small" x="425" y="784" text-anchor="middle">One decision for this effect</text>
+  <text class="small" x="425" y="804" text-anchor="middle">Proceed, or do not</text>
+
+  <rect x="300" y="840" width="250" height="52" rx="10" fill="none" stroke="#e4b15a" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text class="small" x="425" y="862" text-anchor="middle">Ask / Defer / Quarantine / Block</text>
+  <text class="small" x="425" y="880" text-anchor="middle">These do not proceed</text>
+  <path d="M425 824 V840" fill="none" stroke="#e4b15a" stroke-width="1.4" marker-end="url(#arrGold)"/>
+
+  <path d="M550 776 H612" fill="none" stroke="#7fd7ea" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text class="small" x="580" y="768" text-anchor="middle">Proceed</text>
+
+  <rect x="620" y="744" width="250" height="64" rx="12" fill="#0d2436" stroke="#3ec6e0"/>
+  <text class="cardt" x="745" y="772" text-anchor="middle">Runtime enforcement</text>
+  <text class="small" x="745" y="792" text-anchor="middle">May still deny</text>
+
+  <path d="M870 776 H932" fill="none" stroke="#7fd7ea" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <rect x="940" y="744" width="250" height="64" rx="12" fill="#0d2436" stroke="#3ec6e0"/>
+  <text class="cardt" x="1065" y="772" text-anchor="middle">External effect</text>
+  <text class="small" x="1065" y="792" text-anchor="middle">World, tool, or another agent</text>
+
+  <path d="M1190 776 H1248" fill="none" stroke="#7fd7ea" stroke-width="1.6"/>
+  <path d="M1248 776 V908 H1290" fill="none" stroke="#7fd7ea" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text class="small" x="1260" y="850">Observed</text>
+  <text class="small" x="1260" y="866">consequence</text>
+
+  <path d="M1065 808 V908" fill="none" stroke="#7fd7ea" stroke-width="1.4" stroke-dasharray="4 4"/>
+  <text class="small" x="1078" y="868">Memory update</text>
+
+  <rect x="36" y="908" width="1254" height="52" rx="12" fill="#0d2436" stroke="#3ec6e0"/>
+  <text class="cardt" x="663" y="930" text-anchor="middle">Receipt, trace, memory consequence, reconstruction</text>
+  <text class="small" x="663" y="948" text-anchor="middle">The record of what was admitted, what ran, and what the memory became. A trace is not a MemPacket.</text>
+
+  <!-- Backends -->
+  <text class="h" x="36" y="1000">7 BACKEND PILLARS + 1 TRAFFIC PLANE</text>
+  <text class="small" x="420" y="1000">These carry the workspace. They are not a second government.</text>
+
+  <rect x="36" y="1018" width="380" height="132" rx="12" fill="#0b1b2c" stroke="#2f6f86"/>
+  <text class="cardt" x="56" y="1048">Identity</text>
+  <text class="body" x="56" y="1076">1  Keycloak</text>
+  <text class="body" x="56" y="1098">2  SPIFFE / SPIRE</text>
+  <text class="small" x="56" y="1126">Who the agent and the node are.</text>
+
+  <rect x="432" y="1018" width="420" height="132" rx="12" fill="#0b1b2c" stroke="#2f6f86"/>
+  <text class="cardt" x="452" y="1048">Enforcement</text>
+  <text class="body" x="452" y="1076">3  NVIDIA OpenShell</text>
+  <text class="body" x="452" y="1098">4  OPA / Rego</text>
+  <text class="body" x="680" y="1098">5  Firecracker</text>
+  <text class="small" x="452" y="1126">Policy and isolation around the effect.</text>
+
+  <rect x="868" y="1018" width="340" height="132" rx="12" fill="#0b1b2c" stroke="#2f6f86"/>
+  <text class="cardt" x="888" y="1048">Evidence</text>
+  <text class="body" x="888" y="1076">6  OpenTelemetry</text>
+  <text class="body" x="888" y="1098">7  cosign</text>
+  <text class="small" x="888" y="1126">Traces and signatures of what ran.</text>
+
+  <rect x="1224" y="1018" width="420" height="132" rx="12" fill="#120f08" stroke="#e4b15a" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text class="gold" x="1244" y="1048">+1 agentgateway - TARGET</text>
+  <text class="body" x="1244" y="1078">LLM, MCP, A2A, HTTP, gRPC</text>
+  <text class="small" x="1244" y="1106">The traffic plane the effect should cross.</text>
+  <text class="small" x="1244" y="1126">Not installed. Forwarding stays denied.</text>
+
+  <text class="foot" x="840" y="1184" text-anchor="middle">Architecture proposal. Backend integrations are partial. agentgateway is not integrated. This diagram is not a production-ready claim.</text>
+</svg>

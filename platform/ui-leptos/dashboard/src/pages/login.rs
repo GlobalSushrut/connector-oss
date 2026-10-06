@@ -2,8 +2,29 @@ use gloo_storage::{LocalStorage, Storage};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use leptos_router::hooks::*;
-use crate::auth::{dev_bypass, login_with_api_key, AuthState};
+use crate::auth::{accept_sso_token, dev_bypass, login_with_api_key, AuthState};
 use crate::routing::post_auth;
+
+/// Reads `#sso_token=` / `#sso_error=` once and removes it from the address bar and history.
+fn take_sso_fragment() -> (Option<String>, Option<String>) {
+    let Some(w) = web_sys::window() else { return (None, None) };
+    let hash = w.location().hash().unwrap_or_default();
+    let hash = hash.trim_start_matches('#');
+    if hash.is_empty() {
+        return (None, None);
+    }
+    let Ok(params) = web_sys::UrlSearchParams::new_with_str(hash) else { return (None, None) };
+    let token = params.get("sso_token");
+    let error = params.get("sso_error");
+    if token.is_some() || error.is_some() {
+        if let Ok(history) = w.history() {
+            let path = w.location().pathname().unwrap_or_else(|_| "/login".into());
+            let search = w.location().search().unwrap_or_default();
+            let _ = history.replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&format!("{path}{search}")));
+        }
+    }
+    (token, error)
+}
 
 fn page_is_loopback() -> bool {
     web_sys::window()
@@ -49,6 +70,44 @@ pub fn Login(set_auth: WriteSignal<AuthState>) -> impl IntoView {
                 _ => "/run".into(),
             }
         });
+
+    let (sso_login_path, set_sso_login_path) = signal(None::<String>);
+    spawn_local(async move {
+        if let Ok(body) = crate::api::get_value("/auth/sso").await {
+            let path = body
+                .get("providers")
+                .and_then(|v| v.as_array())
+                .and_then(|list| {
+                    list.iter().find(|p| {
+                        p.get("id").and_then(|v| v.as_str()) == Some("keycloak")
+                            && p.get("configured").and_then(|v| v.as_bool()) == Some(true)
+                    })
+                })
+                .and_then(|p| p.get("login_path").and_then(|v| v.as_str()))
+                .filter(|p| p.starts_with("/api/"))
+                .map(String::from);
+            set_sso_login_path.set(path);
+        }
+    });
+
+    let (sso_token, sso_error) = take_sso_fragment();
+    if let Some(code) = sso_error {
+        set_error.set(format!("Keycloak sign-in was refused: {code}"));
+    }
+    if let Some(token) = sso_token {
+        let nav = nav1.clone();
+        let route = post_route.clone();
+        set_loading.set(true);
+        spawn_local(async move {
+            match accept_sso_token(set_auth, token).await {
+                Ok(()) => nav(&route, Default::default()),
+                Err(e) => {
+                    set_error.set(e);
+                    set_loading.set(false);
+                }
+            }
+        });
+    }
 
     // Auto-submit when arriving from /trial with a pre-filled key.
     if has_prefill {
@@ -151,6 +210,18 @@ pub fn Login(set_auth: WriteSignal<AuthState>) -> impl IntoView {
                     }.into_any()
                 } else {
                     ().into_any()
+                }}
+
+                {move || match sso_login_path.get() {
+                    Some(path) => view! {
+                        <div class="mb-5 space-y-2">
+                            <a href=path class="btn-secondary block w-full text-center">"Sign in with Keycloak"</a>
+                            <p class="text-center text-[11px] text-zinc-500">
+                                "Keycloak signs you in. Connector checks its ID token against Keycloak's keys before opening a session."
+                            </p>
+                        </div>
+                    }.into_any(),
+                    None => ().into_any(),
                 }}
 
                 {

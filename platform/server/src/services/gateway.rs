@@ -895,7 +895,10 @@ async fn playground_talk_fast(
         );
         let chat_result = tokio::time::timeout(
             talk_llm_wall_timeout(),
-            llm_router.chat_with_overrides(engine_msgs, overrides),
+            crate::kernel::aios::with_interrupt(
+                &agent_pid,
+                llm_router.chat_with_overrides(engine_msgs, overrides),
+            ),
         )
         .await;
         drop(_inflight);
@@ -912,7 +915,18 @@ async fn playground_talk_fast(
                     "Retry Talk; if it persists, try another provider or check vendor egress from this host.",
                 ));
             }
-            Ok(Ok(resp)) => (
+            Ok((_, crate::kernel::aios::CompleteOutcome::Interrupted)) => {
+                return Err(ConnectorError::new(
+                    DenialReason::PolicyDenied,
+                    "operator_cease: the model call was dropped. Its output is not used.",
+                )
+                .with_denied_resource("llm.interrupt"));
+            }
+            Ok((_, crate::kernel::aios::CompleteOutcome::Denied(e))) => {
+                return Err(ConnectorError::new(DenialReason::RateLimitExceeded, e)
+                    .with_denied_resource("llm.inflight"));
+            }
+            Ok((_, crate::kernel::aios::CompleteOutcome::Done(Ok(resp)))) => (
                 resp.text,
                 resp.input_tokens,
                 resp.output_tokens,
@@ -920,7 +934,7 @@ async fn playground_talk_fast(
                 Some(resp.provider),
                 resp.reasoning_content,
             ),
-            Ok(Err(e)) => {
+            Ok((_, crate::kernel::aios::CompleteOutcome::Done(Err(e)))) => {
                 return Err(ConnectorError::internal(format!(
                     "LLM router error: {}. Check provider config and API key.",
                     e

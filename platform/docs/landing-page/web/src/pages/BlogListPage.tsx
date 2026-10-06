@@ -69,9 +69,9 @@ export function BlogListPage() {
               The Signal
             </h1>
             <p className="hero-subtitle">
-              Essays on the problem space — incidents, standards, and why an OS
-              under agents matters. They are analysis, not a product certification.
-              Three institutions are ready today. Seven are planned.
+              These notes are not the product. They are not linked from the
+              site menu. What ships today is the workspace, one admission,
+              Cease, and DevGuard, TraceTramp, and WitnessCtl.
             </p>
             <p className="hero-sub" style={{ marginTop: '1rem' }}>
               If an essay names SOC 2, HIPAA, or a plugin that is not DevGuard,

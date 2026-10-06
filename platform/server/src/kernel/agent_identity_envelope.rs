@@ -519,6 +519,12 @@ pub fn agent_may_access_namespace(
     if talk_gateway_ns_allowed(&api_pid, agent_pid, target_ns) {
         return true;
     }
+    // `m/{kernel_pid}` is this agent's kernel memory, not another agent's /m/.
+    if let Some(kpid) = kernel_pid_of(state, &api_pid, agent_pid) {
+        if namespace_is_own_kernel(target_ns, &kpid) {
+            return true;
+        }
+    }
     let setup = match load_setup(state, &api_pid) {
         Some(s) => s,
         None => {
@@ -555,6 +561,40 @@ pub fn agent_may_access_namespace(
         }
     }
     false
+}
+
+fn kernel_pid_of(state: &PlatformState, api_pid: &str, agent_pid: &str) -> Option<String> {
+    if agent_pid.trim().starts_with("pid:") {
+        return Some(agent_pid.trim().to_string());
+    }
+    let es = state.engine_store.lock().ok()?;
+    for key in [api_pid, agent_pid] {
+        let key = key.trim();
+        if key.is_empty() {
+            continue;
+        }
+        if let Some(kpid) = es
+            .folder_get("agent_meta", key)
+            .ok()
+            .flatten()
+            .and_then(|m| m.get("kernel_pid").and_then(|v| v.as_str()).map(str::to_string))
+            .filter(|s| !s.trim().is_empty())
+        {
+            return Some(kpid);
+        }
+    }
+    None
+}
+
+/// True when `target_ns` is exactly this kernel agent's private memory, or a child of it.
+fn namespace_is_own_kernel(target_ns: &str, kernel_pid: &str) -> bool {
+    let k = kernel_pid.trim();
+    if k.is_empty() {
+        return false;
+    }
+    let t = normalize_ns(target_ns);
+    let own = format!("/m/{k}");
+    t == own || t.starts_with(&format!("{own}/"))
 }
 
 fn talk_gateway_ns_allowed(api_pid: &str, kernel_pid: &str, target_ns: &str) -> bool {
@@ -928,6 +968,15 @@ pub fn agent_self_access(headers: &axum::http::HeaderMap, api_pid: &str) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn own_kernel_namespace_is_not_cross_agent() {
+        assert!(namespace_is_own_kernel("m/pid:000001", "pid:000001"));
+        assert!(namespace_is_own_kernel("/m/pid:000001", "pid:000001"));
+        assert!(namespace_is_own_kernel("m/pid:000001/notes", "pid:000001"));
+        assert!(!namespace_is_own_kernel("m/connector-guide", "pid:000001"));
+        assert!(!namespace_is_own_kernel("m/pid:000002", "pid:000001"));
+    }
 
     #[test]
     fn namespace_scope_includes_private_memory() {

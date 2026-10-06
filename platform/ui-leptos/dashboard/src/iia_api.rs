@@ -529,6 +529,10 @@ pub async fn agent_preflight(agent_pid: &str) -> Result<Value, ApiError> {
     api::get_value(&format!("/agents/{agent_pid}/preflight")).await
 }
 
+pub async fn runtime_backends() -> Result<Value, ApiError> {
+    api::get_value("/runtime/backends").await
+}
+
 pub async fn agentgateway_status() -> Result<Value, ApiError> {
     api::get_value("/runtime/agentgateway").await
 }

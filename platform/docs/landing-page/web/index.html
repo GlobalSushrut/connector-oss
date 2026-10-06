@@ -7,8 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary SEO -->
-    <title>Connector · Isolate. Govern. Stop. Prove.</title>
-    <meta name="description" content="Self-hosted operating substrate for intelligence: identity, admission, isolation, memory, audit. Three institutions ready in 90 minutes. Seven more workflows on the map. Evidence, not a certificate." />
+    <title>Connector · Control the action. Keep the receipt.</title>
+    <meta name="description" content="Connector admits or refuses each agent action, lets an operator stop the next one, and keeps a receipt. Run it with ./up.sh. Not a production claim." />
     <meta name="keywords" content="AI agent governance, agentic AI security, AI compliance, AI audit trail, AI policy enforcement, AI agent infrastructure, connector, connectorOS, AGOS" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href="https://cnktros.com/" />
@@ -16,8 +16,8 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Connector" />
-    <meta property="og:title" content="Connector · Isolate. Govern. Stop. Prove." />
-    <meta property="og:description" content="Self-hosted OS for agents, models, tools, and workflows. Three institutions ready in 90 minutes. Seven more planned. Evidence, not a SOC 2 certificate." />
+    <meta property="og:title" content="Connector · Control the action. Keep the receipt." />
+    <meta property="og:description" content="One admission per action. An operator can stop the next one. A receipt a reviewer can inspect. Not a production claim." />
     <meta property="og:url" content="https://cnktros.com/" />
     <meta property="og:image" content="https://cnktros.com/img/hero-og.png" />
     <meta property="og:image:width" content="1376" />
@@ -26,8 +26,8 @@
 
     <!-- Twitter / X Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Connector · Isolate. Govern. Stop. Prove." />
-    <meta name="twitter:description" content="Self-hosted OS for intelligence. Three institutions ready in 90 minutes. Seven more planned." />
+    <meta name="twitter:title" content="Connector · Control the action. Keep the receipt." />
+    <meta name="twitter:description" content="One admission per action. An operator can stop the next one. A receipt a reviewer can inspect." />
     <meta name="twitter:image" content="https://cnktros.com/img/hero-og.png" />
 
     <!-- JSON-LD Structured Data -->
@@ -37,15 +37,15 @@
       "@type": "SoftwareApplication",
       "name": "Connector",
       "alternateName": "ConnectorOS",
-      "description": "Self-hosted operating substrate for intelligence. Isolate, govern, stop, prove. Three institutions ready in 90 minutes.",
+      "description": "Open-source control plane for agents that take real actions. One admission per action, operator stop, and a receipt. Not a production claim.",
       "url": "https://cnktros.com",
-      "applicationCategory": "SecurityApplication",
-      "operatingSystem": "Linux, Docker, Kubernetes",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Linux",
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD",
-        "description": "90-minute playground — your email, your private node, one Demo agent and three institutions. Paid pilots by application."
+        "description": "Source is public. Run ./up.sh on Linux. Not a production claim."
       },
       "publisher": {
         "@type": "Organization",
@@ -68,42 +68,26 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "What is Connector?",
+          "name": "What do I get?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Connector is a self-hosted operating substrate for intelligence: identity, admission, isolation, memory, and audit. Agents, models, tools, and workflows run on it. Isolate, govern, stop, prove. Three institutions are ready to try in 90 minutes. Seven more workflows are the plan."
+            "text": "A workspace that admits or refuses each action, an operator stop that does not wait for the model, and a receipt a reviewer can inspect. Run it with ./up.sh and open http://127.0.0.1:9091/."
           }
         },
         {
           "@type": "Question",
-          "name": "What is AI agent governance?",
+          "name": "Is this production-ready?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "AI agent governance is the enforcement of policies, access controls, and audit trails on agents that take actions. On Connector that means pre-execution policy checks, tool allowlists, budget posture, human-in-the-loop where required, and HMAC-chained receipts a reviewer can inspect — not a sold certification."
+            "text": "No. The site does not claim production readiness, security, correctness, safety, or compliance."
           }
         },
         {
           "@type": "Question",
-          "name": "How does Connector handle compliance for AI agents?",
+          "name": "What is next?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Connector produces hash-chained receipts for admitted agent actions. A reviewer can inspect the chain. Framework mapping for SOC 2, HIPAA, and similar is a design-partner path — we do not sell a certification."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Is Connector self-hosted?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes. Connector ships as a self-hosted connector-platform binary on your infrastructure — Docker, Kubernetes, or bare metal. Memory, grants, and the journal stay on the node. Calls to an external LLM vendor still leave the host unless you use a local model."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What does Connector do about agent security threats?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Connector inspects content (including injection and PII scoring) and admits or refuses effects before they run. Ungranted world destinations fail closed when the cage is on. It does not claim those threats are impossible, and it does not undo effects that already happened."
+            "text": "Prove a real request through agentgateway, run a Firecracker microVM rather than only the binary, and show that an admitted effect passed through the backend that owns that job. A production claim waits until those are true."
           }
         }
       ]

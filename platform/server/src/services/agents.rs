@@ -663,7 +663,15 @@ pub fn ensure_talk_identity(state: &SharedState, api_pid: &str) {
         if crate::services::playground::is_playground_mode() {
             let _ = crate::kernel::agent_identity_envelope::force_activate_playground(state.as_ref(), api_pid);
         } else if !crate::kernel::agent_identity_envelope::setup_gate_enabled() {
-            let _ = crate::kernel::agent_identity_envelope::activate_agent(state.as_ref(), api_pid);
+            let already_active = crate::kernel::agent_identity_envelope::load_activation(
+                state.as_ref(),
+                api_pid,
+            )
+            .map(|a| matches!(a.state, connector_trust::ActivationStateV2::Active))
+            .unwrap_or(false);
+            if !already_active {
+                let _ = crate::kernel::agent_identity_envelope::activate_agent(state.as_ref(), api_pid);
+            }
         }
         return;
     }
@@ -1015,6 +1023,118 @@ pub fn ensure_playground_tool_lane(state: &SharedState, api_pid: &str) {
 }
 
 /// Mint Talk lane prerequisites for hosted playground (address DAC + identity).
+/// The agent's own model lane (`llm:{namespace}`). Not a world grant.
+/// Address RULES and HITL here cover talk only. Tools and other addresses stay ungated until minted.
+pub fn ensure_self_talk_lane(state: &SharedState, api_pid: &str, namespace: &str) {
+    let api_pid = api_pid.trim();
+    let namespace = namespace.trim();
+    if api_pid.is_empty() || namespace.is_empty() {
+        return;
+    }
+    ensure_talk_identity(state, api_pid);
+    let address = format!("llm:{namespace}");
+    if crate::kernel::address_contracts::load_rules(state.as_ref(), &address).is_none() {
+        let rules = crate::kernel::address_contracts::AddressRulesContractV1 {
+            schema: crate::kernel::address_contracts::RULES_SCHEMA.into(),
+            address: address.clone(),
+            default_effect: "allow".into(),
+            tools: vec![],
+            allowed_tools: vec!["llm.chat".into()],
+            denied_tools: vec![],
+            contract_version: 1,
+        };
+        let _ = crate::kernel::address_contracts::save_rules(state.as_ref(), &rules);
+    }
+    if crate::kernel::address_contracts::load_hitl(state.as_ref(), &address).is_none() {
+        let hitl = crate::kernel::address_contracts::AddressHitlContractV1 {
+            schema: crate::kernel::address_contracts::HITL_SCHEMA.into(),
+            address: address.clone(),
+            default_policy: "none".into(),
+            tools: vec![],
+            contract_version: 1,
+        };
+        let _ = crate::kernel::address_contracts::save_hitl(state.as_ref(), &hitl);
+    }
+    {
+        let graph_key = crate::substrate::identity_stack::graph_key(&address);
+        if let Ok(mut es) = state.engine_store.lock() {
+            let existing = es
+                .folder_get(
+                    crate::substrate::identity_stack::ADDRESS_GRAPH_FOLDER,
+                    &graph_key,
+                )
+                .ok()
+                .flatten();
+            if existing.is_none() {
+                let doc = serde_json::json!({
+                    "nodes": [
+                        {"node_id": address, "kind": "llm_address"},
+                        {"node_id": api_pid, "kind": "agent"}
+                    ],
+                    "edges": [
+                        {"from_node_id": api_pid, "to_node_id": address, "rel": "talks_as"}
+                    ]
+                });
+                let _ = es.folder_put(
+                    crate::substrate::identity_stack::ADDRESS_GRAPH_FOLDER,
+                    &graph_key,
+                    &doc,
+                );
+            }
+            if es
+                .folder_get(crate::kernel::intelligence_spec::SPEC_FOLDER, api_pid)
+                .ok()
+                .flatten()
+                .is_none()
+            {
+                let meta = es.folder_get("agent_meta", api_pid).ok().flatten();
+                let purpose = meta
+                    .as_ref()
+                    .and_then(|m| {
+                        m.get("purpose")
+                            .or_else(|| m.get("instructions"))
+                            .and_then(|x| x.as_str())
+                            .map(str::to_string)
+                    })
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or_else(|| "Answer from this agent's knowledge. Do not touch an address that was not granted.".into());
+                let name = meta
+                    .as_ref()
+                    .and_then(|m| m.get("name").and_then(|x| x.as_str()).map(str::to_string))
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or_else(|| "Agent".into());
+                let _ = es.folder_put(
+                    crate::kernel::intelligence_spec::SPEC_FOLDER,
+                    api_pid,
+                    &serde_json::json!({
+                        "apiVersion": "connector.ai/v1",
+                        "kind": "Intelligence",
+                        "metadata": { "name": name, "agent_pid": api_pid },
+                        "spec": {
+                            "class": "app",
+                            "purpose": purpose,
+                            "harden": false
+                        }
+                    }),
+                );
+            }
+        }
+    }
+    if let Ok(mut es) = state.engine_store.lock() {
+        let _ = es.folder_put(
+            crate::substrate::identity_stack::LAST_MEMORY_FOLDER,
+            api_pid,
+            &serde_json::json!({
+                "at_ms": chrono::Utc::now().timestamp_millis(),
+                "cid": format!("talk-lane:{api_pid}"),
+                "namespace": namespace,
+                "honesty": "Talk-lane memory marker. A MemPacket is also written when the kernel accepts it.",
+            }),
+        );
+    }
+    seed_playground_last_memory(state, api_pid, namespace);
+}
+
 pub fn ensure_playground_talk_lane(state: &SharedState, api_pid: &str) {
     if !crate::services::playground::is_playground_mode() || api_pid.trim().is_empty() {
         return;
@@ -1125,7 +1245,7 @@ pub fn ensure_playground_talk_lane(state: &SharedState, api_pid: &str) {
 
 /// Mint Admit lane pillars (`tool:workbench.admit`) so Workbench Admit matches Talk readiness.
 pub fn ensure_playground_admit_lane(state: &SharedState, api_pid: &str) {
-    if !crate::services::playground::is_playground_mode() || api_pid.trim().is_empty() {
+    if api_pid.trim().is_empty() {
         return;
     }
     let address = "tool:workbench.admit".to_string();
@@ -1955,12 +2075,16 @@ pub async fn register_agent(
     state.refresh_health_snapshot();
     open_proceed.finish_observed(true);
 
+    let keycloak_account =
+        crate::services::keycloak_agents::provision(&state, &api_pid, &req.name).await;
+
     Json(serde_json::json!({
         "pid": api_pid,
         "task_id": admitted.task_id,
         "executed": true,
         "admits": false,
         "kernel_pid": kernel_pid,
+        "keycloak_account": keycloak_account,
         "name": req.name,
         "namespace": namespace,
         "role": role_label,
@@ -2665,6 +2789,9 @@ pub async fn terminate_agent(
 
     state.refresh_health_snapshot();
     state.cells.remove(&pid);
+    if terminated {
+        crate::services::keycloak_agents::remove(&state, &pid).await;
+    }
     open_proceed.finish_observed(terminated);
 
     Json(serde_json::json!({
@@ -3194,23 +3321,23 @@ pub async fn operator_stop(
         Err(v) => return Json(v),
     };
     let (_kernel_pid, pid) = resolve_kernel_pid(&state, &pid);
-    let admitted = match crate::substrate::pate::require_proceed(
-        &state,
-        &pid,
-        "lifecycle",
-        "operator_stop",
-        &serde_json::json!({"pid": pid.as_str()}),
-    ) {
-        Ok(atu) => atu,
-        Err(body) => return Json(body),
-    };
-    let mut open_proceed = crate::substrate::pate::OpenProceed::arm(&state, &admitted);
+    let (admitted, pate) = crate::substrate::pate::admit_operator_stop(&state, &pid, "operator_stop");
+    let task_id = admitted.as_ref().map(|a| a.task_id.clone());
+    let mut open_proceed = admitted
+        .as_ref()
+        .map(|a| crate::substrate::pate::OpenProceed::arm(&state, a));
     let _ = crate::kernel::aios::interrupt_generation(&pid, None);
     let dim = crate::substrate::dim::persist::load(state.as_ref(), &pid);
     let view = dim.operator_view();
     // Stop the MicroCell before the kernel syscall so a stuck terminate
     // cannot skip the destroy stage of the lifecycle evidence.
     let cvr = crate::substrate::cvr::apply_stop(&state, &pid, &user_id);
+    let cease = crate::substrate::spend_cease::kernel_cease(
+        &state,
+        &pid,
+        connector_trust::CeaseReason::UserStop,
+    )
+    .ok();
     // Soft stop first; do not dump messages.
     let stopped = crate::substrate::agent_lifecycle_gate::dispatch_lifecycle(
         &state,
@@ -3225,15 +3352,19 @@ pub async fn operator_stop(
         "operator_stop",
     )
     .is_ok();
-    open_proceed.finish_observed(stopped);
+    if let Some(open) = open_proceed.as_mut() {
+        open.finish_observed(stopped);
+    }
     Json(serde_json::json!({
         "ok": stopped,
         "schema": "connector.operator_stop.v1",
         "pid": pid,
         "stopped": stopped,
-        "task_id": admitted.task_id,
+        "task_id": task_id,
         "executed": stopped,
         "admits": false,
+        "pate": pate,
+        "spend_cease": cease,
         "regime": view.get("regime"),
         "homeodynamic_potential": view.get("homeodynamic_potential"),
         "degraded": view.get("degraded"),
@@ -4040,17 +4171,11 @@ pub async fn pause_agent(
         }
     }
 
-    let admitted = match crate::substrate::pate::require_proceed(
-        &state,
-        &pid,
-        "lifecycle",
-        "pause",
-        &serde_json::json!({"pid": pid}),
-    ) {
-        Ok(atu) => atu,
-        Err(body) => return Json(body),
-    };
-    let mut open_proceed = crate::substrate::pate::OpenProceed::arm(&state, &admitted);
+    let (admitted, pate) = crate::substrate::pate::admit_operator_stop(&state, &pid, "pause");
+    let task_id = admitted.as_ref().map(|a| a.task_id.clone());
+    let mut open_proceed = admitted
+        .as_ref()
+        .map(|a| crate::substrate::pate::OpenProceed::arm(&state, a));
     let actor = crate::substrate::agent_lifecycle_gate::LifecycleActor::operator(
         &user_id,
         role,
@@ -4075,14 +4200,17 @@ pub async fn pause_agent(
                 connector_trust::CeaseReason::UserStop,
             )
             .ok();
-            open_proceed.finish_observed(true);
+            if let Some(open) = open_proceed.as_mut() {
+                open.finish_observed(true);
+            }
             Json(serde_json::json!({
                 "pid": pid,
-                "task_id": admitted.task_id,
+                "task_id": task_id,
                 "executed": true,
                 "admits": false,
                 "paused": true,
                 "paused_by": user_id,
+                "pate": pate,
                 "cvr_lifecycle": cvr,
                 "spend_cease": cease,
             }))
@@ -4091,11 +4219,14 @@ pub async fn pause_agent(
             let mut body = e.to_json();
             if let Some(obj) = body.as_object_mut() {
                 obj.insert("cvr_lifecycle".into(), cvr);
-                obj.insert("task_id".into(), serde_json::json!(admitted.task_id));
+                obj.insert("task_id".into(), serde_json::json!(task_id));
                 obj.insert("executed".into(), serde_json::json!(false));
                 obj.insert("admits".into(), serde_json::json!(false));
+                obj.insert("pate".into(), pate);
             }
-            open_proceed.finish_observed(false);
+            if let Some(open) = open_proceed.as_mut() {
+                open.finish_observed(false);
+            }
             Json(body)
         }
     }
@@ -4124,41 +4255,40 @@ pub async fn cease_agent(
         Err(v) => return Json(v),
     };
     let (_kernel_pid, pid) = resolve_kernel_pid(&state, &pid);
-    let admitted = match crate::substrate::pate::require_proceed(
-        &state,
-        &pid,
-        "lifecycle",
-        "cease",
-        &serde_json::json!({"pid": pid}),
-    ) {
-        Ok(atu) => atu,
-        Err(body) => return Json(body),
-    };
-    let mut open_proceed = crate::substrate::pate::OpenProceed::arm(&state, &admitted);
+    let (admitted, pate) = crate::substrate::pate::admit_operator_stop(&state, &pid, "cease");
+    let task_id = admitted.as_ref().map(|a| a.task_id.clone());
+    let mut open_proceed = admitted
+        .as_ref()
+        .map(|a| crate::substrate::pate::OpenProceed::arm(&state, a));
     match crate::substrate::spend_cease::kernel_cease(
         &state,
         &pid,
         connector_trust::CeaseReason::UserStop,
     ) {
         Ok(receipt) => {
-            open_proceed.finish_observed(true);
+            if let Some(open) = open_proceed.as_mut() {
+                open.finish_observed(true);
+            }
             Json(serde_json::json!({
                 "ok": true,
-                "task_id": admitted.task_id,
+                "task_id": task_id,
                 "executed": true,
                 "admits": false,
                 "pid": pid,
                 "ceased_by": user_id,
                 "role": role,
+                "pate": pate,
                 "spend_cease": receipt,
                 "honesty": "model_desire_irrelevant_admit_path_dead",
             }))
         }
         Err(e) => {
-            open_proceed.finish_observed(false);
+            if let Some(open) = open_proceed.as_mut() {
+                open.finish_observed(false);
+            }
             Json(serde_json::json!({
                 "ok": false,
-                "task_id": admitted.task_id,
+                "task_id": task_id,
                 "executed": false,
                 "admits": false,
                 "error": e,

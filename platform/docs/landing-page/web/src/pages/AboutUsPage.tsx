@@ -307,26 +307,16 @@ export function AboutUsPage() {
         <section className="section section--bordered">
           <div className="section__inner" style={{ maxWidth: '760px' }}>
             <p className="section-label">Where we are</p>
-            <h2 className="section__title">Three ready. Seven planned. Honest about it.</h2>
+            <h2 className="section__title">What we provide today.</h2>
             <div className="au-status-grid">
               <div className="au-status-card au-status-card--live">
-                <p className="au-status-card__label">Ready — try in 90 minutes</p>
+                <p className="au-status-card__label">Ships now</p>
                 <ul className="au-status-list">
-                  <li>DevGuard — coding-agent institution (on the OS, not the OS)</li>
-                  <li>TraceTramp — who did what</li>
-                  <li>WitnessCtl — hash-chained receipts</li>
-                  <li>Self-hosted node — your infrastructure</li>
-                  <li>90-minute playground — your email, your node</li>
-                </ul>
-              </div>
-              <div className="au-status-card au-status-card--evolving">
-                <p className="au-status-card__label">Planned</p>
-                <ul className="au-status-list">
-                  <li>Conductor, AgentLoop, LedgerLens</li>
-                  <li>AgentPassport, Relay, Engram</li>
-                  <li>Support / CX automation</li>
-                  <li>Regulated custom (healthcare, legal, gov, finance)</li>
-                  <li>SOC 2 / HIPAA / FedRAMP as a sold SKU — not today</li>
+                  <li>A workspace for who the agent is and what it may cause</li>
+                  <li>One admission for each effect, then a receipt</li>
+                  <li>Cease — an operator can stop the next action</li>
+                  <li>DevGuard, TraceTramp, and WitnessCtl</li>
+                  <li>A self-hosted node, or a 90-minute playground</li>
                 </ul>
               </div>
             </div>

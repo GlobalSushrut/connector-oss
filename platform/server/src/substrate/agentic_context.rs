@@ -204,7 +204,10 @@ pub fn require_or_hitl(
 ) -> Result<AgenticContext, ConnectorError> {
     let ctx = build_for_shared(state, agent_pid);
     if ctx.missing.is_empty() || !agentic_context_required() {
-        // Bind character/contract hashes into a generation record (Pillar 1).
+        // Load the contract before taking the store lock. load_contract locks
+        // the same mutex, and a second lock on this thread freezes the node.
+        let contract_hash = crate::kernel::agent_principal::load_contract(state.as_ref(), agent_pid)
+            .map(|c| c.contract_digest_sha256);
         if let Ok(mut es) = state.engine_store.lock() {
             let _ = es.folder_put(
                 "agentic_generation_v1",
@@ -216,8 +219,7 @@ pub fn require_or_hitl(
                 &serde_json::json!({
                     "principal_id": ctx.principal_id,
                     "character_hash": ctx.agent_intelligence_hash,
-                    "contract_hash": crate::kernel::agent_principal::load_contract(state.as_ref(), agent_pid)
-                        .map(|c| c.contract_digest_sha256),
+                    "contract_hash": contract_hash,
                     "last_memory_cid": ctx.last_memory_cid,
                 }),
             );

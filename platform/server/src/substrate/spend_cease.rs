@@ -250,6 +250,10 @@ pub fn kernel_cease(
     agent_pid: &str,
     reason: CeaseReason,
 ) -> Result<CeaseReceiptV1, String> {
+    // Drop every in-flight model call for this agent before anything else.
+    // The model does not get to finish, and its output is not used.
+    let _ = crate::kernel::aios::interrupt_generation(agent_pid, None);
+
     let ceased_gen = llm_context_broker::current_generation(state, agent_pid);
     let generation_id = ceased_gen.to_string();
 
@@ -346,6 +350,8 @@ pub fn kernel_cease(
             }),
         );
     }
+
+    crate::services::keycloak_agents::on_cease(state, agent_pid, reason_str);
 
     tracing::warn!(
         agent_pid = %agent_pid,

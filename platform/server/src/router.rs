@@ -288,6 +288,8 @@ async fn auth_middleware(
         "/auth/sso",
         "/auth/sso/login",
         "/auth/sso/callback",
+        // The handler verifies the agent's Keycloak token itself.
+        "/agent/me",
         "/auth/totp/verify",
         "/billing/stripe/webhook",
         "/payment/webhook",
@@ -1247,6 +1249,10 @@ pub fn build_router(state: SharedState) -> Router {
             get(crate::operator::fix_queue::get_operator_fix_queue),
         )
         .route(
+            "/operator/fix/tracetramp/decide",
+            post(crate::operator::fix_queue::post_fix_tracetramp_decide),
+        )
+        .route(
             "/operator/watch/events",
             get(crate::operator::watch_events::get_operator_watch_events),
         )
@@ -1281,6 +1287,23 @@ pub fn build_router(state: SharedState) -> Router {
         .route(
             "/kernel/agent-explain",
             get(crate::kernel::agent_explain::get_agent_explain),
+        )
+        .route(
+            "/kernel/fleet-chain/verbs",
+            get(services::fleet_chain::verbs),
+        )
+        .route("/kernel/fleet-chain", get(services::fleet_chain::status))
+        .route(
+            "/kernel/fleet-chain/charter",
+            post(services::fleet_chain::put_charter),
+        )
+        .route(
+            "/kernel/fleet-chain/step",
+            post(services::fleet_chain::post_step),
+        )
+        .route(
+            "/kernel/fleet-chain/effect",
+            post(services::fleet_chain::post_effect),
         )
         .route("/kernel/aios/claim-readiness", get(services::aios::claim_readiness))
         .route("/kernel/aios/modules", get(services::aios::modules))
@@ -1623,6 +1646,66 @@ pub fn build_router(state: SharedState) -> Router {
             "/plugins/:id/lifecycle/history",
             get(services::plugin_lifecycle::get_plugin_lifecycle_history),
         )
+        // TraceTramp management proxy. Fix approve/deny calls these paths.
+        .route(
+            "/plugins/tracetramp/status",
+            get(services::tracetramp_proxy::tracetramp_proxy_status),
+        )
+        .route(
+            "/plugins/tracetramp/admin/stats",
+            get(services::tracetramp_proxy::tt_get_stats),
+        )
+        .route(
+            "/plugins/tracetramp/admin/traces",
+            get(services::tracetramp_proxy::tt_get_traces),
+        )
+        .route(
+            "/plugins/tracetramp/admin/approvals",
+            get(services::tracetramp_proxy::tt_get_approvals),
+        )
+        .route(
+            "/plugins/tracetramp/admin/approvals/:id/approve",
+            post(services::tracetramp_proxy::tt_post_approve),
+        )
+        .route(
+            "/plugins/tracetramp/admin/approvals/:id/reject",
+            post(services::tracetramp_proxy::tt_post_reject),
+        )
+        .route(
+            "/plugins/tracetramp/admin/approvals/:id/quarantine",
+            post(services::tracetramp_proxy::tt_post_quarantine_approval),
+        )
+        .route(
+            "/plugins/tracetramp/admin/approvals/:id/execute",
+            post(services::tracetramp_proxy::tt_post_execute_approval),
+        )
+        .route(
+            "/plugins/tracetramp/admin/policies",
+            get(services::tracetramp_proxy::tt_get_policies)
+                .post(services::tracetramp_proxy::tt_post_policy),
+        )
+        .route(
+            "/plugins/tracetramp/admin/operation-blocks",
+            get(services::tracetramp_proxy::tt_get_operation_blocks)
+                .post(services::tracetramp_proxy::tt_post_operation_block),
+        )
+        .route(
+            "/plugins/tracetramp/admin/operation-blocks/release",
+            post(services::tracetramp_proxy::tt_post_operation_block_release),
+        )
+        .route(
+            "/plugins/tracetramp/admin/quarantine",
+            get(services::tracetramp_proxy::tt_get_quarantines)
+                .post(services::tracetramp_proxy::tt_post_create_quarantine),
+        )
+        .route(
+            "/plugins/tracetramp/admin/quarantine/all",
+            get(services::tracetramp_proxy::tt_get_quarantine_all),
+        )
+        .route(
+            "/plugins/tracetramp/admin/quarantine/release",
+            post(services::tracetramp_proxy::tt_post_quarantine_release),
+        )
         .route(
             "/native/extensions",
             get(services::extension_host::list_extensions_handler),
@@ -1682,6 +1765,10 @@ pub fn build_router(state: SharedState) -> Router {
         .route("/agents/:pid/thaw", post(services::agents::thaw_agent))
         .route("/agents/:pid/pause", post(services::agents::pause_agent))
         .route("/agents/:pid/cease", post(services::agents::cease_agent))
+        .route("/agents/:pid/identity", get(services::keycloak_agents::get_identity))
+        .route("/agents/:pid/identity/rotate", post(services::keycloak_agents::rotate_identity))
+        .route("/agents/:pid/identity/enable", post(services::keycloak_agents::enable_identity))
+        .route("/agent/me", get(services::keycloak_agents::agent_me))
         .route(
             "/agents/:pid/expometer",
             get(services::agents::agent_expometer),
@@ -1965,6 +2052,7 @@ pub fn build_router(state: SharedState) -> Router {
         .route("/auth/rbac/permissions", get(rbac_permissions))
         .route("/auth/rbac/roles", get(rbac_roles))
         // ENT-4: SSO OIDC (Okta, Google, Azure AD, GitHub, any OIDC provider)
+        .route("/auth/sso", get(auth::sso_status))
         .route("/auth/sso/login", get(auth::sso_login))
         .route("/auth/sso/callback", get(auth::sso_callback))
 

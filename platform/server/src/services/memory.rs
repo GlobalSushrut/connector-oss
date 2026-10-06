@@ -387,11 +387,31 @@ fn materialize_memory_parts(
 /// For shared knowledge, use `/memory/knowledge/ingest` which writes to `/k/` namespaces.
 ///
 /// The packet is also auto-ingested into KnotEngine for entity extraction.
+fn reject_tracetramp_memory(pipeline: &str) -> Option<&'static str> {
+    if pipeline.trim().eq_ignore_ascii_case("tracetramp") {
+        Some("TraceTramp keeps enforcement in its own ledger. Memory is stored only as a MemPacket.")
+    } else {
+        None
+    }
+}
+
 pub async fn write_memory(
     State(state): State<SharedState>,
     headers: HeaderMap,
     Json(req): Json<WriteRequest>,
 ) -> impl IntoResponse {
+    if let Some(honesty) = reject_tracetramp_memory(&req.pipeline) {
+        return (
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({
+                "ok": false,
+                "error": "tracetramp_is_not_memory",
+                "store": "mempacket",
+                "honesty": honesty,
+            })),
+        )
+            .into_response();
+    }
     let ptype = match req
         .packet_type
         .as_deref()
@@ -763,6 +783,10 @@ pub async fn write_memory(
         "ok": result.outcome == vac_core::types::OpOutcome::Success && durable,
         "durable": durable,
         "durable_error": durable_error,
+        "store": "mempacket",
+        "namespace": packet.namespace,
+        "packet_type": format!("{}", packet.content.packet_type),
+        "memory_type": format!("{:?}", packet.memory_type),
         "agent_pid": req.agent_pid,
         "cid": cid_str,
         "enrichment": enrichment,
@@ -2362,6 +2386,13 @@ pub async fn enrich_memory(
 #[cfg(test)]
 mod multimodal_parts_tests {
     use super::*;
+
+    #[test]
+    fn tracetramp_cannot_store_a_memory_packet() {
+        assert!(super::reject_tracetramp_memory("tracetramp").is_some());
+        assert!(super::reject_tracetramp_memory(" TraceTramp ").is_some());
+        assert!(super::reject_tracetramp_memory("default").is_none());
+    }
 
     #[test]
     fn memory_part_input_strips_to_object_ref_shape() {

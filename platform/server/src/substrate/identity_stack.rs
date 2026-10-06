@@ -18,6 +18,7 @@ use crate::state::SharedState;
 
 pub const SCHEMA: &str = "identity_stack.v1";
 pub const ADDRESS_GRAPH_FOLDER: &str = "address_identity_graph";
+pub const LAST_MEMORY_FOLDER: &str = "identity_last_memory";
 
 #[derive(Debug, Clone, Default)]
 pub struct IdentityStackSnapshot {
@@ -155,7 +156,25 @@ fn inspect_last_memory(
             best_cid = Some(p.index.packet_cid.to_string());
         }
     }
-    (best_ts.is_some(), best_ts, best_cid)
+    drop(k);
+    if best_ts.is_some() {
+        return (true, best_ts, best_cid);
+    }
+    if let Ok(es) = state.engine_store.lock() {
+        if let Some(doc) = es
+            .folder_get(LAST_MEMORY_FOLDER, api_pid)
+            .ok()
+            .flatten()
+        {
+            let at = doc.get("at_ms").and_then(|x| x.as_i64());
+            let cid = doc
+                .get("cid")
+                .and_then(|x| x.as_str())
+                .map(str::to_string);
+            return (true, at, cid);
+        }
+    }
+    (false, None, None)
 }
 
 /// Stable engine-store key for an address identity graph document.
@@ -359,7 +378,12 @@ pub fn enforce(
     namespace: &str,
     op: &AdmissionOp,
 ) -> Result<IdentityStackSnapshot, ConnectorError> {
-    // Hosted Talk: mint lane pillars before measuring (distrust stays on).
+    // The model's own lane is not a world address. Mint memory, the
+    // relation, and RULES + HITL for `llm:{namespace}` only. Tools stay
+    // incomplete until the operator mints those addresses.
+    if matches!(op, AdmissionOp::LlmChat) {
+        crate::services::agents::ensure_self_talk_lane(state, api_pid, namespace);
+    }
     if crate::services::playground::is_playground_mode() {
         crate::services::agents::ensure_playground_talk_lane(state, api_pid);
     }

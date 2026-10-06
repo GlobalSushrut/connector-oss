@@ -4697,4 +4697,50 @@ code {
   }
 }
 
+.ready__card--static {
+  cursor: default;
+  min-height: 0;
+}
+
+.ready__card--static:hover {
+  transform: none;
+  border-color: var(--border);
+}
+
+.ready--future {
+  background: var(--bg);
+}
+
+.ready__grid--future {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.maintainer__list {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: grid;
+  gap: 0.9rem;
+  max-width: 36rem;
+}
+
+.maintainer__list li {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.maintainer__list span {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@media (max-width: 980px) {
+  .ready__grid--future {
+    grid-template-columns: 1fr;
+  }
+}
+
 

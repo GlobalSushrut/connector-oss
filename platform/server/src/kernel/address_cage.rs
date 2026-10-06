@@ -258,6 +258,11 @@ pub fn resolve_tool_address(
     parameters: &Value,
 ) -> CagedAddress {
     let pid = agent_pid.trim();
+    // Operator settings (link a model, routing, guardrails) stay on the
+    // platform plane. They are not an agent touching an outer address.
+    if bridge_id.eq_ignore_ascii_case("settings") {
+        return CagedAddress::new(format!("nsfs:{pid}"), "agent_nsfs", true, true, false);
+    }
     if let Some(raw) = param_str(
         parameters,
         &[
@@ -544,6 +549,18 @@ mod tests {
     }
 
     #[test]
+    fn linking_an_llm_is_the_settings_plane_not_a_world_address() {
+        let c = resolve_tool_address(
+            "llm-settings",
+            "settings",
+            "link_llm",
+            &json!({"provider": "deepseek", "model": "deepseek-chat", "endpoint": "https://api.deepseek.com/v1"}),
+        );
+        assert!(c.self_nsfs);
+        assert_eq!(c.address_type, "agent_nsfs");
+        assert_eq!(c.address, "nsfs:llm-settings");
+    }
+
     fn workbench_session_journal_is_the_agents_own_namespace() {
         let c = resolve_tool_address(
             "agt_1",

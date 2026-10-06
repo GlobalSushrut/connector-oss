@@ -231,6 +231,7 @@ pub async fn create_agent(
         .unwrap_or_default()
         .as_millis() as i64;
     
+    let identity_path = format!("/api/v1/agents/{api_pid}/identity/rotate");
     let agent = Agent {
         id: agent_pid.clone(),
         api_pid: Some(api_pid),
@@ -250,6 +251,14 @@ pub async fn create_agent(
             method: "POST".to_string(),
             path: format!("/api/v2/agents/{}/start", agent.id),
             description: "Start the agent".to_string(),
+            reason: None,
+            example_body: None,
+        },
+        NextAction {
+            action: "keycloak_account".to_string(),
+            method: "POST".to_string(),
+            path: identity_path,
+            description: "Create this agent's Keycloak account and show its password once".to_string(),
             reason: None,
             example_body: None,
         },

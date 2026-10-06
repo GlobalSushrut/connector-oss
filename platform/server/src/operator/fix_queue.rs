@@ -1,6 +1,9 @@
 use axum::extract::State;
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::IntoResponse;
 use axum::Json;
 use serde_json::{json, Value};
+use std::collections::{BTreeMap, HashSet};
 
 use crate::{operator::honesty::operator_envelope, state::SharedState};
 
@@ -123,35 +126,31 @@ fn actor_is_connector_agent(actor: &str, pids: &std::collections::HashSet<String
     false
 }
 
-async fn tracetramp_approval_items(state: &SharedState) -> (Vec<Value>, bool) {
+struct TtWindow {
+    wired: bool,
+    rows: Vec<Value>,
+    table_total: Option<u64>,
+}
+
+fn tt_admin_endpoint() -> Option<(String, String)> {
     if !crate::services::tracetramp_proxy::tracetramp_management_plane_configured() {
-        return (Vec::new(), false);
+        return None;
     }
     let base = std::env::var("CONNECTOR_TRACETRAMP_MANAGEMENT_URL")
         .or_else(|_| std::env::var("TRACETRAMP_MANAGEMENT_URL"))
         .ok()
-        .or_else(|| {
-            crate::services::plugin_configure::overlay_string("tracetramp", "management_url")
-        })
+        .or_else(|| crate::services::plugin_configure::overlay_string("tracetramp", "management_url"))
         .unwrap_or_else(|| "http://127.0.0.1:19742".into());
-    let base = base.trim_end_matches('/').to_string();
-    let Some(token) = std::env::var("CONNECTOR_TRACETRAMP_ADMIN_TOKEN")
+    let token = std::env::var("CONNECTOR_TRACETRAMP_ADMIN_TOKEN")
         .or_else(|_| std::env::var("TRACETRAMP_ADMIN_TOKEN"))
         .ok()
         .or_else(|| crate::services::plugin_configure::overlay_string("tracetramp", "admin_token"))
         .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-    else {
-        return (Vec::new(), false);
-    };
+        .filter(|s| !s.is_empty())?;
+    Some((base.trim_end_matches('/').to_string(), token))
+}
 
-    let client = match reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(4))
-        .build()
-    {
-        Ok(c) => c,
-        Err(_) => return (Vec::new(), true),
-    };
+async fn fetch_tt_window(client: &reqwest::Client, base: &str, token: &str) -> TtWindow {
     let url = format!("{base}/admin/approvals");
     let Ok(resp) = client
         .get(&url)
@@ -160,68 +159,115 @@ async fn tracetramp_approval_items(state: &SharedState) -> (Vec<Value>, bool) {
         .send()
         .await
     else {
-        return (Vec::new(), true);
+        return TtWindow { wired: true, rows: Vec::new(), table_total: None };
     };
     if !resp.status().is_success() {
-        return (Vec::new(), true);
+        return TtWindow { wired: true, rows: Vec::new(), table_total: None };
     }
     let Ok(body) = resp.json::<Value>().await else {
-        return (Vec::new(), true);
+        return TtWindow { wired: true, rows: Vec::new(), table_total: None };
     };
-    let arr = body
+    let rows = body
         .get("approvals")
         .or_else(|| body.get("items"))
         .or_else(|| body.get("pending"))
         .and_then(|v| v.as_array())
         .cloned()
         .unwrap_or_default();
-    let pids = connector_agent_pids(state);
-    let items = arr
-        .into_iter()
-        .filter(|a| {
-            a.get("status")
+    let table_total = body.get("total").and_then(|v| v.as_u64());
+    TtWindow { wired: true, rows, table_total }
+}
+
+fn row_text<'a>(row: &'a Value, keys: &[&str]) -> &'a str {
+    for key in keys {
+        if let Some(text) = row.get(*key).and_then(|v| v.as_str()).filter(|s| !s.is_empty()) {
+            return text;
+        }
+    }
+    ""
+}
+
+fn pending_connector_rows(rows: &[Value], pids: &std::collections::HashSet<String>) -> Vec<Value> {
+    rows.iter()
+        .filter(|row| {
+            row.get("status")
                 .and_then(|s| s.as_str())
                 .map(|s| s.eq_ignore_ascii_case("pending"))
                 .unwrap_or(true)
         })
-        .filter(|a| {
-            let actor = a.get("actor_id").and_then(|x| x.as_str()).unwrap_or("");
-            actor_is_connector_agent(actor, &pids)
+        .filter(|row| actor_is_connector_agent(row_text(row, &["actor_id"]), pids))
+        .cloned()
+        .collect()
+}
+
+/// One card per actor + reason. A 50-card slice of the same reason is not a queue.
+fn group_tt_rows(rows: &[Value]) -> Vec<Value> {
+    let mut counts: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for row in rows {
+        let actor = row_text(row, &["actor_id", "agent_pid"]).to_string();
+        let reason = row_text(row, &["reason", "title", "summary"]).to_string();
+        let reason = if reason.is_empty() {
+            "TraceTramp hold".to_string()
+        } else {
+            reason
+        };
+        *counts.entry((actor, reason)).or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .map(|((actor, reason), count)| {
+            json!({
+                "actor_id": actor,
+                "reason": reason,
+                "count": count,
+            })
         })
-        .take(50)
-        .filter_map(|a| {
-            let id = a
-                .get("id")
-                .or_else(|| a.get("approval_id"))
-                .and_then(|x| x.as_str())?
-                .to_string();
-            let title = a
-                .get("title")
-                .or_else(|| a.get("summary"))
-                .or_else(|| a.get("reason"))
-                .or_else(|| a.get("tool"))
-                .and_then(|x| x.as_str())
-                .unwrap_or("TraceTramp approval")
-                .to_string();
+        .collect()
+}
+
+async fn tracetramp_approval_items(state: &SharedState) -> (Vec<Value>, TtWindow, Vec<Value>) {
+    let Some((base, token)) = tt_admin_endpoint() else {
+        return (Vec::new(), TtWindow { wired: false, rows: Vec::new(), table_total: None }, Vec::new());
+    };
+    let Ok(client) = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+    else {
+        return (Vec::new(), TtWindow { wired: true, rows: Vec::new(), table_total: None }, Vec::new());
+    };
+    let window = fetch_tt_window(&client, &base, &token).await;
+    let pids = connector_agent_pids(state);
+    let matched = pending_connector_rows(&window.rows, &pids);
+    let groups = group_tt_rows(&matched);
+    let items = matched
+        .iter()
+        .filter_map(|row| {
+            let id = row_text(row, &["id", "approval_id"]);
+            if id.is_empty() {
+                return None;
+            }
+            let reason = row_text(row, &["reason", "title", "summary", "tool"]);
+            let title = if reason.is_empty() { "TraceTramp approval" } else { reason };
             Some(governance_item(
                 format!("tt:{id}"),
                 "tracetramp_approval",
-                title,
+                title.to_string(),
                 "medium",
-                a.get("created_at").cloned().unwrap_or(json!(chrono::Utc::now().to_rfc3339())),
+                row.get("created_at").cloned().unwrap_or(json!(chrono::Utc::now().to_rfc3339())),
                 json!({
                     "owner": "tracetramp_reviewer",
                     "request_id": id,
-                    "agent_pid": a.get("actor_id"),
+                    "agent_pid": row.get("actor_id"),
+                    "reason": title,
                     "primary_action": "tt_approve",
                     "approve_url": format!("/api/v1/plugins/tracetramp/admin/approvals/{id}/approve"),
                     "deny_url": format!("/api/v1/plugins/tracetramp/admin/approvals/{id}/reject"),
-                    "hint": "POST /plugins/tracetramp/admin/approvals/{id}/approve",
+                    "hint": "Grouped on Fix. POST /operator/fix/tracetramp/decide walks every later window.",
                 }),
             ))
         })
         .collect();
-    (items, true)
+    (items, window, groups)
 }
 
 fn hitl_pending_items(state: &SharedState) -> Vec<Value> {
@@ -275,7 +321,7 @@ fn hitl_pending_items(state: &SharedState) -> Vec<Value> {
         .collect()
 }
 
-const FIX_HONESTY: &str = "FIX is pending human decisions only: HITL rows in iia_hitl_requests with status=pending, tool calls still in pending_approvals, and TraceTramp holds whose actor_id is a live Connector agent. Historical denials belong on Watch. A TraceTramp approval_queue full of plugin demo actors is not this node's Fix inbox.";
+const FIX_HONESTY: &str = "Approve is PATE (iia_hitl_requests) and live tool approvals. Fix is TraceTramp holds whose actor_id is a live Connector agent. A TraceTramp approve arms the resume latch and does not run the held request. A PATE approve runs that ask. Historical denials belong on Watch.";
 
 fn sort_items_newest_first(items: &mut [Value]) {
     items.sort_by(|a, b| {
@@ -289,9 +335,32 @@ fn sort_items_newest_first(items: &mut [Value]) {
 pub async fn compute_fix_queue_async(state: &SharedState) -> Value {
     let mut items = tool_approval_items(state);
     items.extend(hitl_pending_items(state));
-    let (tt_items, tt_wired) = tracetramp_approval_items(state).await;
+    let (tt_items, window, groups) = tracetramp_approval_items(state).await;
+    let tt_shown = tt_items.len();
+    let window_len = window.rows.len();
+    let window_full = window_len >= 100;
     items.extend(tt_items);
     sort_items_newest_first(&mut items);
+    let note = if !window.wired {
+        "TraceTramp management plane is not configured.".to_string()
+    } else if window_full {
+        match window.table_total {
+            Some(total) => format!(
+                "TraceTramp returned its newest {window_len} pending rows. {tt_shown} belong to Connector agents, in {} groups. The table has {total} pending rows. A 50-card slice stayed full because the next hold filled each gap. Clear and Approve walk every later window.",
+                groups.len()
+            ),
+            None => format!(
+                "TraceTramp returned its newest {window_len} pending rows, which is its list cap. {tt_shown} belong to Connector agents, in {} groups. Older holds are behind that cap. A 50-card slice stayed full because the next hold filled each gap. Clear and Approve walk every later window.",
+                groups.len()
+            ),
+        }
+    } else {
+        format!(
+            "TraceTramp returned {window_len} pending rows. {tt_shown} belong to Connector agents, in {} groups.",
+            groups.len()
+        )
+    };
+    let honesty = format!("{FIX_HONESTY} {note}");
     json!({
         "schema": GOVERNANCE_INBOX_SCHEMA,
         "count": items.len(),
@@ -299,11 +368,17 @@ pub async fn compute_fix_queue_async(state: &SharedState) -> Value {
         "sources": {
             "hitl_approvals": true,
             "tool_approvals": true,
-            "tracetramp_approvals": tt_wired,
+            "tracetramp_approvals": window.wired,
+            "tracetramp_pending": window.table_total.unwrap_or(tt_shown as u64),
+            "tracetramp_shown": tt_shown,
+            "tracetramp_window": window_len,
+            "tracetramp_window_full": window_full,
+            "tracetramp_groups": groups,
+            "tracetramp_note": note,
             "denied_operations": false,
             "workflow_fix_rules": false
         },
-        "honesty": FIX_HONESTY,
+        "honesty": honesty,
     })
 }
 
@@ -330,4 +405,239 @@ pub fn compute_fix_queue(state: &SharedState) -> Value {
 /// `GET /api/v1/operator/fix/queue`
 pub async fn get_operator_fix_queue(State(state): State<SharedState>) -> Json<Value> {
     Json(operator_envelope(compute_fix_queue_async(&state).await))
+}
+
+/// `POST /api/v1/operator/fix/tracetramp/decide`
+///
+/// `action` is `reject` (clear) or `approve` (arm the resume latch).
+/// Optional `actor_id` and `reason` limit the walk to one group.
+/// TraceTramp lists at most 100 newest pending rows, so this repeats until a pass
+/// finds nothing left to decide, or `max` is reached.
+pub async fn post_fix_tracetramp_decide(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> impl IntoResponse {
+    let _ = headers;
+    let action = body.get("action").and_then(|v| v.as_str()).unwrap_or("");
+    if action != "approve" && action != "reject" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "ok": false,
+                "error": "action must be approve or reject",
+                "honesty": "Fix clear/approve decides TraceTramp holds only. It does not decide a PATE ask.",
+            })),
+        )
+            .into_response();
+    }
+    if crate::substrate::handoff_queue::handoff_backpressure_active(state.as_ref()) {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "ok": false,
+                "error": "handoff_backpressure",
+                "honesty": "TraceTramp mutating calls are blocked while WitnessCtl handoffs are over the cap.",
+            })),
+        )
+            .into_response();
+    }
+    let Some((base, token)) = tt_admin_endpoint() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "ok": false,
+                "error": "tracetramp_unconfigured",
+                "honesty": "TraceTramp management plane is not configured.",
+            })),
+        )
+            .into_response();
+    };
+    let max = body
+        .get("max")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(500)
+        .min(2000) as usize;
+    let reason_filter = body.get("reason").and_then(|v| v.as_str()).filter(|s| !s.is_empty());
+    let actor_filter = body.get("actor_id").and_then(|v| v.as_str()).filter(|s| !s.is_empty());
+    let Ok(client) = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+    else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"ok": false, "error": "http_client"})),
+        )
+            .into_response();
+    };
+
+    let mut decided = 0usize;
+    let mut failed = 0usize;
+    let mut latched = 0usize;
+    let mut latch_failed = 0usize;
+    let mut failed_ids: HashSet<String> = HashSet::new();
+    let mut rounds = 0usize;
+    let mut last_error = String::new();
+
+    loop {
+        if decided >= max || rounds >= 40 {
+            break;
+        }
+        rounds += 1;
+        let window = fetch_tt_window(&client, &base, &token).await;
+        let pids = connector_agent_pids(&state);
+        let matched = pending_connector_rows(&window.rows, &pids);
+        let mut progress = false;
+        for row in matched {
+            if decided >= max {
+                break;
+            }
+            let actor = row_text(&row, &["actor_id"]);
+            if let Some(want) = actor_filter {
+                if actor != want {
+                    continue;
+                }
+            }
+            let reason = row_text(&row, &["reason", "title", "summary"]);
+            if let Some(want) = reason_filter {
+                if reason != want {
+                    continue;
+                }
+            }
+            let id = row_text(&row, &["id", "approval_id"]).to_string();
+            if id.is_empty() || failed_ids.contains(&id) {
+                continue;
+            }
+            let path = if action == "approve" { "approve" } else { "reject" };
+            let url = format!("{base}/admin/approvals/{id}/{path}");
+            let sent = client
+                .post(&url)
+                .header("Authorization", format!("Bearer {token}"))
+                .header("Accept", "application/json")
+                .json(&json!({"approver_id": "operator"}))
+                .send()
+                .await;
+            let ok = match sent {
+                Ok(resp) if resp.status().is_success() => true,
+                Ok(resp) => {
+                    last_error = format!("HTTP {}", resp.status());
+                    false
+                }
+                Err(err) => {
+                    last_error = err.to_string();
+                    false
+                }
+            };
+            if !ok {
+                failed += 1;
+                failed_ids.insert(id);
+                continue;
+            }
+            decided += 1;
+            progress = true;
+            if action == "approve" {
+                let exec = format!("{base}/admin/approvals/{id}/execute");
+                let latched_ok = client
+                    .post(&exec)
+                    .header("Authorization", format!("Bearer {token}"))
+                    .header("Accept", "application/json")
+                    .json(&json!({}))
+                    .send()
+                    .await
+                    .map(|resp| resp.status().is_success())
+                    .unwrap_or(false);
+                if latched_ok {
+                    latched += 1;
+                } else {
+                    latch_failed += 1;
+                }
+            }
+        }
+        if !progress {
+            break;
+        }
+    }
+
+    let window = fetch_tt_window(&client, &base, &token).await;
+    let pids = connector_agent_pids(&state);
+    let remaining = pending_connector_rows(&window.rows, &pids)
+        .into_iter()
+        .filter(|row| {
+            if let Some(want) = actor_filter {
+                if row_text(row, &["actor_id"]) != want {
+                    return false;
+                }
+            }
+            if let Some(want) = reason_filter {
+                if row_text(row, &["reason", "title", "summary"]) != want {
+                    return false;
+                }
+            }
+            true
+        })
+        .count();
+
+    let honesty = if action == "reject" {
+        format!(
+            "Cleared {decided} TraceTramp holds (rejected). Failed: {failed}. Remaining in the newest window: {remaining}. Nothing was resumed. This is not a PATE denial. {last_error}"
+        )
+    } else {
+        format!(
+            "Approved {decided} TraceTramp holds. Resume latch armed: {latched}. Latch failed: {latch_failed}. Failed before approve: {failed}. Remaining in the newest window: {remaining}. Connector did not run the held requests. This is not a PATE ask. The original caller retries with X-Approval-Resume and X-Approval-Id. {last_error}"
+        )
+    };
+    let ok = decided > 0 || failed == 0;
+    (
+        StatusCode::OK,
+        Json(operator_envelope(json!({
+            "ok": ok,
+            "action": action,
+            "decided": decided,
+            "failed": failed,
+            "latched": latched,
+            "latch_failed": latch_failed,
+            "rounds": rounds,
+            "remaining_in_window": remaining,
+            "executed": false,
+            "pate": false,
+            "honesty": honesty.trim(),
+        }))),
+    )
+        .into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::group_tt_rows;
+    use serde_json::json;
+
+    #[test]
+    fn sixty_identical_holds_are_one_group_not_fifty_cards() {
+        let rows: Vec<_> = (0..60)
+            .map(|i| {
+                json!({
+                    "id": format!("id-{i}"),
+                    "actor_id": "pid:000002",
+                    "reason": "Request held for human approval (default HITL policy): publish",
+                    "status": "pending",
+                })
+            })
+            .collect();
+        let groups = group_tt_rows(&rows);
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0]["count"], 60);
+        assert_eq!(groups[0]["actor_id"], "pid:000002");
+    }
+
+    #[test]
+    fn publish_and_delete_stay_separate_groups() {
+        let rows = vec![
+            json!({"id":"a","actor_id":"pid:000002","reason":"publish"}),
+            json!({"id":"b","actor_id":"pid:000002","reason":"publish"}),
+            json!({"id":"c","actor_id":"pid:000002","reason":"delete"}),
+            json!({"id":"d","actor_id":"pid:000003","reason":"publish"}),
+        ];
+        let groups = group_tt_rows(&rows);
+        assert_eq!(groups.len(), 3);
+    }
 }

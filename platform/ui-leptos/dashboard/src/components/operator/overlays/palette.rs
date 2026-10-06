@@ -32,7 +32,7 @@ fn static_items() -> Vec<PaletteItem> {
         PaletteItem { label: "RUN — agents · ENABLED workflows · Action".into(), hint: "/run".into(), action: PaletteAction::Navigate("/run") },
         PaletteItem { label: "Workbench — consult · admit · chart".into(), hint: "/run/workbench".into(), action: PaletteAction::Navigate("/run/workbench") },
         PaletteItem { label: "WATCH — Stream · Tools · Address · Agent · Fuel · Trace".into(), hint: "/watch".into(), action: PaletteAction::Navigate("/watch") },
-        PaletteItem { label: "FIX — HITL / PATE Ask".into(), hint: "/fix".into(), action: PaletteAction::Navigate("/fix") },
+        PaletteItem { label: "FIX — Approve is PATE, Fix is TraceTramp".into(), hint: "/fix".into(), action: PaletteAction::Navigate("/fix") },
         PaletteItem { label: "SETUP — LLM · DAC · institutions".into(), hint: "/setup".into(), action: PaletteAction::Navigate("/setup") },
         PaletteItem { label: "DEV — packages · author · CLS · SDK".into(), hint: "/dev".into(), action: PaletteAction::Navigate("/dev") },
         PaletteItem { label: "DEV · SDK".into(), hint: "/dev?tab=sdk".into(), action: PaletteAction::Navigate("/dev?tab=sdk") },

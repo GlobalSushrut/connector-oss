@@ -78,6 +78,8 @@ pub fn navigate(
     url: &str,
     session_id: Option<&str>,
     max_bytes: Option<usize>,
+    goal_id: Option<&str>,
+    situation: Option<&[f64]>,
 ) -> Result<Value, Value> {
     let url = url.trim();
     if agent_pid.trim().is_empty() {
@@ -113,6 +115,16 @@ pub fn navigate(
             }));
         }
     }
+    let chain = match crate::kernel::fleet_chain::before_browser_fetch(
+        state,
+        agent_pid,
+        &origin,
+        goal_id,
+        situation,
+    ) {
+        Ok(v) => v,
+        Err(e) => return Err(e),
+    };
     if let Err(message) = egress_policy::assert_agent_l7_egress_allowed(state, agent_pid, url) {
         return Err(json!({"ok": false, "error": "l7_egress_denied", "message": message}));
     }
@@ -157,6 +169,17 @@ pub fn navigate(
             }
         };
 
+    if let Some(chain) = chain.as_ref() {
+        let goal = chain.get("goal_id").and_then(|v| v.as_str()).unwrap_or("");
+        let digest = chain
+            .pointer("/sequence/sequence_digest")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if !goal.is_empty() && !digest.is_empty() {
+            crate::kernel::fleet_chain::mark_effect_taken(state, goal, agent_pid, digest);
+        }
+    }
+
     let page = json!({
         "schema": "connector.browser.page.v1",
         "session_id": sid,
@@ -177,6 +200,7 @@ pub fn navigate(
         "landlock_child": landlock,
         "followed_redirect": false,
         "at_ms": chrono::Utc::now().timestamp_millis(),
+        "fleet_chain": chain,
         "honesty": "One hop. 3xx Location is not auto-followed — navigate again so Connector records the jump. Not computer-use.",
     });
 

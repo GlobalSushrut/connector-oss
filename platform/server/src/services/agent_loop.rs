@@ -268,6 +268,22 @@ pub async fn run_tool_proposals_for_run(
 ) -> Vec<ToolReceipt> {
     let mut out = Vec::with_capacity(proposals.len());
     for p in proposals {
+        let live = crate::substrate::llm_context_broker::current_generation(state, &run.agent_pid);
+        if crate::substrate::dynamic_agent_loop::loop_must_stop(run.broker_epoch, live) {
+            out.push(ToolReceipt {
+                schema: RECEIPT_SCHEMA.into(),
+                call_id: p.call_id,
+                tool_name: p.tool_name,
+                ok: false,
+                action_digest: None,
+                task_id: None,
+                result: json!({"stopped": "operator_cease"}),
+                error: Some(
+                    "operator_cease: the loop stopped. Remaining steps were not run.".into(),
+                ),
+            });
+            break;
+        }
         out.push(execute_governed_proposal_checked(state, &run.agent_pid, Some(run), p).await);
     }
     out

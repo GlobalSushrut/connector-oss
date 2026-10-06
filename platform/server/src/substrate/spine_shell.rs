@@ -302,6 +302,18 @@ fn auth_bootstrap(path: &str) -> bool {
     SKIP.iter().any(|pat| segments_match(path, pat))
 }
 
+/// An operator stop only removes authority. Its handler records PATE's verdict and never
+/// lets a refusal block it, so the route shell must not refuse it first.
+fn operator_stop(path: &str) -> bool {
+    const STOP: &[&str] = &[
+        "/agents/:pid/cease",
+        "/agents/:pid/pause",
+        "/agents/:pid/operator-stop",
+        "/api/v2/agents/:pid/stop",
+    ];
+    STOP.iter().any(|pat| segments_match(path, pat))
+}
+
 /// These handlers, or the function they call, already open one PATE task.
 /// A shell task here would block registration and chat, or spend twice.
 fn already_mediated(path: &str) -> bool {
@@ -349,7 +361,7 @@ fn should_shell(method: &Method, path: &str, v2: bool) -> bool {
     ) {
         return false;
     }
-    if declared_non_effect(path) || auth_bootstrap(path) || already_mediated(path) {
+    if declared_non_effect(path) || auth_bootstrap(path) || already_mediated(path) || operator_stop(path) {
         return false;
     }
     if v2 {

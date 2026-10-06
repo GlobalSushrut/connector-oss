@@ -189,6 +189,20 @@ pub async fn login_with_api_key(
     Ok(())
 }
 
+/// Session handed back by `/auth/sso/callback` after Connector verified the IdP's ID token.
+pub async fn accept_sso_token(set_auth: WriteSignal<AuthState>, token: String) -> Result<(), String> {
+    if token.split('.').count() != 3 {
+        return Err("The SSO session was not a token".into());
+    }
+    let _ = LocalStorage::delete("api_key");
+    store_tokens(&token, "");
+    if bootstrap_session(set_auth).await {
+        Ok(())
+    } else {
+        Err("Connector did not accept the SSO session".into())
+    }
+}
+
 pub async fn fetch_me(set_auth: WriteSignal<AuthState>) {
     let _ = bootstrap_session(set_auth).await;
 }

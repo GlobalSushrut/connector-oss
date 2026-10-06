@@ -44,6 +44,7 @@ pub mod pore_table;
 pub mod landlock_child;
 pub mod llm_vendor_cut;
 pub mod browser_world;
+pub mod fleet_chain;
 pub mod conp_authority;
 pub mod admission_layers;
 pub mod aacr;

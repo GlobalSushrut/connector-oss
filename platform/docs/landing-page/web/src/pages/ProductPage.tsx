@@ -33,7 +33,7 @@ export function ProductPage() {
     description: plugin ? plugin.problem.slice(0, 155) + '...' : 'An institution on the Connector OS.',
     canonical: plugin ? `https://cnktros.com/products/${plugin.slug}` : undefined,
   })
-  if (!plugin) return <Navigate to="/" replace />
+  if (!plugin || !ready) return <Navigate to="/" replace />
 
   return (
     <>

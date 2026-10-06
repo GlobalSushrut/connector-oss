@@ -1,43 +1,41 @@
-import { playgroundUrl } from '../config'
-
 export function HeroSection() {
   return (
     <section id="hero" className="cinematic">
       <div className="cinematic__inner">
         <div className="cinematic__copy">
-          <p className="cinematic__kicker">The OS under intelligence</p>
+          <p className="cinematic__kicker">cnktros</p>
           <h1 className="cinematic__h1">
-            Isolate.
+            Control the
             <br />
-            Govern.
+            action.
             <br />
-            Stop.
+            Keep the
             <br />
-            Prove.
+            receipt.
           </h1>
           <p className="cinematic__line">
-            One self-hosted node. Agents keep their stack.
-            You admit the world — or you don’t.
+            Connector decides whether this agent may take this action, in this
+            situation, right now — and an operator can stop the next one.
           </p>
           <div className="cinematic__actions">
-            <a href={playgroundUrl} className="btn btn--primary btn--xl">
-              Try 90 minutes
+            <a href="#outcomes" className="btn btn--primary btn--xl">
+              What you get
             </a>
-            <a href="#ready" className="btn btn--ghost btn--xl">
-              Three ready now
+            <a href="#future" className="btn btn--ghost btn--xl">
+              What is next
             </a>
           </div>
         </div>
 
         <figure className="cinematic__shot">
           <img
-            src="/img/ui-controlled-world.png"
-            alt="Concept operator surface for a controlled world — not the shipping dashboard"
+            src="/connector-os-architecture.svg"
+            alt="Connector OS. One admission, runtime enforcement, a receipt, and Cease. agentgateway is still a target."
             width={1376}
-            height={768}
+            height={997}
           />
           <figcaption>
-            Concept operator surface — not the shipping UI. Isolation today is dest-pinned Landlock, not Firecracker-by-default.
+            One effect, one admission, one receipt. agentgateway forwarding is not proven. This is not a production claim.
           </figcaption>
         </figure>
       </div>

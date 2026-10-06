@@ -4,7 +4,7 @@ export function ServicesSection() {
   return (
     <section id="services" className="section section--bordered">
       <div className="section__inner">
-        <h2 className="section__title">Ten workflows. Three ready. Seven planned.</h2>
+        <h2 className="section__title">Three institutions on one workspace.</h2>
         <p className="section__lead section__lead--flush">
           The OS is one product. Workflows are how buyers use it.
           Ready means your email opens a private 90-minute node.

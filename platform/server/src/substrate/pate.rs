@@ -1149,6 +1149,38 @@ pub fn require_proceed(
     Ok(atu)
 }
 
+/// Operator stop (cease, pause, stop). It only removes authority, so PATE records its verdict
+/// but never refuses it. A Proceed task is returned for the caller to finish; otherwise the
+/// refusal is returned as `pate` so the response shows what PATE would have said.
+pub fn admit_operator_stop(
+    state: &SharedState,
+    agent_pid: &str,
+    tool_name: &str,
+) -> (Option<AugmentedTaskUnit>, Value) {
+    match require_proceed(state, agent_pid, "lifecycle", tool_name, &json!({"pid": agent_pid})) {
+        Ok(atu) => {
+            let task_id = atu.task_id.clone();
+            (Some(atu), json!({"verdict": "proceed", "task_id": task_id}))
+        }
+        Err(body) => {
+            tracing::warn!(
+                agent_pid = %agent_pid,
+                tool = %tool_name,
+                refusal = %body,
+                "operator stop executed although PATE would refuse it"
+            );
+            (
+                None,
+                json!({
+                    "verdict": "refused_but_stop_executed",
+                    "refusal": body,
+                    "honesty": "An operator stop removes authority. PATE's refusal is recorded; the stop is not blocked.",
+                }),
+            )
+        }
+    }
+}
+
 /// Closes a Proceed task if the caller returns before finishing it.
 /// Ask is left open. A second finish is ignored.
 pub struct OpenProceed {

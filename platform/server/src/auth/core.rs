@@ -1775,6 +1775,8 @@ struct SsoPending {
     nonce: String,
     code_verifier: String,
     created_at: i64,
+    /// Set when the operator UI started the login and wants the session handed back to /login.
+    return_ui: bool,
 }
 
 fn sso_pending_store() -> &'static DashMap<String, SsoPending> {
@@ -1894,7 +1896,7 @@ fn sso_expected_issuer(provider: &str) -> Option<String> {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct JwksDocument {
     keys: Vec<JwkKey>,
 }
@@ -2013,6 +2015,46 @@ pub fn verify_id_token_with_jwks(
         out.insert("iat".into(), serde_json::json!(iat));
     }
     Ok(serde_json::Value::Object(out))
+}
+
+/// Verify a Keycloak access token for `audience` against `CONNECTOR_SSO_JWKS_URL` and `CONNECTOR_SSO_ISSUER`.
+/// JWKS is cached for five minutes and refetched once when the token's key is not in the cache.
+pub async fn verify_idp_access_token(token: &str, audience: &str) -> Result<serde_json::Value, String> {
+    static CACHE: OnceLock<std::sync::Mutex<Option<(i64, JwksDocument)>>> = OnceLock::new();
+    let jwks_url = std::env::var("CONNECTOR_SSO_JWKS_URL")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .ok_or("idp_jwks_url_missing")?;
+    let issuer = std::env::var("CONNECTOR_SSO_ISSUER").ok().filter(|s| !s.trim().is_empty());
+    let insecure_tls = !crate::connector_profile::is_productionish_env()
+        && std::env::var("CONNECTOR_SSO_INSECURE_TLS")
+            .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false);
+    let cache = CACHE.get_or_init(|| std::sync::Mutex::new(None));
+    let now = chrono::Utc::now().timestamp();
+    let kid = id_token_header_kid(token);
+    let cached = cache.lock().unwrap().as_ref().and_then(|(at, doc)| {
+        let fresh = now - at < 300;
+        let has_kid = kid
+            .as_ref()
+            .map(|k| doc.keys.iter().any(|key| key.kid.as_deref() == Some(k.as_str())))
+            .unwrap_or(true);
+        (fresh && has_kid).then(|| doc.clone())
+    });
+    let jwks = match cached {
+        Some(doc) => doc,
+        None => {
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .danger_accept_invalid_certs(insecure_tls)
+                .build()
+                .map_err(|e| format!("idp_http_client:{e}"))?;
+            let doc = fetch_jwks(&client, &jwks_url).await?;
+            *cache.lock().unwrap() = Some((now, doc.clone()));
+            doc
+        }
+    };
+    verify_id_token_with_jwks(token, &jwks, audience, "", issuer.as_deref())
 }
 
 async fn fetch_jwks(client: &reqwest::Client, jwks_url: &str) -> Result<JwksDocument, String> {
@@ -2217,6 +2259,7 @@ pub async fn sso_login(
             nonce: nonce.clone(),
             code_verifier,
             created_at: chrono::Utc::now().timestamp(),
+            return_ui: params.get("return").map(|v| v == "ui").unwrap_or(false),
         },
     );
 
@@ -2244,9 +2287,56 @@ pub async fn sso_login(
         .unwrap()
 }
 
+/// GET /auth/sso — which SSO providers this node can start. Public: no secret is returned.
+pub async fn sso_status() -> Json<serde_json::Value> {
+    let set = |name: &str| std::env::var(name).map(|v| !v.trim().is_empty()).unwrap_or(false);
+    let generic = set("CONNECTOR_SSO_CLIENT_ID")
+        && set("CONNECTOR_SSO_AUTHORIZATION_URL")
+        && set("CONNECTOR_SSO_TOKEN_URL")
+        && set("CONNECTOR_SSO_JWKS_URL");
+    Json(serde_json::json!({
+        "providers": [{
+            "id": "keycloak",
+            "configured": generic,
+            "issuer": std::env::var("CONNECTOR_SSO_ISSUER").ok().filter(|s| !s.is_empty()),
+            "login_path": "/api/v1/auth/sso/login?provider=keycloak&return=ui",
+        }],
+    }))
+}
+
 /// GET /auth/sso/callback?code=...&state=...
 /// Verifies state, exchanges code (PKCE), loads userinfo, JIT-provisions Viewer-by-default.
+/// A login started by the operator UI is handed back to `/login#sso_token=…` (or `#sso_error=…`).
 pub async fn sso_callback(
+    state: State<crate::state::SharedState>,
+    params: axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let return_ui = params
+        .get("state")
+        .and_then(|s| sso_pending_store().get(s).map(|p| p.return_ui))
+        .unwrap_or(false);
+    let Json(body) = sso_callback_json(state, params).await;
+    if !return_ui {
+        return Json(body).into_response();
+    }
+    let fragment = match body.get("token").and_then(|v| v.as_str()).filter(|t| !t.is_empty()) {
+        Some(token) => format!("sso_token={}", urlencoding::encode(token)),
+        None => format!(
+            "sso_error={}",
+            urlencoding::encode(body.get("error").and_then(|v| v.as_str()).unwrap_or("sso_failed"))
+        ),
+    };
+    axum::http::Response::builder()
+        .status(302)
+        .header("location", format!("/login#{fragment}"))
+        .header("cache-control", "no-store")
+        .header("referrer-policy", "no-referrer")
+        .body(axum::body::Body::empty())
+        .unwrap()
+}
+
+async fn sso_callback_json(
     State(state): State<crate::state::SharedState>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Json<serde_json::Value> {
@@ -2398,6 +2488,12 @@ pub async fn sso_callback(
                     &pending.nonce,
                     issuer.as_deref(),
                 ) {
+                    Ok(claims) if claims.get("connector_agent_pid").is_some() => {
+                        return Json(serde_json::json!({
+                            "error": "agent_account_cannot_open_operator_session",
+                            "message": "This Keycloak account belongs to an agent. Agents sign in with their own token, not the operator dashboard.",
+                        }));
+                    }
                     Ok(claims) => {
                         crate::substrate::cvr::deployment_verify::record_operation_success(
                             state.as_ref(),
@@ -2779,8 +2875,9 @@ mod extract_claims_playground_tests {
             super::SsoPending {
                 provider: "google".into(),
                 nonce: "n".into(),
-                code_verifier: verifier,
-                created_at: chrono::Utc::now().timestamp(),
+            code_verifier: verifier,
+            created_at: chrono::Utc::now().timestamp(),
+            return_ui: false,
             },
         );
         assert!(super::sso_pending_store().remove(&state).is_some());

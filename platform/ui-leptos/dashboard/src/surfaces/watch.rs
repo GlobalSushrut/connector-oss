@@ -8,6 +8,7 @@ use crate::api;
 use crate::auth::AuthState;
 use crate::components::operator::cards::OpEventRow;
 use crate::components::operator::overlays::forensics::OpForensicsPanel;
+use crate::components::operator::overlays::fleet_chain::FleetChainPanel;
 use crate::components::operator::overlays::operational_evidence::OperationalEvidencePanel;
 use crate::components::operator::primitives::{
     OpButton, OpButtonVariant, OpEmptyState, OpFilterTabs, OpLiveDot, OpSearchField, OpSpinner,
@@ -65,6 +66,7 @@ pub fn WatchCanvas(auth: ReadSignal<AuthState>) -> impl IntoView {
                             ("fuel", "Fuel"),
                             ("trace", "Trace"),
                             ("backends", "Backends"),
+                            ("chain", "Chain"),
                         ]
                         active=tab
                         set_active=set_tab
@@ -75,6 +77,7 @@ pub fn WatchCanvas(auth: ReadSignal<AuthState>) -> impl IntoView {
                 "fuel" => view! { <BooksCanvas auth=auth embedded=true /> }.into_any(),
                 "trace" => view! { <WatchTracePanel /> }.into_any(),
                 "backends" => view! { <OperationalEvidencePanel /> }.into_any(),
+                "chain" => view! { <FleetChainPanel /> }.into_any(),
                 plane => view! { <WatchEventsPlane plane=plane.to_string() /> }.into_any(),
             }}
         </div>
