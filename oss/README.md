@@ -1,38 +1,60 @@
 <p align="center">
-  <a href="https://cnktros.com"><img src="assets/cnktros-logo.png" alt="cnktros" width="96"></a>
+  <a href="https://cnktros.com"><img src="assets/logo.svg" alt="cnktros" width="72"></a>
 </p>
 
 <h1 align="center">Connector</h1>
 
+<p align="center"><strong>Control what AI agents can do—not only what they can say.</strong></p>
+
 <p align="center">
-  <a href="https://cnktros.com">cnktros.com</a>
+  <a href="https://cnktros.com">Website</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="SECURITY.md">Security</a>
 </p>
 
-**What it is.** Connector governs an agent before its intention becomes a real consequence.
+Connector is an open-source control plane for AI agents that take real actions.
+It gives every agent an identity, explicit authority, per-action admission,
+runtime enforcement, operator stop controls, and an evidence trail.
 
-**Why we need it.** Agents already write, call tools, spend, and continue. A prompt cannot admit one effect, record it, and revoke the next.
+Use your existing agent or assemble one in Connector. Before it sends a request,
+changes data, calls a tool, spends money, or contacts another agent, Connector
+decides whether that specific action may proceed.
 
-**Today's stack vs Connector.** Frameworks make agents capable. Gateways connect them. Policy judges rules. Logs show activity. Connector binds who acts, what they may cause, and whether that one effect may happen. Teams running agents that change real systems need it.
+## Why Connector?
 
-## Market standard, and what is only here
+Agent frameworks help agents reason and use tools. API gateways route traffic.
+Policy engines evaluate rules. Observability systems record events. None of
+these alone answers the whole operational question:
 
-| Market standard | In Connector |
+> **Should this agent be allowed to perform this action, in this situation,
+> right now—and can an operator stop the next action?**
+
+Connector joins that decision to identity, grants, runtime enforcement, and the
+resulting receipt.
+
+| Without Connector | With Connector |
 | --- | --- |
-| MCP, A2A, OpenAI-compatible chat | Bring an existing agent, or assemble one here. Pasting an address does not grant it. |
-| SPIFFE/SPIRE, Sigstore cosign | `./up.sh` downloads these. The checked files are in the boot. The live join to an admitted effect is still partial. |
-| Keycloak, OpenTelemetry | `./up.sh` looks for them on this machine. It does not pull their images. |
-| NVIDIA OpenShell, OPA, Firecracker | Not downloaded. OPA sits inside OpenShell. Firecracker has no verified digest pinned here, so the boot will not fetch an unpinned binary. |
-| agentgateway | `./up.sh` can start the pinned image. Forwarding through it is still unproven, so this plane stays a target. |
+| A tool credential often authorizes the whole process | Authority is scoped to the agent and action |
+| Instructions and permissions are mixed in prompts | Knowledge, directives, memory, and authority remain separate |
+| Approval may happen outside the execution record | Ask stays open until an operator decides it |
+| Logs explain activity after the fact | Admission and observed consequence share an evidence trail |
+| Stopping depends on model cooperation | **Cease** fences the generation and stops future admission |
+| Each backend has a separate operator workflow | Connector presents one workspace and manages the backends |
 
-**Only in Connector.** One requested effect gets one PATE verdict: Proceed, Ask, Defer, Quarantine, or Block. Ask stays open for a person. The grant is that effect, not the whole agent. A receipt records what was observed. Cease revokes the next use. Knowledge, instructions, and memory are not permission.
+## Who is it for?
 
-<p align="center">
-  <img src="assets/architecture.png" alt="Connector OS. Identity, purpose, and authority pass through PATE before a consequence. agentgateway is still a target." width="880">
-</p>
+Connector is for teams whose agents can affect real systems:
 
-## Start
+- platform teams operating internal or customer-facing agents;
+- AI product teams adding tool use, MCP, A2A, browser, or API access;
+- security and governance teams that need explicit authority and evidence;
+- operators who need to pause or cease an agent without waiting for the model.
 
-The code is this repository: [github.com/GlobalSushrut/connector-oss](https://github.com/GlobalSushrut/connector-oss).
+If an agent only produces text in a disposable sandbox, Connector may be more
+infrastructure than you need.
+
+## Quick start
 
 ```bash
 git clone https://github.com/GlobalSushrut/connector-oss.git
@@ -40,12 +62,106 @@ cd connector-oss
 ./up.sh
 ```
 
-Open <http://127.0.0.1:9091/>. On that screen choose **Open on this machine**. That is the local dev-token, and it stays on your computer. A portal API key is for a hosted node, not this one.
+Open <http://127.0.0.1:9091/> and choose **Open on this machine**.
+The local development token stays on your computer.
 
-On **Run**, open **Demo**. On **Bring your agent**, connect something you already use. When PATE says **Ask**, decide that digest on **Fix**. **Watch** shows the evidence.
+Then:
 
-Needs Linux, Rust, Docker, Node.js, and [Trunk](https://trunkrs.dev/) (`rustup target add wasm32-unknown-unknown`). A smaller library server, without the operator UI: [docs/quickstart.md](docs/quickstart.md).
+1. Open **Run → Demo** to see the governed action path.
+2. Use **Bring your agent** to connect an existing agent.
+3. Resolve actions waiting for a person in **Approve**.
+4. Resolve TraceTramp runtime holds in **Fix**.
+5. Inspect decisions and receipts in **Watch**.
 
-**Here:** workspace, PATE, receipts, Cease. The seven backends and the traffic plane are the industry tools this node is built to join, not a second product. `./up.sh` downloads SPIRE and cosign. It can start the pinned agentgateway image, and forwarding there is still a target. It looks for Keycloak and OpenTelemetry and does not pull them. It does not download Firecracker or OpenShell. A tool on disk is not proof an admitted effect went through it, and this is not a claim of secure, correct, safe, compliant, or production-ready.
+### Requirements
 
-Libraries under `oss/` are [Apache License 2.0](LICENSE). The node under `platform/` is [Business Source License 1.1](../platform/LICENSE). Report exploitable findings privately through [SECURITY.md](SECURITY.md).
+- Linux
+- Docker
+- Rust
+- Node.js
+- [Trunk](https://trunkrs.dev/) and the WASM target:
+  `rustup target add wasm32-unknown-unknown`
+
+A smaller library server without the operator UI is documented in
+[docs/quickstart.md](docs/quickstart.md).
+
+## What you get
+
+- **Governed workspace:** principal, purpose, presence, knowledge, directives,
+  authority, and situation stay distinct.
+- **Per-action admission:** PATE returns Proceed, Ask, Defer, Quarantine, or
+  Block for a proposed effect.
+- **Runtime enforcement:** a PATE permit does not bypass downstream policy or
+  isolation.
+- **Operator control:** pause, stop, and Cease do not depend on model agreement.
+- **Memory with provenance:** memory is stored as a MemPacket, separate from
+  traces and instructions.
+- **Evidence:** receipts connect admission, execution, and observed consequence.
+- **Agent-to-agent control:** different addresses can carry different grants and
+  situation ranges without granting the entire swarm.
+- **One operator surface:** Connector manages the supporting identity,
+  enforcement, and evidence systems.
+
+## Architecture
+
+<p align="center">
+  <img src="assets/connector-os-architecture.svg" alt="Connector OS. Bring or assemble an agent. Seven workspace dimensions govern it. One PATE admission, then runtime enforcement, then a receipt. Cease stops the next admission. agentgateway is still a target." width="880">
+</p>
+
+The action path is:
+
+```text
+agent → proposed effect → PATE admission → runtime enforcement
+      → external effect → receipt and observed consequence
+```
+
+The seven workspace dimensions describe how an agent is governed; they are not
+the seven external backends. PATE is the admission authority. A permit can still
+be denied at runtime. Cease fences the current generation, voids its context,
+and stops future admission.
+
+## Managed infrastructure
+
+`./up.sh` downloads pinned components, starts them with local defaults, and keeps
+their operation behind Connector.
+
+| Role | Components |
+| --- | --- |
+| Identity | Keycloak, SPIFFE/SPIRE |
+| Enforcement | NVIDIA OpenShell, OPA/Rego, Firecracker |
+| Evidence | OpenTelemetry, Sigstore cosign |
+| Traffic-plane target | agentgateway for LLM, MCP, A2A, HTTP, and gRPC |
+
+Connector also supports MCP, A2A, and OpenAI-compatible agent interfaces.
+Pasting an address never creates a grant.
+
+## Current status
+
+The workspace, PATE admission, receipts, Cease, TraceTramp, WitnessCtl, and
+seven-backend boot path are present.
+
+Important limits:
+
+- Firecracker boot currently downloads the binary and jailer; it does not
+  create a microVM kernel or root filesystem.
+- The agentgateway image starts, but end-to-end forwarding has not been proven
+  and remains denied.
+- Downloading or starting a backend does not prove that every admitted effect
+  passed through it.
+- Backend integrations are still partial.
+
+This repository does not claim production readiness, security, correctness,
+safety, or compliance.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+## Security
+
+Report exploitable findings privately through [SECURITY.md](SECURITY.md).
+
+## License
+
+Libraries under `oss/` use the [Apache License 2.0](LICENSE). The node under
+`platform/` uses the [Business Source License 1.1](../platform/LICENSE).
