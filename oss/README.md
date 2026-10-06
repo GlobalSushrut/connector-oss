@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://cnktros.com"><img src="assets/logo.svg" alt="cnktros" width="72"></a>
+  <a href="https://cnktros.com"><img src="assets/cnktros-logo.png" alt="cnktros" width="96"></a>
 </p>
 
 <h1 align="center">Connector</h1>
