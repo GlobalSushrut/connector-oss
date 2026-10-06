@@ -23,7 +23,7 @@ cd connector-oss
 ./up.sh
 ```
 
-Open <http://127.0.0.1:9091/>. Local login: `Authorization: Bearer dev-token`. Keep that token on your own machine.
+Open <http://127.0.0.1:9091/>. On that screen choose **Open on this machine**. That is the local dev-token, and it stays on your computer. A portal API key is for a hosted node, not this one.
 
 On **Run**, open **Demo**. On **Bring your agent**, connect something you already use. When PATE says **Ask**, decide that digest on **Fix**. **Watch** shows the evidence.
 

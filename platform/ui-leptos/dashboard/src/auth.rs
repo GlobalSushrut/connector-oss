@@ -193,19 +193,11 @@ pub async fn fetch_me(set_auth: WriteSignal<AuthState>) {
     let _ = bootstrap_session(set_auth).await;
 }
 
-/// Developer-only authentication shortcut.
+/// Local-node authentication shortcut.
 ///
-/// Only compiled when the `dev-bypass` Cargo feature is enabled. Production
-/// builds (`trunk build --release` without features) cannot call this — the
-/// symbol does not exist in the binary. See `dashboard/Cargo.toml::[features]`.
-///
-/// Phase 5.2 — even when the feature is compiled in, this function
-/// **refuses to run** if the live server reports `mode == "playground"`.
-/// Playground sessions are hosted demos; a dev-bypass auto-login would
-/// hand out an operator session to anonymous visitors. We pre-flight
-/// `GET /api/v1/deployment/info` and bail with a console warning if
-/// we're talking to a Playground server.
-#[cfg(feature = "dev-bypass")]
+/// The login page calls this only from a loopback address. Hosted
+/// playground sessions are refused here even if the button were shown:
+/// a dev shortcut must not hand an operator session to an anonymous visitor.
 pub async fn dev_bypass(set_auth: WriteSignal<AuthState>) {
     // Pre-flight: refuse to run against a Playground server even when
     // the dev-bypass feature was compiled in by mistake.

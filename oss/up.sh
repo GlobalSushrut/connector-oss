@@ -63,7 +63,7 @@ ensure_ui() {
   (
     unset NO_COLOR
     cd "$ROOT/platform/ui-leptos/dashboard"
-    trunk build --release
+    trunk build --release --features dev-bypass
   )
   [[ -f "$UI_DIR/index.html" ]]
 }

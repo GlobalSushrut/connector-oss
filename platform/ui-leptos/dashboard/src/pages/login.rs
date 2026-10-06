@@ -2,10 +2,18 @@ use gloo_storage::{LocalStorage, Storage};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use leptos_router::hooks::*;
-use crate::auth::{login_with_api_key, AuthState};
+use crate::auth::{dev_bypass, login_with_api_key, AuthState};
 use crate::routing::post_auth;
-#[cfg(feature = "dev-bypass")]
-use crate::auth::dev_bypass;
+
+fn page_is_loopback() -> bool {
+    web_sys::window()
+        .and_then(|w| w.location().hostname().ok())
+        .map(|host| {
+            let host = host.trim().to_ascii_lowercase();
+            host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]"
+        })
+        .unwrap_or(false)
+}
 
 const PORTAL_URL: &str = "https://portal.connector.dev";
 
@@ -13,8 +21,10 @@ const PORTAL_URL: &str = "https://portal.connector.dev";
 pub fn Login(set_auth: WriteSignal<AuthState>) -> impl IntoView {
     let navigate = use_navigate();
     let nav1 = navigate.clone();
+    let nav_local = navigate.clone();
     #[cfg(feature = "dev-bypass")]
     let nav2 = navigate.clone();
+    let local_gate = page_is_loopback();
 
     // Pre-fill API key if arriving from /trial.
     let prefill: String = LocalStorage::get::<String>("trial_api_key").unwrap_or_default();
@@ -65,6 +75,17 @@ pub fn Login(set_auth: WriteSignal<AuthState>) -> impl IntoView {
                 set_error.set("API key is required".into());
                 return;
             }
+            if key == "dev-token" && page_is_loopback() {
+                set_error.set(String::new());
+                set_loading.set(true);
+                let nav = nav1.clone();
+                let route = route.clone();
+                spawn_local(async move {
+                    dev_bypass(set_auth).await;
+                    nav(&route, Default::default());
+                });
+                return;
+            }
             if !key.starts_with("cpk_") {
                 set_error.set("Invalid format — API keys start with cpk_".into());
                 return;
@@ -90,9 +111,47 @@ pub fn Login(set_auth: WriteSignal<AuthState>) -> impl IntoView {
                     <a href="/" class="mx-auto mb-4 flex justify-center" aria-label="cnktros">
                         <img src="/logo.png" alt="cnktros" class="h-10 w-auto max-w-[12rem]" />
                     </a>
-                    <h1 class="text-xl font-semibold text-zinc-50">"Operator dashboard"</h1>
-                    <p class="mt-1 text-sm text-zinc-500">"Operator Dashboard · Token access only"</p>
+                    <h1 class="text-xl font-semibold text-zinc-50">
+                        {if local_gate { "Local node" } else { "Operator dashboard" }}
+                    </h1>
+                    <p class="mt-1 text-sm text-zinc-500">
+                        {if local_gate {
+                            "This computer. A portal key is not required."
+                        } else {
+                            "Operator Dashboard · Token access only"
+                        }}
+                    </p>
                 </div>
+
+                {if local_gate {
+                    let nav_for_local = nav_local.clone();
+                    let route_for_local = post_route.clone();
+                    view! {
+                        <div class="mb-5 space-y-2">
+                            <button
+                                type="button"
+                                on:click=move |_| {
+                                    set_loading.set(true);
+                                    set_error.set(String::new());
+                                    let nav = nav_for_local.clone();
+                                    let route = route_for_local.clone();
+                                    spawn_local(async move {
+                                        dev_bypass(set_auth).await;
+                                        nav(&route, Default::default());
+                                    });
+                                }
+                                class="btn-primary w-full"
+                            >
+                                "Open on this machine"
+                            </button>
+                            <p class="text-center text-[11px] text-zinc-500">
+                                "Uses the local dev-token. It stays on this computer."
+                            </p>
+                        </div>
+                    }.into_any()
+                } else {
+                    ().into_any()
+                }}
 
                 {
                     // Dev-bypass-only callout. Production builds compile this to nothing.
@@ -102,7 +161,7 @@ pub fn Login(set_auth: WriteSignal<AuthState>) -> impl IntoView {
                     {
                         let mode = crate::deployment::use_deployment_mode();
                         view! {
-                            <Show when=move || mode.get() != crate::deployment::DeploymentMode::Playground>
+                            <Show when=move || !local_gate && mode.get() != crate::deployment::DeploymentMode::Playground>
                                 <div class="mb-4 space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5">
                                     <div class="flex items-center gap-2">
                                         <span class="text-amber-400 text-sm">"⚠"</span>
@@ -182,7 +241,7 @@ pub fn Login(set_auth: WriteSignal<AuthState>) -> impl IntoView {
                         let nav_for_show = nav2.clone();
                         view! {
                             <Show
-                                when=move || mode.get() != crate::deployment::DeploymentMode::Playground
+                                when=move || !local_gate && mode.get() != crate::deployment::DeploymentMode::Playground
                                 fallback=|| view! { <span></span> }
                             >
                                 {
