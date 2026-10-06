@@ -14,6 +14,18 @@
 
 **Today's stack vs Connector.** Frameworks make agents capable. Gateways connect them. Policy judges rules. Logs show activity. Connector binds who acts, what they may cause, and whether that one effect may happen. Teams running agents that change real systems need it.
 
+## Market standard, and what is only here
+
+| Market standard | In Connector |
+| --- | --- |
+| MCP, A2A, OpenAI-compatible chat | Bring an existing agent, or assemble one here. Pasting an address does not grant it. |
+| Keycloak, SPIFFE/SPIRE | Partial. Operator identity and workload identity. |
+| NVIDIA OpenShell, OPA, Firecracker | Partial. Runtime boundary, policy, and microVM isolation. `./up.sh` does not download them. |
+| OpenTelemetry, Sigstore cosign | Partial. Traces and signed artifacts. |
+| agentgateway | Target. Traffic forwarding is not integrated. |
+
+**Only in Connector.** One requested effect gets one PATE verdict: Proceed, Ask, Defer, Quarantine, or Block. Ask stays open for a person. The grant is that effect, not the whole agent. A receipt records what was observed. Cease revokes the next use. Knowledge, instructions, and memory are not permission.
+
 <p align="center">
   <img src="oss/assets/architecture.png" alt="Connector OS. Identity, purpose, and authority pass through PATE before a consequence. agentgateway is still a target." width="880">
 </p>
