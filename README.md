@@ -5,9 +5,14 @@
 <h1 align="center">Connector</h1>
 
 <p align="center">
-  <strong>Govern an agent before its intention becomes a consequence.</strong><br>
   <a href="https://cnktros.com">cnktros.com</a>
 </p>
+
+**What it is.** Connector governs an agent before its intention becomes a real consequence.
+
+**Why we need it.** Agents already write, call tools, spend, and continue. A prompt cannot admit one effect, record it, and revoke the next.
+
+**Today's stack vs Connector.** Frameworks make agents capable. Gateways connect them. Policy judges rules. Logs show activity. Connector binds who acts, what they may cause, and whether that one effect may happen. Teams running agents that change real systems need it.
 
 <p align="center">
   <img src="oss/assets/architecture.png" alt="Connector OS. Identity, purpose, and authority pass through PATE before a consequence. agentgateway is still a target." width="880">
