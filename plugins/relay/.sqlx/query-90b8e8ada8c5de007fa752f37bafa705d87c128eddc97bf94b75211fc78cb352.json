@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE relay_async_jobs SET status = 'running', started_at = NOW(), attempt_count = attempt_count + 1 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "90b8e8ada8c5de007fa752f37bafa705d87c128eddc97bf94b75211fc78cb352"
+}

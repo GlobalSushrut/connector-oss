@@ -1,0 +1,167 @@
+% Connector — What we sell (buyer brief)
+% Compile: make -C platform/docs/gtm -f Makefile.what-we-sell
+% Honesty: AIOS_CLAIM_PLAN.md · AIOS_STATUS.md · buyer_surface on claim JSON
+% Must not say: court-green, SOC2 certified, Mei LLM-as-CPU, Honor OS, GPU OS
+
+\documentclass[10pt]{article}
+\usepackage[margin=0.58in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+
+\hypersetup{
+  pdftitle={Connector --- What we sell},
+  pdfauthor={Connector},
+  pdfsubject={Governed intelligence kernel: what it does, who buys, why us}
+}
+
+\definecolor{textmuted}{HTML}{475569}
+\definecolor{navy}{HTML}{0F172A}
+\definecolor{rule}{HTML}{CBD5E1}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.42em}
+\setlist[itemize]{nosep,leftmargin=1.15em,itemsep=0.08em,topsep=0.14em,parsep=0pt}
+\setlist[enumerate]{nosep,leftmargin=1.2em,itemsep=0.08em,topsep=0.14em,parsep=0pt}
+\titleformat{\section}{\normalfont\bfseries\fontsize{11}{13}\selectfont\color{navy}}{\thesection.}{0.45em}{}
+\titlespacing*{\section}{0pt}{0.85em}{0.28em}
+
+\newcommand{\muted}[1]{\textcolor{textmuted}{#1}}
+
+\begin{document}
+\pagestyle{empty}
+\thispagestyle{empty}
+
+{\fontsize{16}{19}\selectfont\bfseries\color{navy} Connector}\\[0.12em]
+{\fontsize{11}{13}\selectfont\bfseries The operating layer for intelligence that already acts}\\[0.2em]
+{\small\muted{Buyer brief --- August 2026. What the system can do, why they need it, who buys, what we sell, why us.}}
+
+\vspace{0.15em}
+\noindent{\color{rule}\rule{\linewidth}{0.6pt}}
+
+\section{What we are selling}
+
+A \textbf{self-hosted governed intelligence kernel}.
+
+Customers keep LangGraph, Crew, vLLM, Ollama, OpenAI, MCP. Those products do what they do. Connector sits \textbf{beneath} them and does the job they skip:
+
+\begin{itemize}
+  \item \textbf{Charter} an intelligence $I$ (identity $\mu$, not a Linux PID).
+  \item \textbf{Admit} every effect $A$ (talk, tool, world, share) --- or refuse it.
+  \item \textbf{Keep} the world model ($/m$, $/k$) that outlives one graph.
+  \item \textbf{Stop} this $I$ (interrupt thought, kill-switch, compensating undo).
+  \item \textbf{Prove} who did what (hash-chained traces; council floor with live $\mu$).
+\end{itemize}
+
+\textbf{SKU:} one node (\texttt{connector-platform} + \texttt{connectorctl}), licensed, self-hosted. Not a chatbot. Not a GPU farm. Not Honor/CosmOS. Not ``we are LangGraph.''
+
+{\small\muted{Claim language we may use: governed intelligence kernel (V1 buyer Agent OS). We must not say: Mei et al.\ AIOS, LLM-as-CPU, court-green, SOC2 certified, Honor Agentic OS, infrastructure GPU OS.}}
+
+\section{What the system can do today}
+
+These are in code. Crew and AutoGen put them on slides.
+
+\renewcommand{\arraystretch}{1.12}
+{\small
+\begin{tabularx}{\linewidth}{@{}>{\bfseries\arraybackslash}p{0.22\linewidth} X >{\raggedright\arraybackslash}p{0.34\linewidth}@{}}
+\toprule
+Capability & What that means in production & How they run it without us \\
+\midrule
+Kernel who-am-I & Talk injects identity $\mu$ (0xCD). An $I$ cannot speak as another. & A persona prompt. The model invents a name. \\
+Isolation by default & Agent A cannot see Agent B. Share only after human+root portal. & One Python process. Shared graph RAM. \\
+World grants & Each ($I$ $\times$ address) is its own grant. MCP behind admit. & Ambient tools on the graph. \\
+Gartner L1--L4 & Root/Cone = L3 (act with approval). App = L4 with kill + compensate. Per crossing, not a global switch. & Uniform lock-or-trust. Gartner said that fails. \\
+Stop this $I$ & Kill-switch interrupts this intelligence's thought. Seconds on this node. & Restart the process. Everyone dies. \\
+Compensate & Revoke grant, close portal, deny tool. WM records the line. Not world rewind. & They say ``rollback.'' They do not rewind the world. \\
+Cost cap & Per-$I$ budget gate on Talk. & A dashboard after the bill. \\
+Auditor trail & DecisionTrace + OTel/JSONL export. Council floor is who-said-what with $\mu$. & ``The framework logged it somewhere.'' \\
+Memory that lasts & \texttt{/m} core, recall, archival; Talk inject; kernel paging. & RAG stuffed by the app. Dies with the graph. \\
+Council & Root-minted members. Named task owner $\mu$. Talk injects the desk. & Crew chat loop. Invented names. \\
+Sit beneath & \texttt{OPENAI\_BASE\_URL=/v1}. Swap vLLM $\leftrightarrow$ Ollama $\leftrightarrow$ OpenAI without changing $I$. & Lock-in to their runtime. \\
+\bottomrule
+\end{tabularx}
+}
+
+\vspace{0.2em}
+{\footnotesize\muted{Operator loop: charter $I$ $\rightarrow$ link device $\rightarrow$ point the app at \texttt{/v1} $\rightarrow$ grant world $\rightarrow$ admit + trace $\rightarrow$ interrupt or kill this $I$. Follow: \texttt{connectorctl iia aios} $\cdot$ \texttt{GET /api/v1/kernel/aios/claim-readiness} $\rightarrow$ \texttt{buyer\_surface}.}}
+
+\section{Why they need it}
+
+Gartner (25 Jun 2025): \textbf{over 40\% of agentic projects canceled by end-2027} --- cost, unclear value, or inadequate risk controls. Gartner (26 May 2026): applying \textbf{uniform} governance across agents will fail; map each agent to Observe / Advise / Act-with-approval / Act-autonomous; L4 needs rollback, circuit breaker, named owner, and a \textbf{five-minute stop}.
+
+The buyer already has agents that \textbf{act}: they spend, read data, call tools, change customer state. The framework built the workflow. It did not build:
+
+\begin{enumerate}
+  \item a stop that is this agent, not the whole box;
+  \item a cost cap before the invoice;
+  \item isolation so two agents do not share a brain;
+  \item an identity the model cannot invent;
+  \item a trail an auditor will sit with (not a PDF policy, not a Slack export).
+\end{enumerate}
+
+They need Connector because \textbf{the coordination layer is the remaining lock-in} once MCP made tools portable. Without it they cannot ship L4, cannot answer ``who did that,'' and join the 40\%.
+
+\section{Who will buy}
+
+Not ``everyone using ChatGPT.'' The filter is \textbf{urgency}: AI already takes action, the action can hurt, and they cannot explain the last miss.
+
+\renewcommand{\arraystretch}{1.08}
+{\small
+\begin{tabularx}{\linewidth}{@{}>{\bfseries\arraybackslash}p{0.24\linewidth} X >{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+\toprule
+Buyer & Why they feel it & Who signs \\
+\midrule
+Support / CX automation & Wrong refund, wrong discount, unreconstructable escalation. & VP Support, Head of CX, CTO \\
+Fintech / ops risk & Flags, exceptions, money movement without a trail. & Head of Ops, CRO, CISO \\
+Platform / AI engineering & Many agents, three frameworks, no OS. Security will not sign L4. & VP Eng, Head of Platform \\
+Compliance / legal (influencer) & EU AI Act inventory, evidence pack, ``show me who approved.'' They do not write the PO; they can kill the deal. & GC, CISO, DPO \\
+\bottomrule
+\end{tabularx}
+}
+
+\vspace{0.15em}
+\textbf{Three-question qualifier.} (1)~Is the AI taking actions, not only producing text? (2)~When it is wrong, can you say which intelligence did it? (3)~Have you had an incident, or can you see the one coming? Yes / no / yes --- that is a customer.
+
+\textbf{Not first:} teams still in chatbot PoC; buyers who want Honor-style device UX; buyers who want us to become their GPU/vLLM farm.
+
+\section{Why us}
+
+\begin{itemize}
+  \item \textbf{We are the operating layer, not a fourth framework.} LangGraph and Crew stay. Identity, WM, admit, and stop do not live in their graph.
+  \item \textbf{CPU, GPU, and intelligence are three kinds.} We do not sell ``LLM as CPU.'' vLLM is a device URL. $I$ is chartered intelligence. That is why we can swap engines without rewriting the fleet.
+  \item \textbf{Isolation is default, not a prompt.} A sharing contract (human+root) mints a pore. Council is the same rule: named owner $\mu$, not a shared crew RAM.
+  \item \textbf{Evidence is fail-closed.} Court-readiness never auto-greens. Art.9 inventory is a living list, not a spreadsheet. We will not sell a green checkbox as a certificate.
+  \item \textbf{It is already running.} The bake-off list is \texttt{buyer\_surface} in the claim JSON --- not a roadmap slide.
+\end{itemize}
+
+\section{What we do not sell}
+
+\begin{itemize}
+  \item A rewrite of the customer's LangGraph / Crew / vLLM stack.
+  \item World rewind (undo is compensating).
+  \item Certified SOC2 / ISO / court-green from this brief.
+  \item Honor / CosmOS device OS. Infrastructure GPU OS.
+  \item Live multi-node fabric as the default (product SoT is single-node until soak + flag).
+\end{itemize}
+
+\section{How they buy}
+
+\textbf{Entry:} one live workflow where AI already acts and a miss is expensive. We put that workflow on three sockets (completion \texttt{/v1}, syscall, world grant). They keep their thinker. They get identity, admit, stop, budget, and a trail.
+
+\textbf{Pilot shape:} 30 days, self-hosted node, one $I$ (then two, to prove isolation and council). Success = they can stop this $I$, see who did what, and show a crossing that was refused.
+
+\textbf{Expansion:} more $I$, more grants, council, SCIM/OIDC, Art.9 inventory as packaging --- same kernel.
+
+\vspace{0.45em}
+\noindent{\color{rule}\rule{\linewidth}{0.5pt}}\\[0.35em]
+{\footnotesize\muted{Sources of truth: \texttt{AIOS\_OPERATING\_LAYER.md} $\cdot$ \texttt{AIOS\_STATUS.md} $\cdot$ \texttt{AIOS\_CLAIM\_PLAN.md} $\cdot$ \texttt{GET /api/v1/kernel/aios/claim-readiness}. Gartner newsroom 25 Jun 2025 and 26 May 2026. This page is a buyer brief, not a certificate.}}
+
+\end{document}

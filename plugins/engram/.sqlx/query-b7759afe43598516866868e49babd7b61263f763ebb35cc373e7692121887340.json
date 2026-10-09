@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT n.id, n.path, n.team, n.retention_days, n.entropy_alert, n.entropy_halt,\n               n.hipaa, n.auto_consolidate, n.stale_days, n.created_at, n.updated_at,\n               COALESCE(s.entropy_score, 0.0) AS entropy_score,\n               COALESCE(s.knot_score, 0.0) AS knot_score,\n               COALESCE(s.contradiction_count, 0) AS contradiction_count,\n               COALESCE(s.redundancy_count, 0) AS redundancy_count,\n               COALESCE(s.stale_count, 0) AS stale_count,\n               COALESCE(s.threads_detected, 0) AS threads_detected,\n               s.snapped_at\n        FROM engram_namespaces n\n        LEFT JOIN LATERAL (\n            SELECT entropy_score, knot_score, contradiction_count,\n                   redundancy_count, stale_count, threads_detected, snapped_at\n            FROM engram_entropy_snapshots\n            WHERE namespace_id = n.id\n            ORDER BY snapped_at DESC LIMIT 1\n        ) s ON true\n        WHERE n.path = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "team",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "retention_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "entropy_alert",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "entropy_halt",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "hipaa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "auto_consolidate",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "stale_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "entropy_score",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "knot_score",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 13,
+        "name": "contradiction_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 14,
+        "name": "redundancy_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 15,
+        "name": "stale_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 16,
+        "name": "threads_detected",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
+        "name": "snapped_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "b7759afe43598516866868e49babd7b61263f763ebb35cc373e7692121887340"
+}

@@ -1,0 +1,65 @@
+name: anthropic_translate
+description: >
+  Internal: Translate between Anthropic Messages API and internal gateway format.
+  Handles content blocks (text, tool_use, tool_result, image), system field,
+  streaming, and header forwarding.
+version: "1.0.0"
+plugin: devguard
+internal: true
+
+# Anthropic Messages API -> Internal
+# POST /v1/messages body:
+#   model, max_tokens, system (string|array), messages [{role, content}],
+#   tools [], tool_choice, stream, temperature, top_p, top_k,
+#   metadata {user_id}
+#
+# content can be:
+#   string (simple text)
+#   array of blocks:
+#     {type: "text", text: "..."}
+#     {type: "tool_use", id: "...", name: "...", input: {...}}
+#     {type: "tool_result", tool_use_id: "...", content: "..."}
+#     {type: "image", source: {type: "base64", media_type: "...", data: "..."}}
+#
+# Required headers: anthropic-beta, anthropic-version
+# Optional: X-Claude-Code-Session-Id
+#
+# Response:
+#   id, type: "message", role: "assistant", model, stop_reason,
+#   content: [{type: "text", text: "..."}, {type: "tool_use", ...}],
+#   usage: {input_tokens, output_tokens}
+
+transforms:
+  request:
+    # Extract system from top-level field into system message
+    - extract_system_field: true
+    # Flatten content blocks into text for internal processing
+    - flatten_content_blocks: true
+    # Extract tool_use blocks for policy enforcement
+    - extract_tool_use_blocks: true
+    # Forward required headers
+    - forward_headers: [anthropic-beta, anthropic-version, X-Claude-Code-Session-Id]
+
+  response:
+    # Wrap assistant text back into content blocks
+    - wrap_content_blocks: true
+    # Re-insert tool_use blocks (post-policy-check)
+    - reinsert_tool_use: true
+    # Map finish_reason -> stop_reason
+    - map_stop_reason:
+        stop: end_turn
+        tool_calls: tool_use
+        length: max_tokens
+    # Map usage fields
+    - map_usage:
+        prompt_tokens: input_tokens
+        completion_tokens: output_tokens
+
+  streaming:
+    # Anthropic SSE format:
+    #   message_start, content_block_start, content_block_delta,
+    #   content_block_stop, message_delta, message_stop
+    - sse_event_mapping:
+        internal_delta: content_block_delta
+        internal_start: message_start
+        internal_done: message_stop

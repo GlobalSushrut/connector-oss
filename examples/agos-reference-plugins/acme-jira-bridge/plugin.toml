@@ -1,0 +1,43 @@
+[plugin]
+id = "acme/jira-bridge"
+name = "Jira bridge (reference)"
+version = "0.1.0"
+author = "Acme"
+license = "MIT"
+min_kernel = "0.1.0"
+agos_abi = "agos.v1"
+
+[addressing]
+scheme = "agos"
+base = "agos://plugin/acme/jira-bridge"
+
+[runtime]
+type = "subprocess"
+entrypoint = "target/release/acme_jira_bridge"
+memory_mb = 64
+vcpus = 1
+shared = false
+max_concurrency = 4
+idle_window = "30s"
+cold_start_budget_ms = 500
+
+[ports]
+admin = "127.0.0.1:0"
+
+[routes]
+prefix = "/plugins/jira-bridge"
+admin = "/plugins/jira-bridge/admin/*"
+
+[capabilities]
+required = [
+  "audit.write",
+  "network.outbound:api.atlassian.com:443",
+]
+
+[ui]
+pages = [
+  { path = "/plugins/jira-bridge", title = "Jira bridge", role = "operator" },
+]
+
+[provides]
+ticket = { protocol = "agos.jira-ticket.v1" }

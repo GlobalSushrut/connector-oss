@@ -1,0 +1,58 @@
+name: context_assemble
+description: >
+  Internal: Build safe bounded context for LLM calls.
+  Applies scope rules, injects knowledge, enforces token limits.
+version: "1.0.0"
+plugin: devguard
+internal: true
+
+# Context assembly pipeline:
+#
+# 1. Determine task scope from policy
+# 2. Filter files by visibility rules
+# 3. Inject required knowledge docs
+# 4. Add prior work memory (if enabled)
+# 5. Add relevant RAG results
+# 6. Enforce token budget
+# 7. Produce final context block
+
+assembly_order:
+  - stage: system_prompt
+    source: policy.context.inject
+    priority: 1
+    description: "Coding standards, architecture rules, policy docs"
+
+  - stage: task_context
+    source: session.task_description
+    priority: 2
+    description: "What the agent is supposed to do"
+
+  - stage: role_context
+    source: policy.roles[session.role]
+    priority: 3
+    description: "Role permissions summary for self-awareness"
+
+  - stage: memory_context
+    source: kernel.recall_by_similarity
+    priority: 4
+    description: "Prior work, past edits, past failures"
+    max_items: 50
+
+  - stage: file_context
+    source: workspace_files
+    priority: 5
+    description: "Scoped file content from allowed paths"
+    filter: policy.context.scope
+    exclude: policy.context.exclude
+
+  - stage: diff_context
+    source: git.diff
+    priority: 6
+    description: "Current uncommitted changes"
+
+token_budgeting:
+  strategy: priority_based
+  # Higher priority stages get tokens first.
+  # Lower priority stages are truncated if budget exceeded.
+  max_tokens: "{{ policy.context.max_tokens | default(32000) }}"
+  reserve_for_response: 4000

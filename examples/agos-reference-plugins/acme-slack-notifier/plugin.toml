@@ -1,0 +1,43 @@
+[plugin]
+id = "acme/slack-notifier"
+name = "Slack notifier (reference)"
+version = "0.1.0"
+author = "Acme"
+license = "MIT"
+min_kernel = "0.1.0"
+agos_abi = "agos.v1"
+
+[addressing]
+scheme = "agos"
+base = "agos://plugin/acme/slack-notifier"
+
+[runtime]
+type = "subprocess"
+entrypoint = "target/release/acme_slack_notifier"
+memory_mb = 64
+vcpus = 1
+shared = false
+max_concurrency = 4
+idle_window = "30s"
+cold_start_budget_ms = 500
+
+[ports]
+admin = "127.0.0.1:0"
+
+[routes]
+prefix = "/plugins/slack-notifier"
+admin = "/plugins/slack-notifier/admin/*"
+
+[capabilities]
+required = [
+  "audit.write",
+  "network.outbound:hooks.slack.com:443",
+]
+
+[ui]
+pages = [
+  { path = "/plugins/slack-notifier", title = "Slack notifier", role = "operator" },
+]
+
+[provides]
+notify = { protocol = "agos.slack-notify.v1" }

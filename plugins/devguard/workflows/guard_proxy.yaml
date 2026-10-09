@@ -1,0 +1,94 @@
+name: guard_proxy
+description: >
+  Start a generic governed LLM proxy. Works with any tool that accepts
+  a custom API base URL (OpenAI or Anthropic format).
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl guard proxy"
+
+inputs:
+  port:
+    type: integer
+    required: false
+    default: 9091
+  protocol:
+    type: string
+    required: false
+    default: "both"
+    enum: [openai, anthropic, both]
+    description: "API format to serve"
+  policy_path:
+    type: string
+    required: false
+    default: ".connector/policy.yaml"
+  role:
+    type: string
+    required: false
+    default: "builder"
+
+steps:
+  - id: load_policy
+    action: devguard.internal.policy_compile
+    params:
+      path: "{{ inputs.policy_path }}"
+      role: "{{ inputs.role }}"
+
+  - id: start_session
+    action: connector.session.create
+    params:
+      role: "{{ inputs.role }}"
+      policy: "{{ steps.load_policy.compiled_policy }}"
+    depends_on: load_policy
+
+  - id: start_gateway
+    action: connector.gateway.start
+    params:
+      port: "{{ inputs.port }}"
+      protocol: "{{ inputs.protocol }}"
+      session_id: "{{ steps.start_session.session_id }}"
+      features:
+        - anthropic_compat
+        - file_guard
+        - exec_guard
+        - secret_scan
+        - audit_chain
+        - rag_injection
+    depends_on: start_session
+
+  - id: print_instructions
+    action: shell.print
+    params:
+      message: |
+        DevGuard proxy running on port {{ steps.start_gateway.port }}.
+
+        For OpenAI SDK:
+          export OPENAI_BASE_URL=http://localhost:{{ steps.start_gateway.port }}
+          export OPENAI_API_KEY={{ steps.start_session.session_token }}
+
+        For Anthropic SDK:
+          export ANTHROPIC_BASE_URL=http://localhost:{{ steps.start_gateway.port }}
+          export ANTHROPIC_API_KEY={{ steps.start_session.session_token }}
+
+        All LLM calls are now governed.
+    depends_on: start_gateway
+
+  - id: wait_for_exit
+    action: signal.wait
+    params:
+      signals: [SIGINT, SIGTERM]
+    depends_on: print_instructions
+
+  - id: end_session
+    action: devguard.workflows.session_end
+    params:
+      session_id: "{{ steps.start_session.session_id }}"
+      generate_proof: true
+    depends_on: wait_for_exit
+    run: always
+
+outputs:
+  session_id: "{{ steps.start_session.session_id }}"
+  port: "{{ steps.start_gateway.port }}"

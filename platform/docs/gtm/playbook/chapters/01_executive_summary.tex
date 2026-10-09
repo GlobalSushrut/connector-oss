@@ -1,0 +1,78 @@
+\chapter{Executive Summary}
+
+\section{What Connector is (one sentence)}
+
+\textbf{Connector OS} is a \textbf{self-hosted governance node} for AI agents and workflows: it sits between your agents and production systems and makes every consequential action \textbf{isolatable}, \textbf{policy-bound at runtime}, and \textbf{provable afterward}.
+
+\section{What we are not}
+
+\begin{itemize}
+  \item Not a chatbot or copilot product.
+  \item Not ``prompt tuning'' or guardrails-only filtering.
+  \item Not a replacement for your entire AI stack on day one.
+  \item Not a giant transformation program sold as the first conversation.
+\end{itemize}
+
+\section{The three pillars buyers remember}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\begin{tabularx}{0.95\textwidth}{@{}>{\bfseries}p{0.18\textwidth} X@{}}
+\toprule
+Isolate & Boundaries so agents, data, and tools do not blend blindly across teams or environments. \\
+\midrule
+Govern & Policy, budgets, and tool access evaluated \textbf{at runtime}; violations can be blocked, not only logged after the fact. \\
+\midrule
+Verify & Tamper-evident receipts and exportable evidence---artifacts auditors and executives can review, not raw log dumps. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.4em}
+\noindent\textbf{Operator idiom:} \emph{trace $\rightarrow$ explain $\rightarrow$ prove} (dashboard, API, and CLI).
+
+\section{Product shape: one node, many workloads}
+
+Customers install \textbf{one Connector OS node} (\texttt{connector-platform} + \texttt{connectorctl}). On that node they run:
+
+\begin{itemize}
+  \item \textbf{First-party plugins} (DevGuard, TraceTramp, WitnessCtl, LedgerLens, and planned apps).
+  \item \textbf{Custom workflows} (CLS / company-specific automation authored for their business).
+  \item \textbf{Third-party AGOS plugins} (packaged \texttt{.cpkg} workloads from a hub model).
+\end{itemize}
+
+Think \textbf{operating system + applications}, not a bag of disconnected microservices.
+
+\section{Entry wedge (how we sell in 2026)}
+
+We enter through \textbf{one live workflow} where AI already takes action and mistakes hurt:
+
+\begin{itemize}
+  \item support automation (refunds, routing, discounts),
+  \item fintech ops (flags, reviews, exceptions),
+  \item internal automation (approvals, case routing).
+\end{itemize}
+
+We sell \textbf{decision trace + explanation + compliance-ready output} for that workflow---not ``the whole platform vision'' in meeting one.
+
+\begin{conceptbox}{Core GTM line}
+\centering
+\large
+When your AI makes a decision, Connector shows what happened, why it happened, and gives you evidence you can stand behind.
+\end{conceptbox}
+
+\section{Stage}
+
+\textbf{Controlled beta.} Runtime, plugins, and workflows are exercised in self-hosted and lab settings with design partners. Position honestly: thesis is clear; distribution is founder-led; proof comes from narrow pilots.
+
+\section{Who should read this document}
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Reader} & \textbf{Use this for} \\
+\midrule
+GTM / sales & Pitch framing, use-case tables, plugin story, pilot scope \\
+Semi-technical champion (VP Eng, Head of Platform) & How the node works, custom vs pre-made choice \\
+Founder / investor conversation & Problem depth, USP, wedge, motion \\
+\bottomrule
+\end{tabularx}

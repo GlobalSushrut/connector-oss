@@ -1,0 +1,92 @@
+name: command_patterns
+description: "Internal: Built-in dangerous command detection patterns."
+version: "1.0.0"
+plugin: devguard
+internal: true
+
+# These patterns are always checked regardless of policy.
+# Policy allowed/denied lists are checked separately.
+
+always_deny:
+  - pattern: "rm -rf /"
+    reason: "Recursive delete of root filesystem"
+  - pattern: "rm -rf ~"
+    reason: "Recursive delete of home directory"
+  - pattern: "rm -rf ."
+    reason: "Recursive delete of current directory"
+  - pattern: ":(){ :|:& };:"
+    reason: "Fork bomb"
+  - pattern: "> /dev/sd"
+    reason: "Direct write to block device"
+  - pattern: "dd if=/dev/zero of=/dev/sd"
+    reason: "Disk wipe"
+  - pattern: "dd if=/dev/random of=/dev/sd"
+    reason: "Disk wipe"
+  - pattern: "mkfs."
+    reason: "Filesystem format"
+  - pattern: "chmod -R 777 /"
+    reason: "Remove all file permissions on root"
+  - pattern: "chown -R"
+    reason: "Recursive ownership change"
+    context_check: "only deny if target is / or /etc or /usr or /var"
+
+always_flag:
+  - pattern: "curl.*| bash"
+    reason: "Remote code execution via pipe"
+    severity: critical
+  - pattern: "wget.*| sh"
+    reason: "Remote code execution via pipe"
+    severity: critical
+  - pattern: "curl.*| sh"
+    reason: "Remote code execution via pipe"
+    severity: critical
+  - pattern: "eval "
+    reason: "Dynamic code execution"
+    severity: high
+  - pattern: "exec "
+    reason: "Process replacement"
+    severity: high
+  - pattern: "sudo "
+    reason: "Privilege escalation"
+    severity: high
+  - pattern: "su -"
+    reason: "User switch"
+    severity: high
+
+network_egress:
+  - pattern: "curl "
+    check: "url_allowlist"
+  - pattern: "wget "
+    check: "url_allowlist"
+  - pattern: "ssh "
+    check: "host_allowlist"
+  - pattern: "scp "
+    check: "host_allowlist"
+  - pattern: "rsync "
+    check: "host_allowlist"
+  - pattern: "nc "
+    check: "deny_all"
+  - pattern: "ncat "
+    check: "deny_all"
+  - pattern: "telnet "
+    check: "deny_all"
+
+resource_intensive:
+  - pattern: "npm install"
+    note: "May install untrusted packages"
+    default: require_approval
+  - pattern: "pip install"
+    note: "May install untrusted packages"
+    default: require_approval
+  - pattern: "cargo install"
+    note: "Compiles from source"
+    default: require_approval
+  - pattern: "docker build"
+    note: "Container build may be slow/expensive"
+    default: allow
+  - pattern: "docker run"
+    note: "Container execution"
+    default: require_approval
+  - pattern: "docker push"
+    note: "Registry publish"
+    default: require_approval

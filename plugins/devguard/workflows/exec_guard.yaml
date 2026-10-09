@@ -1,0 +1,88 @@
+name: exec_guard
+description: >
+  Enforce shell command policy. Runs on every command execution attempt.
+  Checks allow/deny/approve rules, argument safety, duration limits.
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - on_event: tool_use.bash
+  - on_event: mcp.connector_run_command
+
+inputs:
+  command:
+    type: string
+    required: true
+  session_id:
+    type: string
+    required: true
+  working_dir:
+    type: string
+    required: false
+
+steps:
+  - id: parse_command
+    action: devguard.internal.command_parse
+    params:
+      raw_command: "{{ inputs.command }}"
+
+  - id: check_policy
+    action: devguard.internal.exec_guard_check
+    params:
+      command: "{{ steps.parse_command.executable }}"
+      args: "{{ steps.parse_command.args }}"
+      full_command: "{{ inputs.command }}"
+      role: "{{ session.role }}"
+    depends_on: parse_command
+
+  - id: check_dangerous
+    action: devguard.internal.dangerous_command_check
+    params:
+      command: "{{ inputs.command }}"
+      patterns:
+        - "rm -rf /"
+        - "rm -rf ~"
+        - "rm -rf ."
+        - ":(){ :|:& };:"  # fork bomb
+        - "> /dev/sda"
+        - "dd if=/dev/zero"
+        - "mkfs."
+        - "chmod -R 777 /"
+    depends_on: parse_command
+
+  - id: check_network_egress
+    action: devguard.internal.network_egress_check
+    params:
+      command: "{{ inputs.command }}"
+      role: "{{ session.role }}"
+    depends_on: parse_command
+
+  - id: audit_attempt
+    action: connector.audit.record
+    params:
+      action: "shell.execute"
+      resource: "{{ inputs.command }}"
+      verdict: "{{ steps.check_policy.verdict }}"
+      details:
+        role: "{{ session.role }}"
+        executable: "{{ steps.parse_command.executable }}"
+        dangerous: "{{ steps.check_dangerous.is_dangerous }}"
+        network_egress: "{{ steps.check_network_egress.has_egress }}"
+        reason: "{{ steps.check_policy.reason }}"
+    depends_on: [check_policy, check_dangerous, check_network_egress]
+
+  - id: enforce
+    action: devguard.internal.enforce_verdict
+    params:
+      verdict: "{{ steps.check_policy.verdict }}"
+      override_deny: "{{ steps.check_dangerous.is_dangerous }}"
+      reason: "{{ steps.check_policy.reason }}"
+      requires_approval: "{{ steps.check_policy.requires_approval }}"
+      session_id: "{{ inputs.session_id }}"
+    depends_on: [check_policy, check_dangerous]
+
+outputs:
+  allowed: "{{ steps.check_policy.allowed and not steps.check_dangerous.is_dangerous }}"
+  verdict: "{{ steps.enforce.final_verdict }}"
+  reason: "{{ steps.check_policy.reason }}"
+  requires_approval: "{{ steps.check_policy.requires_approval }}"

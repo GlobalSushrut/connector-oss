@@ -1,0 +1,231 @@
+%% ============================================================
+%%  Greylock Edge Application — Final Answers
+%%  GlobalSushrut, Inc. — 2026
+%% ============================================================
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[top=0.75in,bottom=0.75in,left=0.85in,right=0.85in]{geometry}
+\usepackage[dvipsnames,table]{xcolor}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage[most]{tcolorbox}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[
+  colorlinks=false,
+  pdftitle={Greylock Edge -- Application Answers},
+  pdfauthor={GlobalSushrut Inc.},
+]{hyperref}
+
+%% ── Palette ──────────────────────────────────────────────────
+\definecolor{CNavy}{RGB}{15,23,42}
+\definecolor{CBlue}{RGB}{24,78,160}
+\definecolor{CGray}{RGB}{100,116,139}
+\definecolor{CSoft}{RGB}{246,248,252}
+\definecolor{CLine}{RGB}{203,213,225}
+
+%% ── Layout ───────────────────────────────────────────────────
+\setstretch{1.08}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlist[itemize]{itemsep=2pt,topsep=2pt,leftmargin=1.4em}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\color{CGray}\textsc{Greylock Edge — Application Answers}}
+\fancyhead[R]{\small\color{CGray}GlobalSushrut, Inc.\ \textbullet\ 2026}
+\fancyfoot[C]{\small\color{CGray}\thepage}
+\renewcommand{\headrulewidth}{0.35pt}
+
+%% ── Question block ───────────────────────────────────────────
+\tcbset{qbase/.style={
+  enhanced, breakable, arc=4pt, boxrule=0pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt,
+  borderline west={3pt}{0pt}{CBlue}
+}}
+
+\newcommand{\qblock}[2]{%
+  \vspace{8pt}
+  \noindent
+  \begin{tcolorbox}[qbase,
+    colback=CSoft,
+    title={\small\bfseries\color{CBlue} #1},
+    attach boxed title to top left={yshift=-2mm,xshift=6pt},
+    boxed title style={colback=CBlue,arc=2pt,boxrule=0pt,
+      fonttitle=\small\bfseries\color{white}}]
+  #2
+  \end{tcolorbox}
+}
+
+%% ── Section style ────────────────────────────────────────────
+\titleformat{\section}[runin]
+  {\normalfont\large\bfseries\color{CBlue}}{}{}{}[\ \textcolor{CLine}{\rule[0.5ex]{0.6\linewidth}{0.4pt}}]
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+
+%% ============================================================
+\begin{document}
+\pagestyle{fancy}
+
+%% ── Mini header ──────────────────────────────────────────────
+\begin{center}
+  {\fontsize{8}{10}\selectfont\scshape\color{CGray} Greylock Edge Program Application}\\[3pt]
+  {\fontsize{18}{22}\selectfont\bfseries\color{CNavy} Final Answers}\\[2pt]
+  {\small\color{CGray}Copy-paste ready \textbullet\ One answer per question \textbullet\ No fluff}
+\end{center}
+
+\noindent\textcolor{CLine}{\rule{\linewidth}{0.6pt}}
+\vspace{2pt}
+
+%% ============================================================
+%% Q3
+%% ============================================================
+\qblock{Q3 — Products you have built and launched, and your role}{
+
+I built \textbf{Connector OS} — an AI execution control plane — from scratch over the past 18
+months, as sole architect and primary engineer. Every layer is mine: the compiler, the runtime
+enforcement engine, the cryptographic proof plane, the CLI, the REST API, and the operator UI.
+
+The core of Connector is a \textbf{compiled governance layer} for AI agents.
+I designed and implemented:
+
+\begin{itemize}
+  \item \textbf{CCL (Connector Contract Language)} — a domain-specific language and 7-pass
+        compiler (lex → parse → semantic analysis → IR lowering → optimization → verification → emit)
+        that compiles agent behavior into Ed25519-signed, content-addressed execution contracts.
+        Policy violations are caught at compile time, not at runtime.
+
+  \item \textbf{9-Chain Cryptographic Audit Architecture} — nine independent tamper-evident
+        chains (audit, memory, dehallucination, compliance, governance, execution, trust, proof,
+        isolation) that together produce a signed proof bundle covering HIPAA, SOC~2, GDPR,
+        and EU AI Act from a single API call. Verifiable by a third party without a live system.
+
+  \item \textbf{Namespace Isolation Model} — typed data classification (PHI in \texttt{/p/},
+        knowledge in \texttt{/k/}, memory in \texttt{/m/}) enforced at the storage layer.
+        Structural compliance — not a policy document.
+
+  \item \textbf{Real-Time Budget Enforcement Gateway} — intercepts every LLM call, records
+        provider-verified token counts per agent, enforces compile-time-declared budget ceilings.
+        When the ceiling is hit, the agent stops with a signed receipt. No crash, no silence.
+\end{itemize}
+
+I also built live adversarial demos: prompt-injection attacks that Connector blocks mid-execution,
+budget drain loops that self-terminate, and PHI leakage scenarios where the proof bundle shows
+the LLM never received the sensitive data.
+
+\textbf{This is not a project. It is infrastructure — a new category.}
+
+}
+
+%% ============================================================
+%% Q4
+%% ============================================================
+\qblock{Q4 — Domains / sectors}{
+
+\textbf{Infrastructure} \textbullet\ \textbf{Security}
+
+\medskip
+I build foundational layers, not applications.
+Connector OS is to AI agents what a kernel is to processes — the mandatory
+substrate through which all resource access, policy enforcement, and audit recording flows.
+Selecting anything other than Infrastructure and Security would misrepresent what I am building.
+
+}
+
+%% ============================================================
+%% Q5
+%% ============================================================
+\qblock{Q5 — How you landed on this problem space}{
+
+I didn't choose this problem. I found it by building — and I couldn't un-see it.
+
+I was building multi-agent systems when I noticed a structural absence that should not exist.
+Every compute system ever built — operating systems, databases, cloud platforms — has a
+\textbf{resource governance layer}. Processes don't access memory directly; they go through a kernel.
+Database queries go through an access control layer. Network packets go through a firewall.
+
+AI agents have none of this. They are the only class of software that can spend money, read sensitive
+customer data, make consequential decisions, and produce external effects —
+\textbf{with zero structural control, zero runtime enforcement, and zero cryptographic proof}.
+
+The existing responses are wrong-layer answers:
+LLM safety proxies filter prompts and outputs — that is like securing a server by checking the keyboard.
+Orchestration frameworks (LangChain, CrewAI) add composition without adding governance.
+Cloud AI safety tools sit at the model I/O boundary, not the execution layer.
+
+The fundamental flaw I discovered:
+\textit{we built sophisticated AI agency on top of an architecturally ungoverned substrate.}
+The fix is not a feature. It is a new infrastructure layer — one that sits between AI agents and
+everything they touch, enforcing compiled policy, recording cryptographic evidence,
+and producing compliance proof that a regulator can verify without trusting the vendor.
+
+I spent 18 months building that layer instead of writing about it.
+
+}
+
+%% ============================================================
+%% Q6
+%% ============================================================
+\qblock{Q6 — Do you have a co-founder already?}{
+
+\textbf{No} — and by design.
+
+The first thing I needed to prove was that the architecture was correct.
+You cannot co-found a system you have not fully thought through.
+I built the core alone: the compiler, the proof plane, the runtime, the compliance layer.
+I now know exactly what I built, what it takes to extend it, and what kind of partner would
+compound it — not duplicate it.
+
+I am looking for a co-founder whose strength is the enterprise GTM and relationship motion
+in regulated industries. The technical architecture is decided. The moat is built.
+The right partner runs toward healthcare, fintech, and legal AI buyers while I extend the platform.
+
+}
+
+%% ============================================================
+%% Q7
+%% ============================================================
+\qblock{Q7 — Anything else you'd like us to know}{
+
+I built the execution and evidence layer for AI systems —
+the missing kernel that makes AI decisions controllable, auditable, and provable in production.
+
+\medskip
+This matters because regulated industries \textbf{cannot} deploy AI without it —
+not by preference, but by law.
+HIPAA, the EU AI Act, SOC~2 Type~II, and emerging SEC disclosure rules all require
+exactly what Connector produces.
+The window for voluntary adoption is closing. The mandate wave is arriving.
+
+\medskip
+Why me: I am one of very few people who has built a production AI governance system that is both
+cryptographically correct and regulation-aware — not as a paper design, but as working, tested
+infrastructure with a compiler, a proof chain, a live runtime, and adversarial demos.
+\textbf{This is not a pitch. This is a system.}
+
+}
+
+%% ============================================================
+%% Q8
+%% ============================================================
+\qblock{Q8 — Interest in Greylock talent team}{
+
+\textbf{Yes} — selectively.
+
+I am building a company. But Greylock portfolio companies operating at the intersection of
+AI governance, security, and enterprise compliance are exactly the environments that sharpen
+my understanding of the buyer. I am open to aligned conversations —
+not because I am looking for a role, but because the right signal from the right environment
+is how category companies get built faster.
+
+}
+
+\vspace{8pt}
+\noindent\textcolor{CLine}{\rule{\linewidth}{0.5pt}}\\[3pt]
+{\footnotesize\color{CGray}\centering
+  Connector OS \textbullet\ GlobalSushrut, Inc. \textbullet\
+  \textit{``The system that governs non-deterministic AI must itself be deterministic.''}
+}
+
+\end{document}

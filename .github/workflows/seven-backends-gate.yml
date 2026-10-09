@@ -1,0 +1,64 @@
+name: seven-backends-gate
+
+on:
+  pull_request:
+    paths:
+      - "platform/server/src/substrate/cvr/**"
+      - "platform/server/src/auth/core.rs"
+      - "platform/server/src/main.rs"
+      - "platform/deploy/seven-backends/**"
+      - "platform/deploy/helm/connector/**"
+      - "platform/scripts/seven-backends-deployment-verify.sh"
+      - ".github/workflows/seven-backends-gate.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "platform/server/src/substrate/cvr/**"
+      - "platform/deploy/seven-backends/**"
+      - "platform/deploy/helm/connector/**"
+      - ".github/workflows/seven-backends-gate.yml"
+  workflow_dispatch:
+    inputs:
+      run_effective:
+        description: "Run against a pre-provisioned seven-backends KVM runner"
+        type: boolean
+        default: false
+
+jobs:
+  contract:
+    name: Fail-closed backend contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: platform/server
+      - name: Backend verifier invariants
+        working-directory: platform/server
+        run: cargo test -p connector-platform --bin connector-platform deployment_verify:: -- --test-threads=8
+      - name: Shell syntax
+        run: |
+          bash -n platform/scripts/seven-backends-deployment-verify.sh
+          bash -n platform/deploy/seven-backends/linux/up.sh
+          bash -n platform/deploy/seven-backends/linux/bootstrap-keycloak.sh
+      - name: Helm lint
+        run: bash platform/scripts/helm-lint-smoke.sh
+
+  effective:
+    name: Seven real backends (self-hosted KVM)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_effective == true
+    runs-on: [self-hosted, linux, kvm, seven-backends]
+    steps:
+      - uses: actions/checkout@v4
+      - name: KVM lifecycle
+        env:
+          CONNECTOR_KVM_REQUIRED: "1"
+          CONNECTOR_FETCH_FIRECRACKER: "0"
+        run: bash platform/scripts/cvr-kvm-acceptance.sh
+      - name: Seven-backend operational verdict
+        env:
+          CONNECTOR_API_URL: ${{ secrets.SEVEN_BACKENDS_CONNECTOR_API_URL }}
+          CONNECTOR_API_KEY: ${{ secrets.SEVEN_BACKENDS_CONNECTOR_API_KEY }}
+          CONNECTOR_BACKENDS_PROFILE: linux-kvm
+        run: bash platform/scripts/seven-backends-deployment-verify.sh

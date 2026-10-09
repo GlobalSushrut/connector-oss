@@ -1,0 +1,159 @@
+\chapter{Plugin Combinations, GTM Motion, and Talk Tracks}
+
+\section{Three reference scenarios (from product marketing)}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{0.95\textwidth}{@{}>{\bfseries}p{0.18\textwidth} p{0.3\textwidth} X@{}}
+\toprule
+Scenario & Plugin stack & Story \\
+\midrule
+Support AI & Relay + Engram + WitnessCtl (planned mix) & Governed support agent with memory + export for escalations \\
+Fintech compliance agent & DevGuard + LedgerLens + WitnessCtl + AgentPassport & Tool safety, spend caps, audit, identity \\
+Multi-agent research & Conductor + AgentLoop + Engram + TraceTramp & Coordinated agents with trace and memory \\
+\bottomrule
+\end{tabularx}
+\caption{Reference plugin combinations by scenario}
+\end{table}
+
+\noindent For \textbf{2026 beta pilots}, recommend stacks that are mostly \statusship: e.g.\ \textbf{TraceTramp + WitnessCtl + one custom workflow}, or \textbf{DevGuard + WitnessCtl} for engineering-led accounts.
+
+\section{Minimum viable stacks by pain}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{0.95\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Acute pain} & \textbf{Start here} \\
+\midrule
+``Cannot explain AI decisions'' & WitnessCtl + custom workflow \\
+``Agents bypass our policies'' & TraceTramp (Control pipeline) + WitnessCtl \\
+``Coding agent almost leaked secrets'' & DevGuard (+ WitnessCtl for exports) \\
+``LLM bill out of control'' & LedgerLens + TraceTramp \\
+``Need to ship one governed agent fast'' & Relay (when GA) or TraceTramp proxy path today \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{GTM motion (2026)}
+
+\subsection{Motion type}
+
+\begin{itemize}
+  \item \textbf{Founder-led} direct outreach.
+  \item \textbf{Network-based} warm intros.
+  \item \textbf{Not} broad paid acquisition or ``platform tour'' webinars yet.
+\end{itemize}
+
+\subsection{Four steps}
+
+\begin{enumerate}
+  \item \textbf{Identify} teams with live AI actions + recent or expected incident.
+  \item \textbf{Sell one workflow} --- one pain, one pilot (2--6 weeks).
+  \item \textbf{Land evidence} --- customer quote, export sample, before/after trace.
+  \item \textbf{Expand} --- more workflows, more plugins, reference story.
+\end{enumerate}
+
+\subsection{Outreach framing that works}
+
+\begin{insightbox}{Opening email / LinkedIn DM}
+Are you using AI to take actions in support or ops?
+
+When it makes the wrong call, can you explain why?
+
+If not, we should talk.
+\end{insightbox}
+
+\subsection{2026 targets (honest)}
+
+\textbf{By end of Q2:}
+\begin{itemize}
+  \item 3--5 qualified conversations in wedge segments.
+  \item 1--2 paid pilots in progress or completed.
+  \item At least one documented pilot win with customer statement.
+\end{itemize}
+
+\textbf{By end of Q3:}
+\begin{itemize}
+  \item 2--3 completed pilots with outcomes.
+  \item At least 1 expansion conversation (more workflows or teams).
+  \item Messaging refined from real objections.
+\end{itemize}
+
+\section{Pilot structure (reminder)}
+
+\begin{itemize}
+  \item \textbf{Scope:} one workflow, one team, defined success criteria.
+  \item \textbf{Deliverables:} full trace, decision explanation, audit-ready export.
+  \item \textbf{Success reaction:} ``Now we can see what happened.''
+  \item \textbf{Not:} free indefinite POC of entire platform.
+\end{itemize}
+
+\section{Why they pay (buying triggers)}
+
+\begin{itemize}
+  \item Unexplained AI decisions slowing operations.
+  \item Customer escalations they cannot defend.
+  \item Deals blocked by prospect security questions.
+  \item Compliance review approaching without artifacts.
+  \item Internal teams afraid to ship more AI without control.
+\end{itemize}
+
+\section{Talk tracks --- say vs.\ avoid}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{0.95\textwidth}{@{}>{\bfseries}p{0.42\textwidth} >{\bfseries}p{0.42\textwidth}@{}}
+\toprule
+\textbf{Say} & \textbf{Avoid} \\
+\midrule
+Execution control for AI decisions & ``Revolutionary AI platform'' \\
+Trace, explain, prove & Leading with MemPacket, CNP, or CLS internals \\
+One workflow pilot in 2--4 weeks & ``Rip and replace your stack'' \\
+Self-hosted node, your data & Overclaiming GA for all nine plugins \\
+Isolate, govern, verify & Competing on model quality \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Pricing signal (directional)}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}llp{0.48\linewidth}@{}}
+\toprule
+\textbf{Tier} & \textbf{Signal} & \textbf{Value} \\
+\midrule
+Pilot & Time-boxed, scoped & One workflow, proof bundle, co-produced evidence \\
+Startup & Monthly node fee & Bounded agents, core plugins, exports \\
+Scale & Higher node / SLA & Multi-team, full plugin set, operations support \\
+Enterprise & Custom & Air-gap, dedicated node, custom compliance \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Pricing follows \textbf{infrastructure} logic (per node / per agent), not per seat.
+
+\section{Related documents}
+
+\begin{itemize}
+  \item \texttt{platform/docs/arch/latex/CONNECTOR\_SYSTEM\_ARCHITECTURE.pdf} --- full technical depth.
+  \item \texttt{platform/docs/cofounder\_clarity\_latex/CONNECTOR\_COFOUNDER\_CLARITY\_2026.pdf} --- wedge, pilot, cofounder alignment.
+  \item \texttt{platform/docs/gtm/connector\_investor\_one\_pager.pdf} --- short investor brief.
+  \item \texttt{platform/docs/gtm/design-partner-targets-practical-v2.pdf} --- outreach target list.
+\end{itemize}
+
+\chapter*{Closing}
+\addcontentsline{toc}{chapter}{Closing}
+
+Connector wins when buyers feel an \textbf{expensive, present risk}---unexplained AI actions---and we make that risk \textbf{visible, bounded, and provable} on their infrastructure.
+
+Start narrow. Prove one workflow. Expand on one node.
+
+\vfill
+\begin{center}
+\textbf{Connector OS} \quad|\quad Isolate. Govern. Verify.
+\end{center}

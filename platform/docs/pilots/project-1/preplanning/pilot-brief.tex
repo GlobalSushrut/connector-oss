@@ -1,0 +1,513 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- Packages ---
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{mdframed}
+\usepackage{microtype}
+\usepackage{eurosym}
+
+% --- Colors ---
+\definecolor{connectorblue}{RGB}{30, 80, 160}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{darkgray}{RGB}{80, 80, 80}
+\definecolor{warnred}{RGB}{180, 30, 30}
+\definecolor{okgreen}{RGB}{30, 120, 50}
+
+% --- Section Formatting ---
+\titleformat{\section}{\large\bfseries\color{connectorblue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{}{0em}{}
+\setlist[itemize]{itemsep=4pt, topsep=4pt}
+
+% --- Header/Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{darkgray}{\small Travel Governance Pilot — Pre-Meeting Brief}}
+\rhead{\textcolor{darkgray}{\small Confidential — Early Stage}}
+\cfoot{\textcolor{darkgray}{\small \thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Personal Note Box ---
+\newmdenv[
+  backgroundcolor=lightgray,
+  linecolor=connectorblue,
+  linewidth=1.5pt,
+  leftline=true, rightline=false, topline=false, bottomline=false,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt
+]{notebox}
+
+% --- Warning Box ---
+\newmdenv[
+  backgroundcolor=white,
+  linecolor=warnred,
+  linewidth=1.5pt,
+  leftline=true, rightline=false, topline=false, bottomline=false,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt
+]{warnbox}
+
+% ============================================================
+\begin{document}
+
+% --- Title Page ---
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\Large\bfseries\color{connectorblue} Travel Governance Pilot\par}
+  \vspace{0.5cm}
+  {\large Pre-Meeting Technical Brief\par}
+  \vspace{0.3cm}
+  {\normalsize\color{darkgray} Connector $\times$ VeUP $\times$ Travel Client\par}
+  \vspace{1cm}
+  \hrule
+  \vspace{0.5cm}
+  {\small\color{darkgray}
+    Author: Umesh (Connector) \\
+    Date: April 2026 \\
+    Status: \textbf{Early Stage --- Pre-Discovery} \\
+    Classification: Confidential
+  }
+  \vspace{1cm}
+  \hrule
+  \vspace{1.5cm}
+
+  \begin{notebox}
+    \textbf{Personal Note:} This is my first read-through of what the client wants.
+    I am writing this before the discovery call, so some of this is my interpretation
+    from what was shared. I have a lot of open questions. My goal here is not to
+    over-engineer before I know more --- it is to walk in with a clear head,
+    honest gaps, and a grounded technical direction. Connector has what they need
+    at the core. The question is how much integration work sits on top of that.
+  \end{notebox}
+
+\end{titlepage}
+
+% ============================================================
+\section{What I Understood --- 10 Points}
+
+\begin{notebox}
+\textit{This is my honest read of what the partner shared before any discovery call. It may be incomplete or partially wrong. I flag assumptions clearly.}
+\end{notebox}
+
+\vspace{0.5em}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+
+  \item \textbf{They have an AI-heavy travel web platform.}
+  Their systems use AI for search ranking, booking recommendations, and CRM interactions.
+  This is not a proof-of-concept AI setup --- it is live, customer-facing, and generating real events.
+
+  \item \textbf{Their AI logs are disposable today.}
+  Whatever the AI does --- prompts, rankings, overrides --- currently gets written to logs and
+  either ignored or buried. There is no governance layer. This is the root problem.
+
+  \item \textbf{They have no audit trail they can show a regulator.}
+  If someone asks ``why did your AI recommend this package to this user?'', they cannot answer that
+  today. That is a compliance exposure, not just a nice-to-have feature.
+
+  \item \textbf{They want a sidecar, not a replacement.}
+  The framing of ``embedded control plane alongside live systems'' tells me they do not want
+  to rip and replace. They want something that sits next to their existing stack and captures
+  what is happening. That is the right instinct and it is the right pattern for Connector.
+
+  \item \textbf{Consent is a first-class requirement.}
+  They specifically called out user consent handling. This means GDPR and CCPA are already
+  on their radar. I assume they have some consent capture today but no enforcement layer.
+
+  \item \textbf{The PoC deliverable is deceptively simple to describe.}
+  ``Compile events into a \texttt{traveler\_profile.md} and \texttt{trip\_details.md}'' sounds
+  simple. It is not. Behind it is an ingestion pipeline, policy evaluation, tamper-evident
+  storage, and a memory compilation step. The output file is the proof, not the product.
+
+  \item \textbf{``AWS-native'' is a hard constraint.}
+  They want everything in their own AWS account. This rules out SaaS governance tools
+  (Fiddler, Truera, Arthur) and means Connector deploys as infrastructure in their environment.
+  This is actually our advantage.
+
+  \item \textbf{This is a PoC, not production.}
+  The goal is to prove the architecture works, not to handle 1M travellers. That said,
+  every PoC architecture decision either helps or hurts the production path.
+
+  \item \textbf{Warm-start personalization is the business value.}
+  The compliance angle is the hook. The real value they are selling internally is
+  ``AI that remembers context across sessions without asking users again.''
+  Governance and personalization are the same pipeline --- that framing is smart.
+
+  \item \textbf{The partner (VeUP) is handling client relationship and deployment.}
+  My role is backend, core engine, and technical delivery. I need to scope what I can
+  actually deliver in an 8-week PoC window given I am building and supporting solo.
+
+\end{enumerate}
+
+% ============================================================
+\newpage
+\section{Regulatory and Compliance Landscape}
+
+\begin{notebox}
+\textit{What the regulatory environment actually looks like for a travel company using AI in 2025--2026. This shapes what the client \textbf{must} build, not just what they want to build.}
+\end{notebox}
+
+\vspace{0.5em}
+
+\subsection{Key Regulations That Apply}
+
+\begin{longtable}{>{\bfseries}p{3.5cm} p{4.5cm} p{5.5cm}}
+\toprule
+\textbf{Regulation} & \textbf{What It Covers} & \textbf{Risk If Ignored} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+GDPR (EU) &
+AI-driven personalization of EU travellers requires lawful basis, data minimization, and the right to explanation. &
+Fines up to \euro{}20M or 4\% of global annual turnover. Travel companies with EU customers are directly exposed. \\[6pt]
+
+CCPA / CPRA (California) &
+User right to opt out of AI-driven profiling and targeted recommendations. Consent must be explicit and logged. &
+\$100--\$750 per consumer per incident. Class action risk is high for travel platforms with large US user bases. \\[6pt]
+
+US State Privacy Laws (20+ states, 2025) &
+Colorado, Virginia, Texas and others now have comprehensive AI profiling consent laws mirroring CCPA. &
+Patchwork enforcement is accelerating. No single compliance framework covers all states today. \\[6pt]
+
+EU AI Act (in force Aug 2025) &
+Customer-facing AI chatbots and recommendation engines must disclose AI involvement. High-risk classification if AI influences significant decisions. &
+Obligations for ``limited risk'' systems (chatbots, recommenders) active now. Non-compliance blocks EU market access. \\[6pt]
+
+IATA PNR Rules &
+Passenger Name Record data has strict cross-border data flow requirements. AI systems that process PNR must maintain audit logs for government access. &
+Airlines face fines up to USD \$10,000 per passenger for non-compliant data handling. Extends to OTA partners. \\[6pt]
+
+NIST AI RMF (US Voluntary, becoming standard) &
+Risk management framework for AI systems. Increasingly required by enterprise procurement. &
+Not legally binding yet, but B2B enterprise clients now include NIST AI RMF alignment in vendor requirements. \\
+
+\end{longtable}
+
+\vspace{0.5em}
+\subsection{What This Means Practically}
+
+\begin{itemize}
+  \item Any AI system that ranks travel recommendations, adjusts prices, or personalises content
+        \textbf{must} be able to explain its decisions on demand --- to users and to regulators.
+  \item Consent is not a checkbox. It must be \textbf{enforced at execution time}, logged with a
+        timestamp and cryptographic proof, and honoured immediately on withdrawal.
+  \item ``We store logs in S3'' is not a compliance answer. Regulators require structured,
+        tamper-evident, replayable records --- not raw text files.
+  \item The EU AI Act's GPAI (General Purpose AI) obligations are live as of August 2025.
+        Travel companies deploying third-party LLMs (GPT-4, Claude) are now considered
+        \textbf{deployers} under the Act with direct obligations.
+\end{itemize}
+
+% ============================================================
+\newpage
+\section{What They Need --- 10 Points with Connector Fit}
+
+\begin{notebox}
+\textit{Each need is paired with a 2--3 line description of what Connector provides. This is honest: some things are fully solved, some need integration work.}
+\end{notebox}
+
+\vspace{0.5em}
+
+\begin{longtable}{>{\bfseries}p{3.8cm} p{5cm} p{5cm}}
+\toprule
+\textbf{What They Need} & \textbf{In Their Words} & \textbf{What Connector Provides} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+1. Real-time event capture &
+Capture prompts, outputs, rankings, human overrides as they happen across live systems. &
+\texttt{POST /v1/capture} endpoint with SDK wrappers for Python and Node.js. Events written to CID-addressed memory store in under 5ms. \\[6pt]
+
+2. Policy enforcement &
+Evaluate rules dynamically: consent checks, booking thresholds, PII restrictions --- on every request. &
+Admission Gate runs a 5-layer guard pipeline (MAC $\to$ Policy $\to$ Content $\to$ Circuit Breaker $\to$ Audit) before any action executes. Deny-by-default, under 200$\mu$s overhead. \\[6pt]
+
+3. Consent management &
+Track user consent state per traveller and halt AI processing if consent is missing or withdrawn. &
+Consent state stored in structured namespace (\texttt{/m/consent/\{user\_id\}}). Admission Gate checks consent on every capture event. Withdrawal triggers immediate enforcement. \\[6pt]
+
+4. Tamper-evident audit trail &
+Immutable, cryptographically verifiable log of what the AI did and why. &
+Every decision writes a \texttt{EngineAuditEntry} with a SHA-256 CID (\texttt{soe1-sha256-*}). Audit chain is append-only and signed with Ed25519. Regulator export supported. \\[6pt]
+
+5. Replay capability &
+Reconstruct exactly what the AI saw and decided at any past point in time. &
+SOE Surface Engine supports time-travel queries (\texttt{--at}, \texttt{--since}, \texttt{--last}). Returns a signed proof package with full decision context. \\[6pt]
+
+6. Memory compilation &
+Transform raw event stream into structured, reusable state objects (profiles, trips). &
+Memory Kernel compiles governed events into knowledge objects. Output: \texttt{traveler\_profile.md} and \texttt{trip\_details.md} with CID provenance chain. \\[6pt]
+
+7. Human-in-the-loop &
+High-value bookings require human review before AI proceeds. &
+Admission Gate auto-quarantines agents on policy violations and creates a HITL queue entry. Operator approves/denies via dashboard. Full audit log of human decision included. \\[6pt]
+
+8. Observability dashboard &
+Operators need a real-time view of policies fired, consent states, and audit events. &
+\textbf{Partial.} SOE Surface Engine produces dashboard-ready surface documents via webhook. Grafana/Loki integration requires a thin adapter layer. PoC-scoped work. \\[6pt]
+
+9. AWS-native deployment &
+Everything must run in their AWS account. No external SaaS. &
+Connector is a self-hosted Rust binary. Deploys as ECS Fargate or EKS in their VPC. Terraform configs included. No data leaves their account. \\[6pt]
+
+10. Warm-start personalisation &
+AI should remember traveller context across sessions without re-collecting preferences. &
+Compiled memory objects persist in the Memory Kernel under \texttt{/m/traveller/\{id\}}. Any future AI call can query this as structured context. This is a direct output of the governance pipeline. \\
+
+\end{longtable}
+
+% ============================================================
+\newpage
+\section{Architecture}
+
+\subsection{PoC Architecture (8-Week Target)}
+
+The PoC proves one complete pipeline: \textbf{Event In $\to$ Policy Check $\to$ Audit $\to$ Memory Out}.
+It is intentionally narrow. We are not building production scale in the PoC.
+
+\vspace{0.5em}
+
+\begin{center}
+\begin{tabular}{p{13cm}}
+\toprule
+\multicolumn{1}{c}{\textbf{PoC Stack --- All in One ECS Fargate Container}} \\
+\midrule
+\textbf{Layer 5 (Visualise)}: Grafana dashboard, webhook-fed from Connector \\
+$\uparrow$ Webhook dispatcher pushes policy events + audit entries \\
+\midrule
+\textbf{Layer 4 (Control)}: Connector Platform (Rust binary) \\
+\quad Admission Gate $|$ Surface Engine $|$ Policy Engine $|$ Memory Kernel \\
+\midrule
+\textbf{Layer 3 (Guardrails)}: 3 live travel policies \\
+\quad (1) Consent check \quad (2) Booking threshold \$5K $\to$ HITL \quad (3) PII redaction \\
+\midrule
+\textbf{Layer 2 (Storage)}: redb (embedded) + S3 (audit export) \\
+\quad CID-addressed memory $|$ Append-only audit chain $|$ Ed25519 signatures \\
+\midrule
+\textbf{Layer 1 (Capture)}: Python SDK + REST API \\
+\quad Mock travel app $\to$ \texttt{/v1/capture/search} and \texttt{/v1/capture/booking} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+
+\textbf{Compute:} Single ECS Fargate task, 1 vCPU / 2GB RAM, \textasciitilde\$50/month. \\
+\textbf{Storage:} 20GB EBS gp3 (hot) + S3 bucket (cold audit export). \\
+\textbf{Networking:} ALB on port 8080, VPC-internal only. No public internet access required.
+
+\vspace{0.5em}
+
+\textbf{Deliverables at PoC end:}
+\begin{itemize}
+  \item Working capture pipeline with 3 enforced policies
+  \item \texttt{traveler\_profile.md} generated from governed event history
+  \item \texttt{trip\_details.md} with full audit chain reference
+  \item Grafana dashboard showing live policy decisions
+  \item Replay demo: given a date + user ID, produce a signed proof package
+  \item Terraform config for one-click deploy in client's AWS account
+\end{itemize}
+
+% ============================================================
+\subsection{Production Path (Post PoC)}
+
+\begin{warnbox}
+\textbf{Important:} The PoC proves the pipeline. Production requires a different conversation about scale, multi-region, retention policy, and SLA. We should not promise production timelines in the first meeting.
+\end{warnbox}
+
+\vspace{0.5em}
+
+\textbf{When they grow beyond PoC, the natural path is:}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{Step \arabic*.}]
+  \item \textbf{Horizontal scaling:} Move from single ECS task to EKS cluster with horizontal pod autoscaling. Connector nodes run stateless; memory kernel is the only stateful component.
+
+  \item \textbf{Message queue:} Replace synchronous HTTP capture with Kafka (AWS MSK). This decouples the travel app from the governance layer and handles traffic spikes without blocking.
+
+  \item \textbf{Multi-region:} Deploy one Connector node per AWS region (us-east-1, eu-west-1, ap-southeast-1). Audit logs stay region-local for GDPR data residency. Cross-region policy sync via the license server.
+
+  \item \textbf{Long-term retention:} redb for 30-day hot storage. S3 Standard for 1-year warm. S3 Glacier for 7-year compliance cold storage. Lifecycle policy auto-tiers.
+
+  \item \textbf{Compliance reporting:} SOE Surface Engine exports structured compliance reports in PDF/JSON for regulators. GDPR ``right to explanation'' answered by the replay surface.
+\end{enumerate}
+
+% ============================================================
+\newpage
+\section{Limitations and Risks}
+
+\subsection{Technical Limitations}
+
+\begin{itemize}
+  \item \textbf{No production Kafka integration yet.} The PoC uses synchronous HTTP capture. For high-throughput production, async ingestion via MSK needs to be built. This is 2--3 weeks of additional work.
+
+  \item \textbf{Dashboard is webhook-fed, not native.} Grafana integration requires a thin webhook-to-OTLP adapter. It works but is not a polished product UI. A proper operator UI would be a Phase 2 deliverable.
+
+  \item \textbf{No consent UI widget.} Connector enforces consent state but does not provide the front-end widget that collects it. The travel app must send consent state to Connector. We are the enforcement layer, not the collection layer.
+
+  \item \textbf{Travel-specific policies are YAML-configured, not pre-built.} The 3 PoC policies need to be written and tested. They are straightforward but they require discovery input from the client (thresholds, field names, PII taxonomy).
+
+  \item \textbf{Solo engineering.} I am building and supporting this. The 8-week timeline is achievable but assumes stable requirements. Scope creep is the biggest risk.
+\end{itemize}
+
+\subsection{Risks}
+
+\begin{longtable}{>{\bfseries}p{3.5cm} p{5cm} p{5cm}}
+\toprule
+\textbf{Risk} & \textbf{What Could Happen} & \textbf{Mitigation} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+Requirements shift &
+Client adds scope mid-PoC (``can you also do X?''). 8-week timeline breaks. &
+Scope freeze after Week 1. Any new requirement goes to Phase 2. \\[6pt]
+
+Access delays &
+AWS account access, API credentials, sample data take time to get. &
+Request access on Day 1. Use synthetic data for Weeks 1--2 while waiting. \\[6pt]
+
+Policy definition unclear &
+Client does not know exact field names, thresholds, or consent states in their system. &
+Run a 2-hour technical discovery session before Week 1 coding begins. \\[6pt]
+
+Travel app is complex &
+Their AI stack has many moving parts; capture points are unclear. &
+Start with 2 capture points only: search and booking. Expand later. \\[6pt]
+
+Compliance misalignment &
+Client's legal team has different requirements than what engineering described. &
+Get a legal contact early. Document every policy decision in writing. \\
+
+\end{longtable}
+
+\subsection{Maintenance Protocols (PoC Period)}
+
+\begin{itemize}
+  \item \textbf{Weekly sync:} 30-minute check-in with VeUP partner on progress, blockers, scope.
+  \item \textbf{Incident response:} Critical issues (data loss, policy not enforcing) addressed within 4 hours during business days.
+  \item \textbf{Policy updates:} YAML policy files can be hot-reloaded without restart. Non-breaking updates are self-service.
+  \item \textbf{Audit exports:} Weekly S3 export of audit chain. Client can verify CID integrity independently.
+\end{itemize}
+
+% ============================================================
+\newpage
+\section{Outcomes the Client Will Get}
+
+\subsection{At the End of the PoC}
+
+\begin{itemize}
+  \item \textbf{A working governance sidecar deployed in their AWS account.} Not a demo environment --- in their VPC, using their data.
+
+  \item \textbf{Three enforced policies with live proof.} Every search and booking event passes through policy evaluation. Results logged and visible in Grafana.
+
+  \item \textbf{A \texttt{traveler\_profile.md} file for each synthetic test user.} Compiled from governed interaction history. Structured, versioned, CID-addressed.
+
+  \item \textbf{A replay demo for a regulator scenario.} Given a user ID and a date, the system produces a signed proof package of exactly what the AI saw and decided. This is their answer to any regulatory inquiry.
+
+  \item \textbf{Terraform infrastructure-as-code.} One command deploys the full stack. Repeatable. Auditable. Version-controlled.
+
+  \item \textbf{A clear production roadmap.} What it costs, what it takes, and what the phased path looks like to move from PoC to 1M traveller scale.
+\end{itemize}
+
+\subsection{Longer-Term Business Value}
+
+\begin{itemize}
+  \item \textbf{Compliance as a competitive moat.} They can tell enterprise clients and regulators they have an auditable AI system. Most competitors cannot.
+
+  \item \textbf{Warm-start personalisation.} Traveller memory persists across sessions. Returning users get better recommendations immediately without re-collecting preferences.
+
+  \item \textbf{Reduced legal risk.} GDPR right-to-explanation answered in under 5 seconds. CCPA opt-out enforced at the execution layer, not the log layer.
+\end{itemize}
+
+% ============================================================
+\newpage
+\section{Questions --- Technical and Commercial}
+
+\subsection{Technical Questions I Need Answered Before Coding}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{T\arabic*.}]
+  \item \textbf{What AI models are you using and where do they run?}
+  OpenAI API, AWS Bedrock, a self-hosted model, or a mix? The capture integration differs for each.
+
+  \item \textbf{What language/stack are your travel AI services written in?}
+  Python, Node.js, Java? Determines which SDK I build first.
+
+  \item \textbf{How are search queries and booking events structured today?}
+  What fields exist in a typical event? Do you have a schema or data dictionary?
+
+  \item \textbf{Where does user consent live today?}
+  Is it in a CRM field, a database table, a cookie? Who is the source of truth for ``user X has marketing consent''?
+
+  \item \textbf{What counts as a ``human override'' in your system?}
+  When a travel agent manually changes an AI recommendation, does that event exist anywhere today?
+
+  \item \textbf{What does a high-value booking look like in your system?}
+  Is \$5,000 the right threshold? Is it per booking, per day, per user?
+
+  \item \textbf{Do you have any existing event streaming infrastructure?}
+  Kafka, Kinesis, SQS, or are events only captured at the HTTP layer?
+
+  \item \textbf{What PII fields does your AI system currently see?}
+  Passport numbers, date of birth, loyalty IDs, credit card data? I need to know what to redact.
+
+  \item \textbf{What is your current audit story?}
+  CloudWatch logs? Nothing? An existing SIEM? Understanding the gap helps scope the delta.
+
+  \item \textbf{What AWS services are already in use?}
+  ECS, EKS, RDS, DynamoDB? I want to land in their existing patterns, not introduce new ones.
+\end{enumerate}
+
+\vspace{1em}
+\subsection{Commercial Questions for VeUP}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{C\arabic*.}]
+  \item What is the client's PoC budget? Is there a hard ceiling?
+
+  \item What is the expected timeline from ``yes'' to first deployment? Do they have a hard date?
+
+  \item Who owns any travel-specific policy logic we build? That is custom work on top of OSS.
+
+  \item Is this PoC fixed-price or time-and-materials?
+
+  \item What does ``exclusive deployment partner'' mean if the client eventually wants to buy Connector directly? I need to understand the commercial boundary before I start building.
+\end{enumerate}
+
+\vspace{1em}
+\subsection{Personal Open Questions}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{P\arabic*.}]
+  \item The timeline of 8 weeks is achievable for the core pipeline. But if AWS access, sample data, and policy definition are delayed, we are building blind for weeks 1--2. How do we handle that?
+
+  \item The PoC asks for a Grafana dashboard. Is this just a nice-to-have for the demo, or does the client have an ops team that will actually use it? That changes how much I invest in it.
+
+  \item Are there any other AI systems beyond search and booking? CRM, pricing, fraud detection? Each one is a new capture point with its own policy needs.
+\end{enumerate}
+
+% ============================================================
+\vspace{2em}
+\hrule
+\vspace{0.5em}
+{\small \color{darkgray}
+\textit{This document is an early-stage working brief, not a proposal or commitment. All architecture decisions are subject to change after the discovery call. --- Umesh, Connector}
+}
+
+\end{document}

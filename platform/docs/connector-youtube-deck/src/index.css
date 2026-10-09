@@ -1,0 +1,24 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-dark: #06111e;
+  --bg-card: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --blue: #00c8f8;
+  --purple: #7c3aed;
+  --green: #10d98a;
+  --red: #f43f5e;
+  --amber: #f59e0b;
+  --text-primary: #f0f6ff;
+  --text-secondary: #8ba4be;
+  --text-muted: #4a6077;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body, #root {
+  width: 100%; height: 100%;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  overflow: hidden;
+}

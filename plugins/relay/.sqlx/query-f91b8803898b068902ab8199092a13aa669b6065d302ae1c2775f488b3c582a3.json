@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT i.id, i.function_name, i.model_used, i.tokens_in, i.tokens_out,\n               i.cost_usd, i.latency_ms, i.outcome, i.deny_reason, i.audit_cid,\n               i.invoked_at\n        FROM relay_invocations i\n        JOIN relay_functions f ON f.id = i.function_id\n        WHERE f.name = $1\n        ORDER BY i.invoked_at DESC\n        LIMIT $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "function_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "model_used",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tokens_in",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "tokens_out",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "cost_usd",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "latency_ms",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "outcome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "deny_reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "audit_cid",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "invoked_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "f91b8803898b068902ab8199092a13aa669b6065d302ae1c2775f488b3c582a3"
+}

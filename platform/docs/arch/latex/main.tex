@@ -1,0 +1,271 @@
+%% ============================================================
+%%  Connector Platform — Architecture Reference
+%%  Industry-grade technical document
+%% ============================================================
+\documentclass[11pt,a4paper,openany]{book}
+
+%% ── Core typography ─────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+%% ── Page geometry ───────────────────────────────────────────
+\usepackage[top=1.1in,bottom=1.1in,left=1.15in,right=1.15in]{geometry}
+
+%% ── Color ───────────────────────────────────────────────────
+\usepackage[dvipsnames,table,hyperref]{xcolor}
+
+%% ── Core packages ───────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{array,tabularx,multirow,booktabs,longtable}
+\usepackage{caption}
+\captionsetup{labelfont=bf,skip=6pt,font=small}
+
+%% ── TikZ ────────────────────────────────────────────────────
+\usepackage{tikz}
+\usetikzlibrary{
+  shapes.geometric, shapes.symbols, shapes.multipart,
+  arrows.meta, arrows,
+  positioning, fit, backgrounds,
+  decorations.pathreplacing, decorations.markings,
+  calc, matrix, chains, shadows.blur
+}
+
+%% ── tcolorbox (callout boxes) ───────────────────────────────
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{listings,skins,breakable}
+
+%% ── Listings ────────────────────────────────────────────────
+\usepackage{listings}
+
+%% ── Header / footer ─────────────────────────────────────────
+\usepackage{fancyhdr}
+\usepackage[titles]{tocloft}
+
+%% ── Hyperref (last) ─────────────────────────────────────────
+\usepackage[
+  hidelinks,
+  colorlinks=true,
+  linkcolor=MidnightBlue,
+  urlcolor=MidnightBlue,
+  citecolor=MidnightBlue,
+  pdftitle={Connector Platform Architecture Reference},
+  pdfauthor={Connector Platform Team},
+  pdfsubject={Infrastructure-grade agentic runtime}
+]{hyperref}
+\usepackage{cleveref}
+
+%% ════════════════════════════════════════════════════════════
+%%  Color palette
+%% ════════════════════════════════════════════════════════════
+\definecolor{CKernel}   {RGB}{30,  80, 160}   % deep blue  — kernel
+\definecolor{CExec}     {RGB}{0,  130,  90}   % green      — execution
+\definecolor{CProto}    {RGB}{160, 60,   0}   % burnt orange — protocol
+\definecolor{CLogic}    {RGB}{100,  0, 140}   % purple     — logic plane
+\definecolor{CDX}       {RGB}{0,  150, 180}   % teal       — DX
+\definecolor{CBiz}      {RGB}{180, 120,  0}   % amber      — business
+\definecolor{CInfra}    {RGB}{80,  80,  80}   % gray       — infra
+\definecolor{CLight}    {RGB}{245,248,252}     % off-white bg
+\definecolor{CCode}     {RGB}{248,248,244}     % code bg
+\definecolor{CGreen}    {RGB}{0,  130,  70}
+\definecolor{CWarn}     {RGB}{190, 100,   0}
+\definecolor{CDanger}   {RGB}{180,  20,  20}
+
+%% ════════════════════════════════════════════════════════════
+%%  tcolorbox styles
+%% ════════════════════════════════════════════════════════════
+\tcbset{
+  boxbase/.style={
+    breakable, enhanced, fonttitle=\bfseries\small,
+    top=4pt, bottom=4pt, left=6pt, right=6pt,
+    arc=3pt, boxrule=0.6pt
+  }
+}
+\newtcolorbox{conceptbox}[1]{
+  boxbase, title={#1},
+  colback=MidnightBlue!5, colframe=MidnightBlue!70,
+  coltitle=white, attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=MidnightBlue, arc=2pt, boxrule=0pt}
+}
+\newtcolorbox{insightbox}[1]{
+  boxbase, title={#1},
+  colback=CGreen!6, colframe=CGreen!60,
+  coltitle=white, attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=CGreen, arc=2pt, boxrule=0pt}
+}
+\newtcolorbox{warnbox}[1]{
+  boxbase, title={#1},
+  colback=CWarn!6, colframe=CWarn!70,
+  coltitle=white, attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=CWarn, arc=2pt, boxrule=0pt}
+}
+\newtcolorbox{defbox}[1]{
+  boxbase, title={#1},
+  colback=gray!6, colframe=gray!50,
+  coltitle=black
+}
+
+%% ════════════════════════════════════════════════════════════
+%%  Listings style
+%% ════════════════════════════════════════════════════════════
+\definecolor{codegreen} {rgb}{0,0.55,0}
+\definecolor{codegray}  {rgb}{0.45,0.45,0.45}
+\definecolor{codepurple}{rgb}{0.55,0,0.75}
+
+\lstdefinelanguage{Rust}{
+  keywords={pub,struct,enum,fn,let,mut,impl,trait,async,await,use,mod,
+            crate,self,super,const,static,match,if,else,for,while,loop,
+            return,break,continue,where,type,as,move,ref,in,true,false,
+            Some,None,Ok,Err,Result,Option,Vec,String,Box,Arc,Rc},
+  morecomment=[l]{//}, morecomment=[s]{/*}{*/},
+  morestring=[b]", sensitive=true,
+}
+\lstdefinelanguage{toml}{
+  keywords={true,false}, morecomment=[l]{\#},
+  morestring=[b]", morestring=[b]',
+}
+\lstdefinelanguage{bash}{
+  keywords={export,cd,echo,if,then,fi,for,do,done,set},
+  morecomment=[l]{\#}, morestring=[b]", morestring=[b]',
+  sensitive=true,
+}
+\lstset{
+  backgroundcolor=\color{CCode},
+  commentstyle=\color{codegreen}\itshape,
+  keywordstyle=\color{MidnightBlue}\bfseries,
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true, captionpos=b, keepspaces=true,
+  numbers=left, numbersep=6pt,
+  showstringspaces=false, tabsize=2,
+  frame=single, framesep=4pt, rulecolor=\color{gray!40},
+  aboveskip=8pt, belowskip=4pt
+}
+
+%% ════════════════════════════════════════════════════════════
+%%  Chapter / section styling
+%% ════════════════════════════════════════════════════════════
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{MidnightBlue}}
+  {\chaptertitlename\ \thechapter}{14pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{20pt}{16pt}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{MidnightBlue!80}}
+  {\thesection}{0.8em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{MidnightBlue!60}}
+  {\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}
+  {\thesubsubsection}{0.6em}{}
+
+%% ════════════════════════════════════════════════════════════
+%%  Header / footer
+%% ════════════════════════════════════════════════════════════
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\small\thepage}
+\fancyhead[LO]{\small\itshape\nouppercase{\rightmark}}
+\fancyhead[RE]{\small\itshape Connector Platform Architecture}
+\fancyfoot[C]{\small\color{gray!70} Connector Platform Team — Confidential}
+\renewcommand{\headrulewidth}{0.4pt}
+
+%% ════════════════════════════════════════════════════════════
+%%  TOC styling
+%% ════════════════════════════════════════════════════════════
+\renewcommand{\cftchapfont}{\bfseries\color{MidnightBlue}}
+\renewcommand{\cftsecfont}{\color{MidnightBlue!80}}
+\setlength{\cftbeforechapskip}{6pt}
+
+%% ════════════════════════════════════════════════════════════
+%%  Common TikZ shortcuts
+%% ════════════════════════════════════════════════════════════
+\tikzset{
+  layerbox/.style={
+    rectangle, rounded corners=3pt, draw=#1!70, fill=#1!10,
+    text width=11.5cm, align=center, minimum height=1.0cm,
+    font=\small\bfseries, inner sep=6pt
+  },
+  flowbox/.style={
+    rectangle, rounded corners=4pt, draw=#1!80, fill=#1!12,
+    text width=2.4cm, align=center, minimum height=0.9cm,
+    font=\footnotesize\bfseries, inner sep=4pt
+  },
+  arr/.style={-Stealth, thick, #1},
+  darr/.style={Stealth-Stealth, thick, #1},
+}
+
+%% ════════════════════════════════════════════════════════════
+%%  Document
+%% ════════════════════════════════════════════════════════════
+\begin{document}
+
+%% ── Cover page ──────────────────────────────────────────────
+\begin{titlepage}
+\pagecolor{MidnightBlue}
+\color{white}
+\vspace*{2cm}
+\begin{center}
+  {\fontsize{11}{13}\selectfont\scshape\color{white!70}
+    Infrastructure Reference — Confidential}\\[1.4cm]
+  {\fontsize{42}{48}\selectfont\bfseries Connector}\\[0.3cm]
+  {\fontsize{18}{22}\selectfont\color{white!80}
+    Platform Architecture Reference}\\[2.2cm]
+  \begin{tikzpicture}
+    \foreach \y/\lbl/\col in {
+      0/{\normalsize Infrastructure\ \ Boot\ \textbullet\ Health\ \textbullet\ Deploy}/CInfra,
+      1/{\normalsize Business Ops\ \ Signup\ \textbullet\ Licensing\ \textbullet\ Billing}/CBiz,
+      2/{\normalsize Developer Experience\ \ CLI\ \textbullet\ API\ \textbullet\ Glue}/CDX,
+      3/{\normalsize Logic Plane\ \ Contracts\ \textbullet\ Registry\ \textbullet\ Composition}/CLogic,
+      4/{\normalsize Protocol Layer\ \ CNP\ \textbullet\ A2A\ \textbullet\ MCP}/CProto,
+      5/{\normalsize Execution Engines\ \ Cognitive\ \textbullet\ CLS\ \textbullet\ VM}/CExec,
+      6/{\normalsize Memory Kernel\ \ MemPacket\ \textbullet\ Syscalls\ \textbullet\ Lifecycle}/CKernel
+    }{
+      \node[rectangle, rounded corners=3pt,
+            fill=white!15, draw=white!30,
+            text width=10.5cm, align=center,
+            minimum height=0.85cm, font=\small\bfseries\color{white}]
+        at (0,\y*1.1) {\lbl};
+    }
+  \end{tikzpicture}\\[2.2cm]
+  {\large\color{white!75} Connector Platform Team}\\[0.3cm]
+  {\normalsize\color{white!60} \today}
+\end{center}
+\vfill
+\noindent\color{white!40}\rule{\textwidth}{0.4pt}\\[2pt]
+{\footnotesize\color{white!50}
+  This document contains proprietary and confidential information about the
+  Connector platform architecture. Distribution is restricted.}
+\end{titlepage}
+\nopagecolor
+\color{black}
+
+%% ── Front matter ────────────────────────────────────────────
+\frontmatter
+\tableofcontents
+
+%% ── Main content ────────────────────────────────────────────
+\mainmatter
+
+\input{chapters/01_introduction}
+\input{chapters/02_memory_kernel}
+\input{chapters/03_execution_engines}
+\input{chapters/04_protocol_layers}
+\input{chapters/05_developer_experience}
+\input{chapters/06_business_operations}
+\input{chapters/07_node_operations}
+\input{chapters/08_growth_trajectory}
+\input{chapters/09_technology_evolution}
+\input{chapters/10_execution_reality}
+\input{chapters/11_complete_architecture}
+
+\end{document}

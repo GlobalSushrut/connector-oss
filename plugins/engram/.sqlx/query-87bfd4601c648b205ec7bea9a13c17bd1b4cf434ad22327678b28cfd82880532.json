@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE engram_cot_sessions\n        SET step_count   = step_count + 1,\n            passed_count = passed_count + $1,\n            failed_count = failed_count + $2,\n            status       = $3\n        WHERE id = $4\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "87bfd4601c648b205ec7bea9a13c17bd1b4cf434ad22327678b28cfd82880532"
+}

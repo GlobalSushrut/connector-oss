@@ -1,0 +1,133 @@
+name: cvr-kvm-acceptance
+
+# Soft LAB always (merge gate). KVM Effective gate runs on self-hosted kvm
+# runners, workflow_dispatch, or nightly — never falsely claims Effective on
+# GitHub-hosted ubuntu without /dev/kvm.
+
+on:
+  pull_request:
+    paths:
+      - "platform/server/src/substrate/cvr/**"
+      - "platform/microvm/**"
+      - "platform/connector-microd/**"
+      - "platform/scripts/cvr-*-acceptance.sh"
+      - "platform/docs/arch/CONNECTOR_ISOLATION_IMPLEMENTATION_PLAN.md"
+      - "platform/docs/arch/CONNECTOR_REACH_CHECKLIST.md"
+      - "vendor/firecracker/**"
+      - "vendor/microvm/**"
+      - ".github/workflows/cvr-kvm-acceptance.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "platform/server/src/substrate/cvr/**"
+      - "platform/microvm/**"
+      - "platform/connector-microd/**"
+      - "platform/scripts/cvr-*-acceptance.sh"
+      - "vendor/firecracker/**"
+      - "vendor/microvm/**"
+      - ".github/workflows/cvr-kvm-acceptance.yml"
+  schedule:
+    # Nightly probe — LAB_SKIP on github-hosted; PASS on self-hosted kvm
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      kvm_required:
+        description: "Fail if KVM/assets missing (Effective gate)"
+        type: boolean
+        default: false
+
+jobs:
+  soft-lab:
+    name: CVR soft LAB (always)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            platform/server
+            platform/microvm
+            platform/connector-microd
+
+      - name: Soft acceptance
+        run: bash platform/scripts/cvr-soft-acceptance.sh
+
+      - name: Upload soft artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cvr-soft-acceptance
+          path: artifacts/cvr-acceptance/cvr-soft-acceptance.json
+
+  kvm-probe:
+    name: CVR KVM probe (honest skip without /dev/kvm)
+    runs-on: ubuntu-latest
+    needs: soft-lab
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            platform/server
+            platform/microvm
+            platform/connector-microd
+
+      - name: KVM acceptance (LAB_SKIP if no KVM)
+        env:
+          CONNECTOR_KVM_REQUIRED: "0"
+          CONNECTOR_FETCH_FIRECRACKER: "0"
+        run: bash platform/scripts/cvr-kvm-acceptance.sh
+
+      - name: Upload KVM artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cvr-kvm-acceptance-probe
+          path: artifacts/cvr-acceptance/
+
+  kvm-effective:
+    name: CVR KVM Effective gate (self-hosted)
+    # Only on labeled self-hosted runners or explicit dispatch with kvm_required
+    if: >
+      (github.event_name == 'workflow_dispatch' && inputs.kvm_required == true) ||
+      contains(github.event.pull_request.labels.*.name, 'kvm-effective')
+    runs-on: [self-hosted, linux, kvm]
+    needs: soft-lab
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: KVM Effective acceptance (required)
+        env:
+          CONNECTOR_KVM_REQUIRED: "1"
+          CONNECTOR_FETCH_FIRECRACKER: "1"
+        run: bash platform/scripts/cvr-kvm-acceptance.sh
+
+      - name: Upload Effective artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cvr-kvm-acceptance-effective
+          path: artifacts/cvr-acceptance/
+
+      - name: Assert Effective claim
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          p = "artifacts/cvr-acceptance/cvr-kvm-acceptance.json"
+          d = json.load(open(p))
+          assert d.get("status") == "PASS", d
+          assert d.get("effective_claim") is True, d
+          print("Effective claim authorized:", d)
+          PY

@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, path, entropy_alert, entropy_halt, auto_consolidate\n        FROM engram_namespaces\n        WHERE path = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "entropy_alert",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "entropy_halt",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "auto_consolidate",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "72e089a8475d2d15bf0559acc2a7635063571906e819df402ed93727c19f9ca3"
+}

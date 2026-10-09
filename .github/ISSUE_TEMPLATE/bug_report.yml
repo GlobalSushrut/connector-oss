@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a defect in Connector OS
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: connector-platform 0.x or git SHA
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: `connectorctl status --json`, relevant env (redact secrets)

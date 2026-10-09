@@ -1,0 +1,93 @@
+name: guard_claude
+description: >
+  Start a governed Claude Code session. All LLM calls, file operations,
+  and shell commands are intercepted, policy-checked, and audited.
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl guard claude"
+
+inputs:
+  task:
+    type: string
+    required: true
+    description: "Task description to pass to Claude Code"
+  policy_path:
+    type: string
+    required: false
+    default: ".connector/policy.yaml"
+  workspace:
+    type: string
+    required: false
+    default: "."
+  role:
+    type: string
+    required: false
+    default: "builder"
+  budget_tokens:
+    type: integer
+    required: false
+    default: 500000
+  model:
+    type: string
+    required: false
+    description: "Override model (default from policy)"
+
+steps:
+  - id: load_policy
+    action: devguard.internal.policy_compile
+    params:
+      path: "{{ inputs.policy_path }}"
+      role: "{{ inputs.role }}"
+
+  - id: start_session
+    action: connector.session.create
+    params:
+      role: "{{ inputs.role }}"
+      workspace: "{{ inputs.workspace }}"
+      policy: "{{ steps.load_policy.compiled_policy }}"
+      budget_tokens: "{{ inputs.budget_tokens }}"
+    depends_on: load_policy
+
+  - id: start_gateway
+    action: connector.gateway.start
+    params:
+      port: 9091
+      protocol: anthropic
+      session_id: "{{ steps.start_session.session_id }}"
+      features:
+        - anthropic_compat
+        - file_guard
+        - exec_guard
+        - secret_scan
+        - audit_chain
+        - rag_injection
+    depends_on: start_session
+
+  - id: launch_claude
+    action: shell.exec
+    params:
+      command: "claude"
+      args: ["{{ inputs.task }}"]
+      env:
+        ANTHROPIC_BASE_URL: "http://localhost:{{ steps.start_gateway.port }}"
+        ANTHROPIC_API_KEY: "{{ steps.start_session.session_token }}"
+      workspace: "{{ inputs.workspace }}"
+      wait: true
+    depends_on: start_gateway
+
+  - id: end_session
+    action: devguard.workflows.session_end
+    params:
+      session_id: "{{ steps.start_session.session_id }}"
+      generate_proof: true
+    depends_on: launch_claude
+    run: always  # run even if claude exits with error
+
+outputs:
+  session_id: "{{ steps.start_session.session_id }}"
+  proof_path: "{{ steps.end_session.proof_path }}"
+  audit_summary: "{{ steps.end_session.audit_summary }}"
+  total_cost_usd: "{{ steps.end_session.total_cost_usd }}"

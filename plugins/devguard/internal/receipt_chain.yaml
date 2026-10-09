@@ -1,0 +1,68 @@
+name: receipt_chain
+description: >
+  Internal: HMAC-chained receipt generation for audit entries.
+  Each receipt links to the previous via HMAC, creating a tamper-evident chain.
+version: "1.0.0"
+plugin: devguard
+internal: true
+
+# Receipt format:
+#
+# {
+#   receipt_id: "rcpt_{uuid}",
+#   session_id: "...",
+#   sequence: N,
+#   timestamp: ISO8601,
+#   action: "file.write",
+#   resource: "src/main.rs",
+#   verdict: "ALLOW",
+#   actor: { agent_pid, role, user },
+#   content_hash: SHA256(action_content),
+#   prev_receipt_hash: SHA256(previous_receipt),
+#   hmac: HMAC-SHA256(receipt_body, chain_key),
+# }
+#
+# Chain verification:
+#   For each receipt N:
+#     1. Verify HMAC matches receipt body
+#     2. Verify prev_receipt_hash matches SHA256(receipt N-1)
+#     3. Verify sequence is monotonically increasing
+#     4. Verify timestamps are monotonically increasing
+
+chain_config:
+  algorithm: HMAC-SHA256
+  hash_algorithm: SHA256
+  key_source: session_key  # derived from session creation
+  chain_start: "genesis"   # first receipt has prev_hash = SHA256("genesis")
+
+receipt_triggers:
+  # Every action that produces a receipt
+  - file.read
+  - file.write
+  - file.delete
+  - shell.execute
+  - shell.denied
+  - secret.detected
+  - secret.redacted
+  - approval.requested
+  - approval.granted
+  - approval.denied
+  - policy.loaded
+  - policy.violated
+  - git.commit
+  - git.push
+  - llm.prompt_sent
+  - llm.response_received
+  - session.start
+  - session.end
+  - verification.result
+
+verification_endpoint:
+  # POST /api/v1/proof/verify
+  # Takes a bundle and verifies the entire chain
+  checks:
+    - hmac_integrity
+    - hash_chain_continuity
+    - sequence_monotonicity
+    - timestamp_monotonicity
+    - no_gaps

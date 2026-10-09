@@ -1,0 +1,92 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT n.id, n.path, n.team, n.retention_days, n.entropy_alert, n.entropy_halt,\n               n.hipaa, n.auto_consolidate, n.stale_days, n.created_at, n.updated_at,\n               COALESCE(s.entropy_score, 0.0) AS entropy_score,\n               COALESCE(s.knot_score, 0.0) AS knot_score\n        FROM engram_namespaces n\n        LEFT JOIN LATERAL (\n            SELECT entropy_score, knot_score\n            FROM engram_entropy_snapshots\n            WHERE namespace_id = n.id\n            ORDER BY snapped_at DESC LIMIT 1\n        ) s ON true\n        ORDER BY n.created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "team",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "retention_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "entropy_alert",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "entropy_halt",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "hipaa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "auto_consolidate",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "stale_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "entropy_score",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "knot_score",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "c15d75a71e479bdb9873e705eb33970a56efe100bc50b0631e2027e4df25628e"
+}

@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Connector Architecture Record — Agent Operating Substrate</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root {
+    --ink: #1a1f26;
+    --muted: #4a5563;
+    --line: #c5ccd6;
+    --accent: #0d4f6b;
+    --accent2: #1a6b4a;
+    --warn: #8a4b12;
+    --bg: #f7f5f1;
+    --box: #eef2f6;
+    --code: #f0ebe3;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 10.5pt; }
+  body {
+    font-family: "IBM Plex Serif", "Source Serif 4", "Georgia", serif;
+    color: var(--ink);
+    background: #fff;
+    line-height: 1.45;
+    max-width: 190mm;
+    margin: 0 auto;
+    padding: 12mm 8mm;
+  }
+  h1, h2, h3, h4 {
+    font-family: "IBM Plex Sans", "Source Sans 3", "Helvetica Neue", sans-serif;
+    color: var(--accent);
+    page-break-after: avoid;
+    line-height: 1.2;
+  }
+  h1 { font-size: 22pt; margin: 0 0 0.4em; letter-spacing: -0.02em; }
+  h2 { font-size: 14pt; margin: 1.6em 0 0.5em; border-bottom: 1.5px solid var(--line); padding-bottom: 0.25em; }
+  h3 { font-size: 11.5pt; margin: 1.2em 0 0.4em; color: var(--ink); }
+  h4 { font-size: 10.5pt; margin: 1em 0 0.3em; color: var(--muted); }
+  p { margin: 0.45em 0; }
+  .lead { font-size: 11.5pt; color: var(--muted); }
+  .meta { font-family: "IBM Plex Sans", sans-serif; font-size: 9pt; color: var(--muted); margin-bottom: 1.5em; }
+  .cover {
+    page-break-after: always;
+    min-height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-left: 6px solid var(--accent);
+    padding-left: 18px;
+  }
+  .cover .brand { font-family: "IBM Plex Sans", sans-serif; font-size: 28pt; font-weight: 700; color: var(--accent); letter-spacing: -0.03em; }
+  .cover .title { font-size: 18pt; margin-top: 0.6em; color: var(--ink); }
+  .cover .sub { margin-top: 1em; max-width: 140mm; color: var(--muted); }
+  .toc { page-break-after: always; }
+  .toc ol { columns: 2; column-gap: 2em; font-family: "IBM Plex Sans", sans-serif; font-size: 9.5pt; }
+  .toc li { margin: 0.25em 0; }
+  .chapter { page-break-before: always; }
+  .chapter:first-of-type { page-break-before: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 8.5pt;
+    margin: 0.7em 0 1em;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--box); color: var(--accent); font-weight: 600; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  code, .mono {
+    font-family: "IBM Plex Mono", "Consolas", monospace;
+    font-size: 8.5pt;
+    background: var(--code);
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+  pre {
+    font-family: "IBM Plex Mono", "Consolas", monospace;
+    font-size: 7.8pt;
+    background: #1a1f26;
+    color: #e8ecef;
+    padding: 10px 12px;
+    border-radius: 4px;
+    overflow: hidden;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+    line-height: 1.35;
+  }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--box);
+    padding: 8px 12px;
+    margin: 0.8em 0;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  .callout.warn { border-left-color: var(--warn); background: #fbf4eb; }
+  .callout.ok { border-left-color: var(--accent2); background: #eef7f2; }
+  .diagram {
+    margin: 1em 0;
+    page-break-inside: avoid;
+    border: 1px solid var(--line);
+    background: #fafbfc;
+    padding: 8px;
+  }
+  .diagram figcaption {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 8pt;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: center;
+  }
+  svg { display: block; width: 100%; height: auto; }
+  .claim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  .claim {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 8.5pt;
+    border: 1px solid var(--line);
+    padding: 6px 8px;
+    page-break-inside: avoid;
+    background: #fff;
+  }
+  .claim .n {
+    display: inline-block;
+    width: 1.6em;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .footer-note {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 8pt;
+    color: var(--muted);
+    margin-top: 2em;
+    border-top: 1px solid var(--line);
+    padding-top: 0.5em;
+  }
+  ul, ol { margin: 0.4em 0 0.6em 1.2em; padding: 0; }
+  li { margin: 0.2em 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media print {
+    body { padding: 0; max-width: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== COVER ===================== -->
+<section class="cover">
+  <div class="brand">CONNECTOR</div>
+  <div class="title">Architecture Record — Agent Operating Substrate for Augmented Environments</div>
+  <p class="sub">
+    Complete technical record of what has been built: system architecture, isolation stack (AgentCell · MicroCell · CVR · Firecracker),
+    engineer and agent capabilities, product technicalities, honesty bounds, how to operate, and outcomes delivered.
+  </p>
+  <div class="meta" style="margin-top:2.5em">
+    Document: <span class="mono">platform/docs/arch/arch.pdf</span><br/>
+    Status: Architecture / product record (capability + honesty, not absolute security)<br/>
+    Companions: CONNECTOR_CAPABILITY_STANDARD · PRODUCT_PROMISE · FINAL_OUTCOMES · AGENT_ISOLATION · OPERATIONAL_SOFTWARE · REACH_CHECKLIST<br/>
+    Generated from engineered surfaces in <span class="mono">platform/server</span>, <span class="mono">platform/microvm</span>, <span class="mono">platform/connector-microd</span>
+  </div>
+  <div class="callout warn" style="margin-top:2em; max-width:150mm">
+    <strong>Honesty frame.</strong> Connector is engineer tooling for hosting dynamic agents under chosen constraints.
+    It does <em>not</em> claim “100% secure,” SIL/physical safety, or organizational compliance certification.
+    It claims: explicit posture, applied gates, observable denial, reconstructible worldline.
+  </div>
+</section>
+
+<!-- ===================== TOC ===================== -->
+<section class="toc">
+  <h1>Contents</h1>
+  <ol>
+    <li>Executive thesis &amp; product model</li>
+    <li>Complete architecture drawing (system)</li>
+    <li>Authority &amp; effect spine</li>
+    <li>Agent isolation architecture (three layers)</li>
+    <li>CVR · MicroCell · Firecracker · microd</li>
+    <li>Lifecycle, promote, quarantine, regime</li>
+    <li>Augmented environment enablement</li>
+    <li>Forty capability claims (agentic env)</li>
+    <li>Why an engineer should use it</li>
+    <li>Capabilities the agent receives</li>
+    <li>Product &amp; technical inventory</li>
+    <li>Tool — not full security software</li>
+    <li>What we built (accomplishment record)</li>
+    <li>How to use (operator runbook)</li>
+    <li>Outcomes &amp; acceptance evidence</li>
+    <li>Anti-claims &amp; known limits</li>
+    <li>Deep dive — Talk / tool / start sequences</li>
+    <li>Deployment topologies</li>
+    <li>Evidence model &amp; worldline</li>
+    <li>Comparison vs adjacent categories</li>
+    <li>Appendix A — Forty claims verify hints</li>
+    <li>Appendix B — Environment reference</li>
+    <li>Glossary &amp; module map</li>
+  </ol>
+</section>
+
+<!-- ===================== 1 ===================== -->
+<section class="chapter">
+  <h2>1. Executive thesis &amp; product model</h2>
+  <p class="lead">
+    Connector is an <strong>agent operating substrate</strong>: software for engineers who build and operate dynamic agents
+    inside augmented environments. The engineer chooses the operating envelope. The agent may behave dynamically
+    <em>inside</em> that envelope, but cannot silently expand or bypass it.
+  </p>
+
+  <div class="callout ok">
+    <strong>One-line promise.</strong> Tools + environment + constraint/isolation + monitoring + proof —
+    with honesty and reconstructibility of consequence — not absolute security.
+  </div>
+
+  <h3>1.1 Five product layers</h3>
+  <table>
+    <tr><th>Layer</th><th>What it is</th><th>Examples in Connector</th></tr>
+    <tr><td>Tools</td><td>Interfaces the agent may use</td><td>Talk, MCP, CNP/CONP, VAC memory, mission, AAPI effects</td></tr>
+    <tr><td>Environment</td><td>Identity, knowledge, cognitive state</td><td>Namespaces, WorldGrant pores, DIM Z<sub>t</sub>, Knot beliefs</td></tr>
+    <tr><td>Constraint</td><td>What may not happen</td><td>Contracts, NF³, PATE, budgets, Landlock, MicroCell, HITL</td></tr>
+    <tr><td>Monitoring</td><td>Live operator view without raw CoT</td><td>Operator pulse, regime, Φ, denials, spend, HITL</td></tr>
+    <tr><td>Proof</td><td>Reconstructible worldline</td><td>Digests, receipts, Packet DNA, journals, forensic export</td></tr>
+  </table>
+
+  <h3>1.2 Continuum (same spine)</h3>
+  <pre>more dynamic / exploratory          more constrained / verified
+◄──────────────────────────────────────────────────────────────►
+ higher Θ, wider recall              lower Θ, HITL on R2/R3
+ softer budgets                      BCR spend + trajectory caps
+ T0 / V0 app gates only              Landlock → shared/dedicated MicroCell
+ playground soft-fail (LAB)          fail-closed harden + START_REFUSED</pre>
+  <p>Playground and production are <em>postures of the same product</em>, not two products. Soft must be labeled soft.</p>
+
+  <h3>1.3 Five invariants (always)</h3>
+  <ol>
+    <li><strong>Posture honesty</strong> — Requested / Applied / Effective; LAB when critical gates off.</li>
+    <li><strong>Effect exclusivity when applied</strong> — mutating paths through ActionBinding / PATE.</li>
+    <li><strong>Engineer freedom</strong> — compose contract, grants, tier, HITL, budgets, DIM independently.</li>
+    <li><strong>Reconstructible worldline</strong> — admitted effects leave digests / receipts / exportable evidence.</li>
+    <li><strong>No cognitive self-authorization</strong> — DIM / Knot / KECS / confidence never mint Allow.</li>
+  </ol>
+</section>
+
+<!-- ===================== 2 ===================== -->
+<section class="chapter">
+  <h2>2. Complete architecture drawing (system)</h2>
+  <p>Figure 1 is the end-to-end Connector node: operator &amp; engineer surfaces, connectord authority spine, CVR isolation plane, guest MicroCells, evidence export, and optional TraceTramp / Witness paths.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Connector system architecture">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#0d4f6b"/>
+        </marker>
+        <style>
+          .b{fill:#eef2f6;stroke:#0d4f6b;stroke-width:1.2}
+          .b2{fill:#e8f3ee;stroke:#1a6b4a;stroke-width:1.2}
+          .b3{fill:#fbf4eb;stroke:#8a4b12;stroke-width:1.2}
+          .b4{fill:#1a1f26;stroke:#1a1f26}
+          .t{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:10px;fill:#1a1f26}
+          .t2{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8.5px;fill:#4a5563}
+          .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+          .tw{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:10px;fill:#e8ecef}
+          .l{stroke:#0d4f6b;stroke-width:1.2;fill:none;marker-end:url(#arrow)}
+        </style>
+      </defs>
+      <!-- title -->
+      <text x="12" y="18" class="th">FIGURE 1 — Connector node (augmented environment)</text>
+
+      <!-- Operators -->
+      <rect x="20" y="36" width="140" height="70" class="b" rx="4"/>
+      <text x="32" y="54" class="th">Operators / Eng</text>
+      <text x="32" y="70" class="t2">UI · connectorctl</text>
+      <text x="32" y="84" class="t2">API clients · HITL</text>
+      <text x="32" y="98" class="t2">pulse / promote</text>
+
+      <!-- Gateway -->
+      <rect x="200" y="36" width="160" height="70" class="b" rx="4"/>
+      <text x="212" y="54" class="th">Gateway / API</text>
+      <text x="212" y="70" class="t2">/agents · /talk · /tools</text>
+      <text x="212" y="84" class="t2">/cvr · /proof · /dim</text>
+      <text x="212" y="98" class="t2">RBAC · force-pid</text>
+
+      <!-- connectord -->
+      <rect x="20" y="130" width="720" height="220" fill="#f7f9fb" stroke="#0d4f6b" stroke-width="1.5" rx="6"/>
+      <text x="32" y="150" class="th">connectord — authority + ops runtime</text>
+
+      <rect x="36" y="165" width="130" height="80" class="b2" rx="3"/>
+      <text x="44" y="182" class="t">Identity / Contract</text>
+      <text x="44" y="198" class="t2">agent_principal</text>
+      <text x="44" y="212" class="t2">ActionBinding</text>
+      <text x="44" y="226" class="t2">WorldGrant pores</text>
+
+      <rect x="178" y="165" width="130" height="80" class="b2" rx="3"/>
+      <text x="186" y="182" class="t">Admit / PATE</text>
+      <text x="186" y="198" class="t2">NF³ · RGO</text>
+      <text x="186" y="212" class="t2">governed_effect</text>
+      <text x="186" y="226" class="t2">ops_runtime</text>
+
+      <rect x="320" y="165" width="130" height="80" class="b2" rx="3"/>
+      <text x="328" y="182" class="t">Budgets / DNA</text>
+      <text x="328" y="198" class="t2">BCR spend</text>
+      <text x="328" y="212" class="t2">Packet DNA</text>
+      <text x="328" y="226" class="t2">trajectory caps</text>
+
+      <rect x="462" y="165" width="130" height="80" class="b2" rx="3"/>
+      <text x="470" y="182" class="t">Cognition</text>
+      <text x="470" y="198" class="t2">DIM Z_t / regime</text>
+      <text x="470" y="212" class="t2">Knot / VAC</text>
+      <text x="470" y="226" class="t2">≠ authority</text>
+
+      <rect x="604" y="165" width="120" height="80" class="b2" rx="3"/>
+      <text x="612" y="182" class="t">Proof</text>
+      <text x="612" y="198" class="t2">receipts</text>
+      <text x="612" y="212" class="t2">journals</text>
+      <text x="612" y="226" class="t2">/proof/export</text>
+
+      <!-- CVR strip -->
+      <rect x="36" y="260" width="688" height="72" class="b3" rx="3"/>
+      <text x="48" y="278" class="t">CVR — Connector Virtualization Runtime</text>
+      <text x="48" y="294" class="t2">HostProbe · RuntimeBundle · IsolationProfile V0–V4 · AgentCell · MicroCell · promote · quarantine · R/A/E</text>
+      <text x="48" y="310" class="t2">bind_on_start · shared_pool · auto_policy · resources · regime (no auto-revival)</text>
+      <text x="48" y="324" class="t2">IPC → connector-microd (preferred) · fallback MicrovmHost (lab)</text>
+
+      <!-- microd -->
+      <rect x="20" y="372" width="200" height="78" class="b4" rx="4"/>
+      <text x="32" y="392" class="tw">connector-microd</text>
+      <text x="32" y="408" class="t2" style="fill:#a8b0ba">Unix JSON-lines sock</text>
+      <text x="32" y="422" class="t2" style="fill:#a8b0ba">prepare / start / pause</text>
+      <text x="32" y="436" class="t2" style="fill:#a8b0ba">stop / warm / READY file</text>
+
+      <!-- MicroCells -->
+      <rect x="240" y="372" width="280" height="78" class="b" rx="4"/>
+      <text x="252" y="392" class="th">MicroCells (Firecracker/KVM)</text>
+      <text x="252" y="408" class="t2">V3 shared pool  ·  V4 dedicated mc-d-*</text>
+      <text x="252" y="422" class="t2">jailer · kernel · rootfs · vsock</text>
+      <text x="252" y="436" class="t2">AgentCell(s) inside / bound to guest</text>
+
+      <!-- Evidence sink -->
+      <rect x="540" y="372" width="200" height="78" class="b2" rx="4"/>
+      <text x="552" y="392" class="th">Worldline / Evidence</text>
+      <text x="552" y="408" class="t2">body ids · bundle digests</text>
+      <text x="552" y="422" class="t2">LC receipts · DNA log</text>
+      <text x="552" y="436" class="t2">acceptance artifacts</text>
+
+      <!-- arrows -->
+      <path class="l" d="M160,71 H198"/>
+      <path class="l" d="M280,106 V128"/>
+      <path class="l" d="M120,350 V370"/>
+      <path class="l" d="M380,350 V370"/>
+      <path class="l" d="M640,350 V370"/>
+      <path class="l" d="M220,411 H238"/>
+      <path class="l" d="M520,411 H538"/>
+    </svg>
+    <figcaption>Figure 1. Connector node: engineer/operator surfaces → authority spine → CVR → microd / MicroCells → worldline evidence.</figcaption>
+  </figure>
+
+  <h3>2.1 Data &amp; control flows (summary)</h3>
+  <table>
+    <tr><th>Flow</th><th>Path</th><th>Gate</th></tr>
+    <tr><td>Talk</td><td>Gateway → ops_runtime preflight → PATE → BCR → recall → model</td><td>identity, contract, budgets, frozen deny</td></tr>
+    <tr><td>Tool / MCP</td><td>preflight → knowledge justify → DNA → governed_effect → PATE</td><td>WorldGrant, ActionBinding</td></tr>
+    <tr><td>Agent start</td><td>assert_harden_ready → cvr::bind_on_start → AgentCell ± MicroCell</td><td>START_REFUSED if required unmet</td></tr>
+    <tr><td>Promote</td><td>POST /agents/:pid/isolation/promote → same agent_pid, new body</td><td>HostProbe / microd</td></tr>
+    <tr><td>Quarantine</td><td>deny→inflight→grants→net→freeze→VMM→verify→progeny</td><td>QUARANTINE_FAILED on miss</td></tr>
+    <tr><td>Proof</td><td>GET /proof/export/:pid + connectorctl worldline export</td><td>integrity sha256 + posture triad</td></tr>
+  </table>
+</section>
+
+<!-- ===================== 3 ===================== -->
+<section class="chapter">
+  <h2>3. Authority &amp; effect spine</h2>
+  <p>Every mutating consequence is meant to pass a single conceptual admit path. Soft/playground may label LAB; harden must refuse or fail closed.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#0d4f6b"/></marker>
+        <style>
+          .bx{fill:#eef2f6;stroke:#0d4f6b;stroke-width:1.1;rx:3}
+          .tx{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:9.5px;fill:#1a1f26}
+          .sx{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8px;fill:#4a5563}
+          .ln{stroke:#0d4f6b;stroke-width:1.1;fill:none;marker-end:url(#a2)}
+          .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+        </style>
+      </defs>
+      <text x="12" y="18" class="th">FIGURE 2 — Effect admission (propose → verify → commit)</text>
+      <rect class="bx" x="20" y="40" width="100" height="50" rx="4"/><text x="32" y="62" class="tx">Proposal</text><text x="32" y="76" class="sx">Talk/tool/CONP</text>
+      <rect class="bx" x="140" y="40" width="100" height="50" rx="4"/><text x="152" y="62" class="tx">Identity</text><text x="152" y="76" class="sx">bound agent_pid</text>
+      <rect class="bx" x="260" y="40" width="100" height="50" rx="4"/><text x="272" y="62" class="tx">Contract</text><text x="272" y="76" class="sx">declared surface</text>
+      <rect class="bx" x="380" y="40" width="100" height="50" rx="4"/><text x="392" y="62" class="tx">WorldGrant</text><text x="392" y="76" class="sx">address pores</text>
+      <rect class="bx" x="500" y="40" width="100" height="50" rx="4"/><text x="512" y="62" class="tx">NF³ / PATE</text><text x="512" y="76" class="sx">categorical</text>
+      <rect class="bx" x="620" y="40" width="110" height="50" rx="4"/><text x="632" y="62" class="tx">HITL?</text><text x="632" y="76" class="sx">digest-bound</text>
+
+      <path class="ln" d="M120,65 H138"/><path class="ln" d="M240,65 H258"/><path class="ln" d="M360,65 H378"/>
+      <path class="ln" d="M480,65 H498"/><path class="ln" d="M600,65 H618"/>
+
+      <rect class="bx" x="140" y="130" width="120" height="50" rx="4"/><text x="152" y="152" class="tx">Budget BCR</text><text x="152" y="166" class="sx">reserve→commit</text>
+      <rect class="bx" x="290" y="130" width="120" height="50" rx="4"/><text x="302" y="152" class="tx">Packet DNA</text><text x="302" y="166" class="sx">outbound seal</text>
+      <rect class="bx" x="440" y="130" width="120" height="50" rx="4"/><text x="452" y="152" class="tx">Execute body</text><text x="452" y="166" class="sx">Agent/MicroCell</text>
+      <rect class="bx" x="590" y="130" width="140" height="50" rx="4"/><text x="602" y="152" class="tx">Receipt + journal</text><text x="602" y="166" class="sx">worldline proof</text>
+
+      <path class="ln" d="M675,90 V128"/><path class="ln" d="M260,155 H288"/><path class="ln" d="M410,155 H438"/><path class="ln" d="M560,155 H588"/>
+
+      <rect x="20" y="210" width="710" height="70" fill="#fbf4eb" stroke="#8a4b12" rx="4"/>
+      <text x="32" y="232" class="tx">Cognitive side-channel (DIM / Knot / KECS) — inspect &amp; regulate only</text>
+      <text x="32" y="250" class="sx">May raise verification pressure, degrade recall, wake idle agents — MUST NOT convert NF³ Fail→Pass or invent grants.</text>
+      <text x="32" y="268" class="sx">Authority-attack tests in CI: high confidence / Ψ cannot self-authorize.</text>
+    </svg>
+    <figcaption>Figure 2. Single admit spine; cognition never becomes permission.</figcaption>
+  </figure>
+
+  <h3>3.1 Effect exclusivity</h3>
+  <p>When <code>CONNECTOR_EFFECT_EXCLUSIVITY=1</code> (on under augmented env / production presets), alternate mutating paths
+  (raw shell, ungated child spawn, CONP bypass) are closed or refused. Ungated paths are bugs to close, not features.</p>
+</section>
+
+<!-- ===================== 4 ===================== -->
+<section class="chapter">
+  <h2>4. Agent isolation architecture (three layers)</h2>
+  <p><strong>Thesis:</strong> Connector isolates <em>agents</em>, not merely processes. Three layers are required and composed.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 380" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+        .t{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:10px;fill:#1a1f26}
+        .s{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8.5px;fill:#4a5563}
+      </style>
+      <text x="12" y="18" class="th">FIGURE 3 — Three-layer agent isolation</text>
+
+      <rect x="40" y="40" width="680" height="90" fill="#e8f3ee" stroke="#1a6b4a" rx="5"/>
+      <text x="56" y="62" class="t">LAYER 1 — Machine (MicroCell)</text>
+      <text x="56" y="80" class="s">Firecracker/KVM guest · jailer · measured kernel/rootfs · vsock · shared pool (V3) or dedicated mc-d-* (V4)</text>
+      <text x="56" y="96" class="s">Privileged ops via connector-microd · HostProbe Effective when /dev/kvm + assets + InstanceStart proven</text>
+      <text x="56" y="112" class="s">Purpose: hardware-backed boundary for high-risk / blast-radius-sensitive agents</text>
+
+      <rect x="40" y="145" width="680" height="90" fill="#eef2f6" stroke="#0d4f6b" rx="5"/>
+      <text x="56" y="167" class="t">LAYER 2 — Linux (AgentCell)</text>
+      <text x="56" y="185" class="s">Namespaces · cgroups · Landlock · seccomp · network mark / matrix · DockLock cage</text>
+      <text x="56" y="201" class="s">Lifecycle: RUNNING · PAUSED · QUARANTINED · STOPPED · REAP · DESTROY</text>
+      <text x="56" y="217" class="s">Purpose: OS-grade containment for each agent body; freeze/deny effects when frozen</text>
+
+      <rect x="40" y="250" width="680" height="100" fill="#f7f5f1" stroke="#8a4b12" rx="5"/>
+      <text x="56" y="272" class="t">LAYER 3 — Semantic (always on authority spine)</text>
+      <text x="56" y="290" class="s">Identity · memory namespace m/{pid} · contract · WorldGrant · NF³/PATE · budgets · Packet DNA · DIM (non-authority)</text>
+      <text x="56" y="306" class="s">Evidence binds execution body ids + runtime bundle digests to worldline</text>
+      <text x="56" y="322" class="s">Purpose: even if body changes, agent_pid + grants + proof remain coherent</text>
+      <text x="56" y="338" class="s">Invariant: Agent ≠ execution body — promote AgentCell↔MicroCell without new agent identity</text>
+    </svg>
+    <figcaption>Figure 3. Machine · Linux · Semantic isolation composed under one agent_pid.</figcaption>
+  </figure>
+
+  <h3>4.1 Engineer isolation surface</h3>
+  <pre>agent:
+  isolation: auto                 # linux-cell | hardened-linux-cell | shared-microvm | dedicated-microvm
+  isolation_risk: R2              # drives auto table only — never grants authority
+  resources: default              # small | default | compute</pre>
+
+  <h3>4.2 Profiles V0–V4</h3>
+  <table>
+    <tr><th>Profile</th><th>Intent</th><th>Body</th><th>Typical risk map (auto)</th></tr>
+    <tr><td>V0</td><td>App / contract gates only</td><td>process / soft cage</td><td>lab / R0 exploratory</td></tr>
+    <tr><td>V1</td><td>Linux cell</td><td>AgentCell (ns/cgroup)</td><td>R0 → V1</td></tr>
+    <tr><td>V2</td><td>Hardened Linux cell</td><td>AgentCell + Landlock fail-closed</td><td>R1 → V2</td></tr>
+    <tr><td>V3</td><td>Shared MicroCell</td><td>N AgentCells / one Firecracker guest</td><td>R2 → V3</td></tr>
+    <tr><td>V4</td><td>Dedicated MicroCell</td><td>one guest per agent (<code>mc-d-*</code>)</td><td>R3 → V4</td></tr>
+  </table>
+  <p>Posture triad on every isolation decision: <strong>Requested / Applied / Effective</strong>. Missing KVM/assets/jailer when required → <code>START_REFUSED</code>, never silent “applied.”</p>
+</section>
+
+<!-- ===================== 5 ===================== -->
+<section class="chapter">
+  <h2>5. CVR · MicroCell · Firecracker · connector-microd</h2>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 420" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+        .t{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:9.5px;fill:#1a1f26}
+        .s{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8px;fill:#4a5563}
+        .w{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:9.5px;fill:#e8ecef}
+        .box{fill:#eef2f6;stroke:#0d4f6b}
+        .dk{fill:#1a1f26;stroke:#1a1f26}
+        .gn{fill:#e8f3ee;stroke:#1a6b4a}
+      </style>
+      <text x="12" y="18" class="th">FIGURE 4 — CVR &amp; microd detail</text>
+
+      <rect class="box" x="20" y="36" width="220" height="160" rx="4"/>
+      <text x="32" y="56" class="t">substrate/cvr (Rust)</text>
+      <text x="32" y="74" class="s">resolve_isolation</text>
+      <text x="32" y="88" class="s">bind_on_start</text>
+      <text x="32" y="102" class="s">shared_pool · auto_policy</text>
+      <text x="32" y="116" class="s">resources · promote</text>
+      <text x="32" y="130" class="s">regime · inflight</text>
+      <text x="32" y="144" class="s">microd_client (UDS)</text>
+      <text x="32" y="158" class="s">host_probe overlay</text>
+      <text x="32" y="172" class="s">lifecycle rewrite</text>
+      <text x="32" y="186" class="s">API: /cvr/* promote</text>
+
+      <rect class="dk" x="270" y="36" width="220" height="160" rx="4"/>
+      <text x="282" y="56" class="w">connector-microd</text>
+      <text x="282" y="74" class="s" style="fill:#a8b0ba">JSON-lines IPC</text>
+      <text x="282" y="90" class="s" style="fill:#a8b0ba">prepare / serve READY</text>
+      <text x="282" y="106" class="s" style="fill:#a8b0ba">/run/connector/microd.*</text>
+      <text x="282" y="122" class="s" style="fill:#a8b0ba">start/pause/stop VMM</text>
+      <text x="282" y="138" class="s" style="fill:#a8b0ba">warm pool</text>
+      <text x="282" y="154" class="s" style="fill:#a8b0ba">systemd unit path</text>
+      <text x="282" y="170" class="s" style="fill:#a8b0ba">asset pin env</text>
+
+      <rect class="gn" x="520" y="36" width="220" height="160" rx="4"/>
+      <text x="532" y="56" class="t">platform/microvm</text>
+      <text x="532" y="74" class="s">MicrovmHost</text>
+      <text x="532" y="90" class="s">Firecracker API UDS</text>
+      <text x="532" y="106" class="s">api_put keep-alive</text>
+      <text x="532" y="122" class="s">kvm_live + hermetic stub</text>
+      <text x="532" y="138" class="s">jailer orchestration</text>
+      <text x="532" y="154" class="s">SUN_LEN short socks</text>
+      <text x="532" y="170" class="s">vendor FC / vmlinux</text>
+
+      <rect class="box" x="20" y="220" width="350" height="170" rx="4"/>
+      <text x="32" y="240" class="t">Shared MicroCell pool (V3)</text>
+      <text x="32" y="258" class="s">acquire_shared → slot under CONNECTOR_MICROCELL_SHARED_MAX</text>
+      <text x="32" y="274" class="s">Multiple AgentCells bind one guest</text>
+      <text x="32" y="290" class="s">Warm path: POST /cvr/microd/warm</text>
+      <text x="32" y="306" class="s">Resources: small | default | compute</text>
+      <text x="32" y="322" class="s">Evidence: shared body id + agent set</text>
+      <text x="32" y="338" class="s">Harden: missing Effective → refuse</text>
+      <text x="32" y="354" class="s">Lab: MicrovmHost in-process fallback</text>
+      <text x="32" y="370" class="s">Honesty: LAB banner if not Effective</text>
+
+      <rect class="box" x="390" y="220" width="350" height="170" rx="4"/>
+      <text x="402" y="240" class="t">Dedicated MicroCell (V4)</text>
+      <text x="402" y="258" class="s">Always new guest mc-d-* — never pooled</text>
+      <text x="402" y="274" class="s">R3 / dedicated-microvm intent</text>
+      <text x="402" y="290" class="s">Jailer required under harden</text>
+      <text x="402" y="306" class="s">InstanceStart must succeed or refuse</text>
+      <text x="402" y="322" class="s">Acceptance: make cvr-kvm-acceptance</text>
+      <text x="402" y="338" class="s">Artifact: effective_claim=true</text>
+      <text x="402" y="354" class="s">Soft gate: make cvr-soft-acceptance</text>
+      <text x="402" y="370" class="s">Soft clears leaked FC env (hermetic)</text>
+    </svg>
+    <figcaption>Figure 4. CVR package, privileged microd, Firecracker host, V3/V4 bodies.</figcaption>
+  </figure>
+
+  <h3>5.1 HostProbe &amp; Effective</h3>
+  <table>
+    <tr><th>Signal</th><th>Meaning</th></tr>
+    <tr><td>Requested</td><td>Engineer/config asked for a profile (e.g. dedicated-microvm)</td></tr>
+    <tr><td>Applied</td><td>Runtime attempted bind with available controls</td></tr>
+    <tr><td>Effective</td><td>Host can actually run Firecracker MicroCell (KVM + kernel + rootfs + start proven)</td></tr>
+    <tr><td>LAB / unavailable</td><td>Honest when Effective unmet — never marketed as harden-applied</td></tr>
+  </table>
+
+  <h3>5.2 Asset pins</h3>
+  <pre>export CONNECTOR_FIRECRACKER_BIN=/path/to/firecracker
+export CONNECTOR_JAILER_BIN=/path/to/jailer          # required under harden
+export CONNECTOR_MICROVM_KERNEL=/path/to/vmlinux
+export CONNECTOR_MICROVM_ROOTFS=/path/to/rootfs.ext4
+export CONNECTOR_MICROVM_STATE_DIR=/var/lib/connector/microvm/instances
+export CONNECTOR_MICROD_SOCK=/run/connector/microd.sock
+# systemctl enable --now connector-microd.service</pre>
+</section>
+
+<!-- ===================== 6 ===================== -->
+<section class="chapter">
+  <h2>6. Lifecycle, promote, quarantine, regime</h2>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+        .t{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:9px;fill:#1a1f26}
+        .s{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8px;fill:#4a5563}
+        .st{fill:#eef2f6;stroke:#0d4f6b}
+        .bad{fill:#fbf4eb;stroke:#8a4b12}
+        .ok{fill:#e8f3ee;stroke:#1a6b4a}
+      </style>
+      <text x="12" y="18" class="th">FIGURE 5 — Lifecycle &amp; quarantine order</text>
+
+      <rect class="ok" x="20" y="40" width="90" height="36" rx="3"/><text x="36" y="62" class="t">RUNNING</text>
+      <rect class="st" x="130" y="40" width="90" height="36" rx="3"/><text x="148" y="62" class="t">PAUSED</text>
+      <rect class="bad" x="240" y="40" width="110" height="36" rx="3"/><text x="252" y="62" class="t">QUARANTINED</text>
+      <rect class="st" x="370" y="40" width="90" height="36" rx="3"/><text x="384" y="62" class="t">STOPPED</text>
+      <rect class="st" x="480" y="40" width="90" height="36" rx="3"/><text x="504" y="62" class="t">REAP</text>
+      <rect class="st" x="590" y="40" width="100" height="36" rx="3"/><text x="608" y="62" class="t">DESTROY</text>
+
+      <text x="20" y="110" class="t">Quarantine ordered sequence (failure → QUARANTINE_FAILED):</text>
+      <rect class="bad" x="20" y="125" width="720" height="100" rx="4"/>
+      <text x="32" y="148" class="s">1 deny new effects  →  2 classify / drain inflight  →  3 cut WorldGrants  →  4 cut net / matrix</text>
+      <text x="32" y="168" class="s">5 freeze AgentCell  →  6 pause/stop VMM (via microd)  →  7 verify posture  →  8 propagate to progeny</text>
+      <text x="32" y="188" class="s">Regime: QUARANTINED / STOPPED_BY_OPERATOR never auto-revive — explicit operator / HITL required</text>
+      <text x="32" y="208" class="s">Promote: POST /agents/:pid/isolation/promote {target: shared|dedicated} — same agent_pid, new ExecutionBody</text>
+
+      <rect class="st" x="20" y="250" width="350" height="70" rx="4"/>
+      <text x="32" y="270" class="t">Operator stop</text>
+      <text x="32" y="288" class="s">POST /agents/:pid/operator-stop</text>
+      <text x="32" y="304" class="s">regime/Φ update + VMM stop when bound</text>
+
+      <rect class="st" x="390" y="250" width="350" height="70" rx="4"/>
+      <text x="402" y="270" class="t">Frozen effects</text>
+      <text x="402" y="288" class="s">ops_runtime preflight denies</text>
+      <text x="402" y="304" class="s">Talk/tools refuse while frozen/quarantined</text>
+    </svg>
+    <figcaption>Figure 5. OS-grade lifecycle; quarantine is ordered and human-gated.</figcaption>
+  </figure>
+</section>
+
+<!-- ===================== 7 ===================== -->
+<section class="chapter">
+  <h2>7. Augmented environment enablement</h2>
+  <p>A <em>real</em> augmented environment node (not lab) flips membrane defaults and harden refuse-start:</p>
+  <pre>export CONNECTOR_AUGMENTED_ENV=1
+# or CONNECTOR_PRESET=production / CONNECTOR_ENV=production</pre>
+  <table>
+    <tr><th>Flag</th><th>Role</th></tr>
+    <tr><td><code>CONNECTOR_HARDEN_REFUSE_START=1</code></td><td>Start refuses when mandatory gates unmet</td></tr>
+    <tr><td><code>CONNECTOR_EFFECT_EXCLUSIVITY=1</code></td><td>Alternate effect paths closed</td></tr>
+    <tr><td><code>CONNECTOR_SANDBOX_UNBYPASSABLE=1</code></td><td>FS/net/VM/broker bar</td></tr>
+    <tr><td><code>CONNECTOR_ISOLATION_RUNTIME=microvm</code></td><td>Isolation grade for exclusivity</td></tr>
+  </table>
+  <p>Inspect: <code>GET /api/v1/substrate/status</code> → <code>ops_runtime</code> + <code>harden_posture</code> + <code>cvr</code> + <code>escape_hatches</code> + <code>lab_banner</code>.</p>
+  <p>Playground (<code>CONNECTOR_PLAYGROUND=1</code>) never engages augmented harden refuse-start.</p>
+</section>
+
+<!-- ===================== 8 ===================== -->
+<section class="chapter">
+  <h2>8. Forty capability claims (agentic augmented environment)</h2>
+  <p class="lead">These are product claims Connector asserts it can provide when configured. Each is capability + honesty — not a warranty of absolute security.</p>
+
+  <div class="claim-grid">
+    <div class="claim"><span class="n">01</span> Bound agent identity — no ambient LLM effects under harden.</div>
+    <div class="claim"><span class="n">02</span> Contract floor — undeclared FS/net/tools denied.</div>
+    <div class="claim"><span class="n">03</span> WorldGrant pores — external addresses only through grants.</div>
+    <div class="claim"><span class="n">04</span> Packet DNA on outbound effects when required.</div>
+    <div class="claim"><span class="n">05</span> Continuity Broken → egress cut (matrix / governed_effect).</div>
+    <div class="claim"><span class="n">06</span> Memory namespace <code>m/{kernel_pid}</code> per agent.</div>
+    <div class="claim"><span class="n">07</span> Ingress tokenization / seal via LLM broker when enabled.</div>
+    <div class="claim"><span class="n">08</span> Detokenize only on admitted effects.</div>
+    <div class="claim"><span class="n">09</span> BCR token/compute budgets with reserve→commit.</div>
+    <div class="claim"><span class="n">10</span> Trajectory blast / commitment / exposure caps.</div>
+    <div class="claim"><span class="n">11</span> Persistent inspectable DIM cognitive state Z<sub>t</sub>.</div>
+    <div class="claim"><span class="n">12</span> DIM regulates cognition without minting Allow.</div>
+    <div class="claim"><span class="n">13</span> Durable VAC memory + recall across restart.</div>
+    <div class="claim"><span class="n">14</span> Knot interference on contradiction (no silent overwrite).</div>
+    <div class="claim"><span class="n">15</span> Mission continuity / idle wake without new prompt.</div>
+    <div class="claim"><span class="n">16</span> Model-replaceable mind (identity + DIM persist).</div>
+    <div class="claim"><span class="n">17</span> Digest-bound HITL for high-risk actions.</div>
+    <div class="claim"><span class="n">18</span> Proportional autonomy R0–R3 via RGO/PATE.</div>
+    <div class="claim"><span class="n">19</span> Receipt for every admitted effect.</div>
+    <div class="claim"><span class="n">20</span> Compensation when inverse registered (AAPI).</div>
+    <div class="claim"><span class="n">21</span> CONP without SIL theater (honest partner HAL).</div>
+    <div class="claim"><span class="n">22</span> Narrowed child agents with paired receipts.</div>
+    <div class="claim"><span class="n">23</span> Operator stop/inspect without raw chain-of-thought.</div>
+    <div class="claim"><span class="n">24</span> Authority-attack resistance (cognitive ≠ permission).</div>
+    <div class="claim"><span class="n">25</span> Isolation continuum V0–V4 including MicroCell.</div>
+    <div class="claim"><span class="n">26</span> Shared MicroCell pool for density (V3).</div>
+    <div class="claim"><span class="n">27</span> Dedicated MicroCell for blast radius (V4).</div>
+    <div class="claim"><span class="n">28</span> <code>isolation: auto</code> risk→profile table (configurable).</div>
+    <div class="claim"><span class="n">29</span> Promote body without new agent_pid.</div>
+    <div class="claim"><span class="n">30</span> Ordered quarantine with QUARANTINE_FAILED honesty.</div>
+    <div class="claim"><span class="n">31</span> No auto-revival from QUARANTINED / operator-stop.</div>
+    <div class="claim"><span class="n">32</span> START_REFUSED when Requested gates unmet (augmented).</div>
+    <div class="claim"><span class="n">33</span> Posture triad Requested/Applied/Effective on CVR.</div>
+    <div class="claim"><span class="n">34</span> Lab honesty — soft-fail never sold as harden.</div>
+    <div class="claim"><span class="n">35</span> Named escape hatches + audit in substrate status.</div>
+    <div class="claim"><span class="n">36</span> Proof export (digests, DNA, journals, integrity hash).</div>
+    <div class="claim"><span class="n">37</span> Operator pulse: denials, spend, HITL, DIM.</div>
+    <div class="claim"><span class="n">38</span> Effect exclusivity when membrane applied.</div>
+    <div class="claim"><span class="n">39</span> Playground→harden continuum on one spine.</div>
+    <div class="claim"><span class="n">40</span> KVM Effective acceptance artifact for MicroCell claim.</div>
+  </div>
+
+  <p class="footer-note">Mapped to E1–E8 · A1–A28 · S1–S28 in CONNECTOR_FINAL_OUTCOMES.md and REACH checklist.</p>
+</section>
+
+<!-- ===================== 9 ===================== -->
+<section class="chapter">
+  <h2>9. Why an engineer should use it</h2>
+  <div class="two-col">
+    <div>
+      <h3>Problems it solves</h3>
+      <ul>
+        <li>Agents that “just call tools” with ambient authority</li>
+        <li>No way to prove what was admitted vs what the model said</li>
+        <li>Lab demos silently treated as production-hardened</li>
+        <li>Isolation knobs scattered (cgroup here, prompt rules there)</li>
+        <li>No promote path when risk rises mid-life</li>
+        <li>Cognitive confidence mistaken for permission</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What you gain</h3>
+      <ul>
+        <li>One envelope language: contract · grant · tier · budget · HITL</li>
+        <li>Same APIs from playground to harden</li>
+        <li>OS-grade lifecycle + MicroCell when you need it</li>
+        <li>Exportable worldline for incident / audit review</li>
+        <li>Explicit LAB banners when Effective is unmet</li>
+        <li>DIM/Knot for cognition without authority bleed</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout">
+    <strong>Engineer job.</strong> Choose the point on the dynamic↔constrained continuum; Connector makes that choice real, observable, and reconstructible.
+  </div>
+</section>
+
+<!-- ===================== 10 ===================== -->
+<section class="chapter">
+  <h2>10. Capabilities the agent receives</h2>
+  <p>When hosted on Connector (gates enabled), an agent gains a <em>bounded</em> operating environment — not unrestricted host power.</p>
+  <table>
+    <tr><th>Capability</th><th>What the agent gets</th><th>Bound</th></tr>
+    <tr><td>Talk / models</td><td>Routed inference under identity</td><td>budgets, tokenization, NF³</td></tr>
+    <tr><td>Tools / MCP</td><td>Declared tool surface</td><td>contract + PATE + DNA</td></tr>
+    <tr><td>Memory</td><td>Private namespace + VAC recall</td><td>knowledge boundary / DIM radius</td></tr>
+    <tr><td>World addresses</td><td>Only granted pores</td><td>WorldGrant fail-closed option</td></tr>
+    <tr><td>Mission</td><td>Journaled continuity / wake</td><td>trajectory caps</td></tr>
+    <tr><td>Children</td><td>Narrowed spawn with receipts</td><td>parent envelope inheritance</td></tr>
+    <tr><td>CONP</td><td>Protocol effects with DNA</td><td>no SIL theater from stubs</td></tr>
+    <tr><td>Isolation body</td><td>AgentCell / MicroCell as configured</td><td>cannot self-promote Effective</td></tr>
+  </table>
+  <p>The agent does <strong>not</strong> get: ambient root, silent grant expansion, self-authorization via confidence, or auto-revival after quarantine.</p>
+</section>
+
+<!-- ===================== 11 ===================== -->
+<section class="chapter">
+  <h2>11. Product &amp; technical inventory</h2>
+  <h3>11.1 Major code surfaces</h3>
+  <table>
+    <tr><th>Area</th><th>Location</th><th>Role</th></tr>
+    <tr><td>Server / API</td><td><code>platform/server</code></td><td>connectord, ops_runtime, gateway</td></tr>
+    <tr><td>CVR</td><td><code>platform/server/src/substrate/cvr/</code></td><td>isolation resolve, microd client, pool, promote, regime</td></tr>
+    <tr><td>MicroVM</td><td><code>platform/microvm</code></td><td>Firecracker host, kvm_live, hermetic stub</td></tr>
+    <tr><td>microd</td><td><code>platform/connector-microd</code></td><td>Privileged VMM supervisor IPC</td></tr>
+    <tr><td>Acceptance</td><td><code>scripts/cvr-*-acceptance.sh</code></td><td>Soft LAB + KVM Effective gates</td></tr>
+    <tr><td>CI</td><td><code>.github/workflows/cvr-kvm-acceptance.yml</code></td><td>Soft always; KVM-gated Effective</td></tr>
+    <tr><td>UI</td><td><code>platform/ui-leptos</code></td><td>Operator dashboard surfaces</td></tr>
+    <tr><td>Docs SoT</td><td><code>platform/docs/arch/*</code></td><td>Capability, promise, outcomes, isolation</td></tr>
+  </table>
+
+  <h3>11.2 Technical properties</h3>
+  <ul>
+    <li>Rust async server; Unix domain socket JSON-lines to microd</li>
+    <li>Firecracker API over short UDS paths (SUN_LEN); HTTP keep-alive body drain</li>
+    <li>Resource profiles map to guest sizing; shared max configurable</li>
+    <li>Auto policy JSON overrides default R→V table</li>
+    <li>Vendor manifests pin SHA256 for FC/kernel/rootfs (x86_64)</li>
+    <li>Large VMM binaries gitignored; acceptance uses measured assets</li>
+  </ul>
+</section>
+
+<!-- ===================== 12 ===================== -->
+<section class="chapter">
+  <h2>12. Tool — not full security software</h2>
+  <div class="callout warn">
+    Connector is a <strong>governed-autonomy toolkit / agent OS substrate</strong>.
+    It is not a replacement for enterprise GRC suites, endpoint EDR, network firewalls, physical SIL, or legal compliance programs.
+  </div>
+
+  <table>
+    <tr><th>What people might assume</th><th>What Connector actually is</th></tr>
+    <tr><td>“Install Connector → agents are secure”</td><td>Engineer must choose and apply posture; misconfig stays soft/LAB</td></tr>
+    <tr><td>“We are HIPAA/SOC2 certified by Connector”</td><td>Evidence/export for org mapping; optional GRC routes ≠ certification</td></tr>
+    <tr><td>“LLM cannot be jailbroken”</td><td>Membrane gates consequence; model content attacks remain a risk class</td></tr>
+    <tr><td>“MicroCell = airgap”</td><td>KVM boundary + semantic gates; covert channels / host compromise out of scope</td></tr>
+    <tr><td>“Partner HAL/SIL proven”</td><td>Physical safety stays partner-attested — never claimed from lab stubs</td></tr>
+    <tr><td>“DIM high confidence = safe to act”</td><td>Confidence never becomes Allow</td></tr>
+  </table>
+
+  <h3>12.1 Correct use of the tool</h3>
+  <ol>
+    <li>Define agent contract and WorldGrants explicitly.</li>
+    <li>Pick isolation profile (or auto + risk) matching blast radius.</li>
+    <li>Enable augmented env / harden for production nodes.</li>
+    <li>Verify Effective on hosts that claim MicroCell.</li>
+    <li>Monitor via pulse; quarantine with human gate when needed.</li>
+    <li>Export worldline for incidents — do not invent “compliance green.”</li>
+  </ol>
+</section>
+
+<!-- ===================== 13 ===================== -->
+<section class="chapter">
+  <h2>13. What we built (accomplishment record)</h2>
+  <h3>13.1 Product / honesty spine</h3>
+  <ul>
+    <li>Capability standard, product promise, E/A/S outcomes, REACH checklist</li>
+    <li>Anti-claim audit script in CI (<code>audit-product-promise.sh</code>)</li>
+    <li>Augmented env flag + refuse-start membrane</li>
+  </ul>
+  <h3>13.2 Authority &amp; agent capabilities</h3>
+  <ul>
+    <li>Identity, contract, WorldGrant, Packet DNA, BCR spend on live Talk/tool paths</li>
+    <li>DIM / Knot / VAC / mission journal with authority-attack tests</li>
+    <li>Proof export + operator pulse without CoT</li>
+    <li>Effect exclusivity and escape-hatch enumeration</li>
+  </ul>
+  <h3>13.3 Isolation Phases A–F (CVR)</h3>
+  <table>
+    <tr><th>Phase</th><th>Delivered</th></tr>
+    <tr><td>A</td><td>V0–V4 vocabulary, ExecutionBody kinds, R/A/E on isolation, START_REFUSED mapping</td></tr>
+    <tr><td>B–C</td><td>AgentCell / MicroCell binding, lifecycle toward VMM, evidence hooks</td></tr>
+    <tr><td>D</td><td>connector-microd prepare/serve READY, IPC client, status/warm APIs</td></tr>
+    <tr><td>E</td><td>Shared pool, dedicated mc-d-*, auto_policy, resource profiles</td></tr>
+    <tr><td>F</td><td>Promote same pid, ordered quarantine, regime no auto-revival</td></tr>
+  </table>
+  <h3>13.4 Linux-level Effective acceptance</h3>
+  <ul>
+    <li><code>make cvr-soft-acceptance</code> — always; LAB honesty / refuse-start</li>
+    <li><code>make cvr-kvm-acceptance</code> — KVM host; writes <code>effective_claim=true</code> artifact on PASS</li>
+    <li>Firecracker keep-alive HTTP fix, short socket paths, hermetic soft env clearing</li>
+  </ul>
+</section>
+
+<!-- ===================== 14 ===================== -->
+<section class="chapter">
+  <h2>14. How to use (operator runbook)</h2>
+  <h3>14.1 Dev / playground</h3>
+  <pre># soft exploration
+export CONNECTOR_PLAYGROUND=1
+# start connectord per BOOTSTRAP_RUNBOOK / Makefile
+# inspect: GET /api/v1/substrate/status → expect LAB labels when gates off</pre>
+
+  <h3>14.2 Augmented / production posture</h3>
+  <pre>export CONNECTOR_AUGMENTED_ENV=1
+systemctl enable --now connector-microd.service   # if MicroCell required
+# pin FC/jailer/kernel/rootfs (see §5.2)
+# register agent with isolation: auto|shared-microvm|dedicated-microvm
+# start: POST /agents/:pid/start — expect START_REFUSED if Effective unmet</pre>
+
+  <h3>14.3 Day-2 ops</h3>
+  <pre># status
+curl -s $BASE/api/v1/cvr/status | jq .
+curl -s $BASE/api/v1/operator/pulse | jq .
+
+# promote
+curl -s -X POST $BASE/api/v1/agents/$PID/isolation/promote \
+  -H 'content-type: application/json' \
+  -d '{"target":"dedicated"}'
+
+# quarantine / stop
+curl -s -X POST $BASE/api/v1/agents/$PID/quarantine
+curl -s -X POST $BASE/api/v1/agents/$PID/operator-stop
+
+# proof
+curl -s $BASE/api/v1/proof/export/$PID -o worldline.json
+connectorctl worldline export --agent $PID</pre>
+
+  <h3>14.4 Acceptance on a host</h3>
+  <pre>make cvr-soft-acceptance
+make cvr-kvm-acceptance    # requires /dev/kvm + assets
+# artifact: artifacts/cvr-acceptance/cvr-kvm-acceptance.json</pre>
+</section>
+
+<!-- ===================== 15 ===================== -->
+<section class="chapter">
+  <h2>15. Outcomes &amp; acceptance evidence</h2>
+  <table>
+    <tr><th>Outcome set</th><th>IDs</th><th>Meaning</th></tr>
+    <tr><td>Engineer freedom</td><td>E1–E8</td><td>Configure and prove posture continuum</td></tr>
+    <tr><td>Agent capabilities</td><td>A1–A28</td><td>What hosted agents gain / how limits bind</td></tr>
+    <tr><td>System capabilities</td><td>S1–S28</td><td>Platform working software bands</td></tr>
+  </table>
+  <div class="callout ok">
+    <strong>Pass rule.</strong> Capability + honesty bars — not “100% secure” certification.
+    Soft postures must be labeled soft. Harden must fail closed or refuse start.
+  </div>
+  <p>Primary verify surfaces: <code>/substrate/status</code>, <code>/product/promise</code>, <code>/operator/pulse</code>, <code>/proof/export</code>,
+  <code>/cvr/status</code>, soft + KVM acceptance artifacts, <code>audit-product-promise.sh</code>.</p>
+
+  <h3>15.1 Outcomes this stack delivers</h3>
+  <ul>
+    <li>Engineers can dial isolation and budgets without rewriting the agent identity.</li>
+    <li>Operators can freeze, quarantine, and stop including VMM when bound.</li>
+    <li>Auditors can reconstruct admitted effects from exportable evidence.</li>
+    <li>Hosts without KVM cannot claim MicroCell Effective.</li>
+    <li>Labs remain useful without polluting harden claims.</li>
+  </ul>
+</section>
+
+<!-- ===================== 16 ===================== -->
+<section class="chapter">
+  <h2>16. Anti-claims &amp; known limits</h2>
+  <table>
+    <tr><th>Anti-claim</th><th>Why</th></tr>
+    <tr><td>100% secure</td><td>Covert channels, host compromise, novel LLM bypasses, misconfig</td></tr>
+    <tr><td>Every deploy equally hard</td><td>Playground soft-fail is intentional entropy leak</td></tr>
+    <tr><td>Cognition is correct</td><td>We gate consequence; we do not certify model truth</td></tr>
+    <tr><td>Lab echo is SIL</td><td>Physical safety is partner / attested path only</td></tr>
+    <tr><td>Confidence = permission</td><td>DIM/Knot/KECS never mint Allow</td></tr>
+    <tr><td>We make an org compliant</td><td>Compliance is jurisdiction/process; we supply controls + evidence</td></tr>
+  </table>
+  <p>Partner HAL remains LAB where not host-attested. T4 MicroCell Effective requires host proof.</p>
+</section>
+
+<!-- ===================== 17 ===================== -->
+<section class="chapter">
+  <h2>17. Deep dive — Talk / tool / start sequences</h2>
+  <p>These sequence diagrams encode the live operational paths summarized in CONNECTOR_OPERATIONAL_SOFTWARE.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+        .t{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8.5px;fill:#1a1f26}
+        .s{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:7.5px;fill:#4a5563}
+        .box{fill:#eef2f6;stroke:#0d4f6b}
+        .lane{stroke:#c5ccd6;stroke-width:1;stroke-dasharray:3 3}
+      </style>
+      <text x="12" y="16" class="th">FIGURE 6 — Talk path (ops_runtime)</text>
+      <text x="40" y="40" class="t">Client</text>
+      <text x="160" y="40" class="t">Gateway</text>
+      <text x="280" y="40" class="t">ops_runtime</text>
+      <text x="420" y="40" class="t">PATE/BCR</text>
+      <text x="540" y="40" class="t">DIM/VAC</text>
+      <text x="660" y="40" class="t">Model</text>
+      <line class="lane" x1="55" y1="48" x2="55" y2="340"/>
+      <line class="lane" x1="175" y1="48" x2="175" y2="340"/>
+      <line class="lane" x1="310" y1="48" x2="310" y2="340"/>
+      <line class="lane" x1="445" y1="48" x2="445" y2="340"/>
+      <line class="lane" x1="565" y1="48" x2="565" y2="340"/>
+      <line class="lane" x1="680" y1="48" x2="680" y2="340"/>
+
+      <rect class="box" x="60" y="60" width="100" height="22" rx="2"/><text x="70" y="75" class="s">POST /talk</text>
+      <rect class="box" x="180" y="95" width="110" height="22" rx="2"/><text x="188" y="110" class="s">force-pid / auth</text>
+      <rect class="box" x="220" y="130" width="160" height="22" rx="2"/><text x="228" y="145" class="s">preflight (frozen? contract?)</text>
+      <rect class="box" x="340" y="165" width="140" height="22" rx="2"/><text x="348" y="180" class="s">PATE admit + BCR spend</text>
+      <rect class="box" x="460" y="200" width="130" height="22" rx="2"/><text x="468" y="215" class="s">recall + DIM radius</text>
+      <rect class="box" x="580" y="235" width="120" height="22" rx="2"/><text x="588" y="250" class="s">inference call</text>
+      <rect class="box" x="220" y="280" width="200" height="22" rx="2"/><text x="228" y="295" class="s">receipt + journal append</text>
+      <rect class="box" x="60" y="315" width="100" height="22" rx="2"/><text x="72" y="330" class="s">response</text>
+    </svg>
+    <figcaption>Figure 6. Talk: identity → preflight → admit/spend → recall → model → receipt.</figcaption>
+  </figure>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+        .t{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8.5px;fill:#1a1f26}
+        .s{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:7.5px;fill:#4a5563}
+        .box{fill:#eef2f6;stroke:#0d4f6b}
+        .ok{fill:#e8f3ee;stroke:#1a6b4a}
+        .bad{fill:#fbf4eb;stroke:#8a4b12}
+      </style>
+      <text x="12" y="16" class="th">FIGURE 7 — Agent start + CVR bind</text>
+      <rect class="box" x="20" y="40" width="140" height="40" rx="3"/><text x="32" y="58" class="t">POST /agents/:pid/start</text><text x="32" y="72" class="s">engineer intent</text>
+      <rect class="box" x="200" y="40" width="160" height="40" rx="3"/><text x="212" y="58" class="t">assert_harden_ready</text><text x="212" y="72" class="s">gates triad</text>
+      <rect class="bad" x="400" y="30" width="140" height="28" rx="3"/><text x="412" y="48" class="s">FAIL → START_REFUSED</text>
+      <rect class="ok" x="200" y="110" width="160" height="40" rx="3"/><text x="212" y="128" class="t">cvr::bind_on_start</text><text x="212" y="142" class="s">resolve V0–V4</text>
+      <rect class="box" x="40" y="180" width="150" height="50" rx="3"/><text x="52" y="200" class="t">AgentCell only</text><text x="52" y="216" class="s">V1/V2 Linux body</text>
+      <rect class="box" x="220" y="180" width="160" height="50" rx="3"/><text x="232" y="200" class="t">+ Shared MicroCell</text><text x="232" y="216" class="s">V3 pool acquire</text>
+      <rect class="box" x="410" y="180" width="160" height="50" rx="3"/><text x="422" y="200" class="t">+ Dedicated MicroCell</text><text x="422" y="216" class="s">V4 mc-d-* new guest</text>
+      <rect class="ok" x="600" y="180" width="140" height="50" rx="3"/><text x="612" y="200" class="t">RUNNING + evidence</text><text x="612" y="216" class="s">body ids bound</text>
+      <text x="20" y="270" class="s">microd preferred for VMM; lab may use in-process MicrovmHost. Required MicroCell + incomplete HostProbe → refuse (no silent fallback).</text>
+    </svg>
+    <figcaption>Figure 7. Start refuses when Requested MicroCell cannot be made Effective.</figcaption>
+  </figure>
+
+  <h3>17.1 Failure modes (engineered honesty)</h3>
+  <table>
+    <tr><th>Condition</th><th>Response</th><th>Must not claim</th></tr>
+    <tr><td>Harden gate missing</td><td><code>START_REFUSED</code></td><td>Applied harden</td></tr>
+    <tr><td>KVM/assets absent for V3/V4 required</td><td>Refuse or LAB unavailable</td><td>Effective MicroCell</td></tr>
+    <tr><td>Quarantine step fails</td><td><code>QUARANTINE_FAILED</code></td><td>Silent partial quarantine success</td></tr>
+    <tr><td>Soft-fail Landlock</td><td><code>soft_fail_lab</code> posture</td><td>Production-ready cage</td></tr>
+    <tr><td>Playground session</td><td>Soft membrane</td><td>Augmented env harden</td></tr>
+  </table>
+</section>
+
+<section class="chapter">
+  <h2>18. Deployment topologies</h2>
+  <figure class="diagram">
+    <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .th{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:11px;font-weight:700;fill:#0d4f6b}
+        .t{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:9px;fill:#1a1f26}
+        .s{font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:8px;fill:#4a5563}
+        .box{fill:#eef2f6;stroke:#0d4f6b}
+        .dk{fill:#1a1f26}
+        .w{fill:#e8ecef;font-family:IBM Plex Sans,Helvetica,sans-serif;font-size:9px}
+      </style>
+      <text x="12" y="16" class="th">FIGURE 8 — Single-node augmented env (reference)</text>
+      <rect class="box" x="20" y="40" width="720" height="250" rx="5"/>
+      <text x="36" y="62" class="t">Linux host with /dev/kvm</text>
+      <rect class="box" x="40" y="80" width="200" height="70" rx="3"/><text x="52" y="102" class="t">connectord</text><text x="52" y="118" class="s">API :port · substrate</text><text x="52" y="132" class="s">CVR client</text>
+      <rect class="dk" x="270" y="80" width="200" height="70" rx="3"/><text x="282" y="102" class="w">connector-microd</text><text x="282" y="118" class="s" style="fill:#a8b0ba">root/cap · sock</text><text x="282" y="132" class="s" style="fill:#a8b0ba">READY file</text>
+      <rect class="box" x="500" y="80" width="220" height="70" rx="3"/><text x="512" y="102" class="t">Assets</text><text x="512" y="118" class="s">firecracker · jailer</text><text x="512" y="132" class="s">vmlinux · rootfs.ext4</text>
+      <rect class="box" x="40" y="170" width="320" height="100" rx="3"/><text x="52" y="192" class="t">MicroCell guests</text><text x="52" y="210" class="s">shared pool slots + dedicated mc-d-*</text><text x="52" y="226" class="s">vsock / net via World Gateway attach</text><text x="52" y="242" class="s">state dir under MICROVM_STATE_DIR</text>
+      <rect class="box" x="380" y="170" width="340" height="100" rx="3"/><text x="392" y="192" class="t">Evidence &amp; ops</text><text x="392" y="210" class="s">journals · DNA log · proof export</text><text x="392" y="226" class="s">acceptance artifacts (optional CI mount)</text><text x="392" y="242" class="s">operator UI / connectorctl</text>
+    </svg>
+    <figcaption>Figure 8. Reference single-node topology for Effective MicroCell claims.</figcaption>
+  </figure>
+
+  <h3>18.1 Multi-agent density vs blast radius</h3>
+  <table>
+    <tr><th>Goal</th><th>Profile</th><th>Trade-off</th></tr>
+    <tr><td>Many low-risk agents</td><td>V1/V2 AgentCell or V3 shared</td><td>Density; shared guest fate</td></tr>
+    <tr><td>High-risk single agent</td><td>V4 dedicated</td><td>Cost/latency; strong blast radius</td></tr>
+    <tr><td>Risk rises mid-life</td><td>Promote shared→dedicated</td><td>Same pid; brief pause window</td></tr>
+    <tr><td>Unknown / mixed fleet</td><td><code>isolation: auto</code> + risk</td><td>Policy table must be reviewed</td></tr>
+  </table>
+</section>
+
+<section class="chapter">
+  <h2>19. Evidence model &amp; worldline</h2>
+  <p>Proof is a first-class product layer. Connector does not certify that “the agent was good”; it certifies what was <em>admitted</em>, what body executed, and what posture was Requested/Applied/Effective.</p>
+  <table>
+    <tr><th>Artifact</th><th>Contents</th><th>API / tool</th></tr>
+    <tr><td>Action digests</td><td>Canonical action identity for HITL</td><td>ActionBinding</td></tr>
+    <tr><td>Receipts</td><td>Per admitted effect</td><td>AAPI bridge / mission journal</td></tr>
+    <tr><td>Packet DNA log</td><td>Outbound seals</td><td>DNA require mode</td></tr>
+    <tr><td>DIM journal</td><td>Cognitive condition history</td><td><code>/dim</code> · export</td></tr>
+    <tr><td>Lifecycle receipts</td><td>Pause/quarantine/stop + VMM</td><td>CVR lifecycle</td></tr>
+    <tr><td>Bundle digests</td><td>Measured FC/kernel/rootfs</td><td>RuntimeBundle / HostProbe</td></tr>
+    <tr><td>Worldline export</td><td>Integrity sha256 + posture triad</td><td><code>/proof/export</code> · connectorctl</td></tr>
+    <tr><td>Acceptance JSON</td><td><code>effective_claim</code> for MicroCell</td><td><code>cvr-kvm-acceptance</code></td></tr>
+  </table>
+  <div class="callout">
+    Org compliance mapping (HIPAA/SOC2/EU AI Act report UIs) may exist as optional tooling; they are <strong>out of scope</strong> for “standard reached.” The substrate finish line is evidence the org can map themselves.
+  </div>
+</section>
+
+<section class="chapter">
+  <h2>20. Comparison: what Connector is vs adjacent categories</h2>
+  <table>
+    <tr><th>Category</th><th>Typical product</th><th>Connector relation</th></tr>
+    <tr><td>LLM app framework</td><td>Chains, prompts, tool routers</td><td>Connector hosts agents under membrane; not only a prompt SDK</td></tr>
+    <tr><td>Container orchestrator</td><td>k8s pods</td><td>AgentCell/MicroCell are agent-centric bodies, not generic schedulers</td></tr>
+    <tr><td>Secret manager / IAM</td><td>Keys, roles</td><td>Uses identity + grants; does not replace org IAM</td></tr>
+    <tr><td>SIEM / EDR</td><td>Host threat detection</td><td>Exports worldline; does not replace SOC tooling</td></tr>
+    <tr><td>GRC platform</td><td>Control frameworks</td><td>Supplies controls+evidence; not certification</td></tr>
+    <tr><td>Hypervisor product</td><td>VMware / cloud VMs</td><td>Uses Firecracker as backend behind MicroCell UX</td></tr>
+  </table>
+  <p>Positioning: <strong>agent operating substrate for augmented environments</strong> — closest analogy is “OS + cgroups + audit for agents,” not “antivirus for AI.”</p>
+</section>
+
+<section class="chapter">
+  <h2>21. Appendix A — Forty claims (expanded verify hints)</h2>
+  <table>
+    <tr><th>#</th><th>Claim</th><th>Verify hint</th></tr>
+    <tr><td>1</td><td>Bound identity</td><td>Anon Talk banned under harden; force-pid</td></tr>
+    <tr><td>2</td><td>Contract floor</td><td>Undeclared tool → deny</td></tr>
+    <tr><td>3</td><td>WorldGrant pores</td><td>Ungranted URL → deny</td></tr>
+    <tr><td>4</td><td>Packet DNA</td><td>DNA log entry on tool egress</td></tr>
+    <tr><td>5</td><td>Continuity cut</td><td>Broken continuity → egress deny</td></tr>
+    <tr><td>6</td><td>Memory ns</td><td>Packets only under <code>m/{pid}</code></td></tr>
+    <tr><td>7–8</td><td>Tokenize / detokenize</td><td>Broker gate on; detok only admitted</td></tr>
+    <tr><td>9–10</td><td>Budgets / trajectory</td><td>Exhaust → refuse spend/effects</td></tr>
+    <tr><td>11–12</td><td>DIM persist / non-authority</td><td>Restart Z_t; authority-attack CI</td></tr>
+    <tr><td>13–14</td><td>VAC / Knot</td><td>Recall after restart; interference API</td></tr>
+    <tr><td>15–16</td><td>Wake / model swap</td><td>wake/evaluate; set_model_ref</td></tr>
+    <tr><td>17–18</td><td>HITL / R0–R3</td><td>Digest approval; R3 fail-closed</td></tr>
+    <tr><td>19–20</td><td>Receipts / compensate</td><td>AAPI ledger + inverse</td></tr>
+    <tr><td>21–22</td><td>CONP / children</td><td>DNA path; paired child receipts</td></tr>
+    <tr><td>23–24</td><td>Operator / anti self-auth</td><td>pulse no CoT; audit-authority-attack</td></tr>
+    <tr><td>25–28</td><td>V0–V4 / auto</td><td>isolation resolve + policy JSON</td></tr>
+    <tr><td>29–31</td><td>Promote / quarantine / regime</td><td>promote API; ordered QC; no revive</td></tr>
+    <tr><td>32–35</td><td>Refuse / R-A-E / LAB / hatches</td><td>substrate status triad + escape_hatches</td></tr>
+    <tr><td>36–37</td><td>Proof / pulse</td><td>export sha256; pulse fields</td></tr>
+    <tr><td>38–39</td><td>Exclusivity / continuum</td><td>exclusivity flag; playground≠harden</td></tr>
+    <tr><td>40</td><td>KVM Effective</td><td><code>effective_claim=true</code> artifact</td></tr>
+  </table>
+</section>
+
+<section class="chapter">
+  <h2>22. Appendix B — Environment reference (selected)</h2>
+  <table>
+    <tr><th>Variable</th><th>Purpose</th></tr>
+    <tr><td><code>CONNECTOR_AUGMENTED_ENV</code></td><td>Production membrane + refuse-start defaults</td></tr>
+    <tr><td><code>CONNECTOR_PLAYGROUND</code></td><td>Soft lab posture</td></tr>
+    <tr><td><code>CONNECTOR_HARDEN_REFUSE_START</code></td><td>Start refuse when gates unmet</td></tr>
+    <tr><td><code>CONNECTOR_EFFECT_EXCLUSIVITY</code></td><td>Close alternate mutate paths</td></tr>
+    <tr><td><code>CONNECTOR_SANDBOX_UNBYPASSABLE</code></td><td>FS/net/VM/broker bar</td></tr>
+    <tr><td><code>CONNECTOR_ISOLATION_RUNTIME</code></td><td>Isolation grade (e.g. microvm)</td></tr>
+    <tr><td><code>CONNECTOR_MICROCELL_SHARED_MAX</code></td><td>V3 pool capacity</td></tr>
+    <tr><td><code>CONNECTOR_ISOLATION_AUTO_POLICY_JSON</code></td><td>Override R→V table</td></tr>
+    <tr><td><code>CONNECTOR_AGENT_RESOURCES</code></td><td>Default resource profile</td></tr>
+    <tr><td><code>CONNECTOR_FIRECRACKER_BIN</code> / <code>JAILER_BIN</code></td><td>VMM binaries</td></tr>
+    <tr><td><code>CONNECTOR_MICROVM_KERNEL</code> / <code>ROOTFS</code></td><td>Guest assets</td></tr>
+    <tr><td><code>CONNECTOR_MICROD_SOCK</code></td><td>microd UDS path</td></tr>
+    <tr><td><code>CONNECTOR_PACKET_DNA_REQUIRE</code></td><td>Require DNA on egress</td></tr>
+    <tr><td><code>CONNECTOR_WORLD_GRANTS_FAIL_CLOSED</code></td><td>Ungranted deny</td></tr>
+    <tr><td><code>CONNECTOR_LLM_DATA_TOKENIZE</code></td><td>Broker tokenize ingress</td></tr>
+  </table>
+</section>
+
+<section class="chapter">
+  <h2>23. Glossary &amp; module map</h2>
+  <table>
+    <tr><th>Term</th><th>Definition</th></tr>
+    <tr><td>AgentCell</td><td>Linux isolation body (ns/cgroup/Landlock/…)</td></tr>
+    <tr><td>MicroCell</td><td>Machine isolation body (Firecracker guest)</td></tr>
+    <tr><td>CVR</td><td>Connector Virtualization Runtime — resolve/bind/probe</td></tr>
+    <tr><td>microd</td><td>Privileged supervisor for VMM ops over UDS</td></tr>
+    <tr><td>PATE / NF³</td><td>Admit / categorical membrane checks</td></tr>
+    <tr><td>DIM</td><td>Dynamic Intelligence Manifold — cognition, not authority</td></tr>
+    <tr><td>Knot</td><td>Belief field / interference memory plane</td></tr>
+    <tr><td>BCR</td><td>Budget reserve→commit spend protocol</td></tr>
+    <tr><td>Packet DNA</td><td>Outbound effect sealing / lineage</td></tr>
+    <tr><td>R/A/E</td><td>Requested / Applied / Effective posture triad</td></tr>
+    <tr><td>V0–V4</td><td>Isolation profiles from app gates to dedicated MicroCell</td></tr>
+  </table>
+
+  <h3>Related documents</h3>
+  <ul>
+    <li><code>CONNECTOR_CAPABILITY_STANDARD.md</code> — parent standard</li>
+    <li><code>CONNECTOR_PRODUCT_PROMISE.md</code> — promise &amp; anti-claims</li>
+    <li><code>CONNECTOR_FINAL_OUTCOMES.md</code> — E/A/S</li>
+    <li><code>CONNECTOR_AGENT_ISOLATION.md</code> · <code>CONNECTOR_ISOLATION_IMPLEMENTATION_PLAN.md</code></li>
+    <li><code>CONNECTOR_OPERATIONAL_SOFTWARE.md</code> · <code>CONNECTOR_AUGMENTED_ENV.md</code></li>
+    <li><code>CONNECTOR_REACH_CHECKLIST.md</code> — verify checklist</li>
+  </ul>
+
+  <div class="footer-note">
+    End of Architecture Record. This PDF is a durable snapshot of engineered Connector substrate capability for agentic augmented environments.
+    Regenerate from <code>platform/docs/arch/arch.html</code> when the stack materially changes.
+  </div>
+</section>
+
+</body>
+</html>

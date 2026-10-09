@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package license;
+
+service LicenseService {
+  // Validate a license key and return tier + limits
+  rpc Validate (ValidateRequest) returns (ValidateResponse);
+  // Activate an instance against a key
+  rpc Activate (ActivateRequest) returns (ActivateResponse);
+  // Deactivate an instance
+  rpc Deactivate (DeactivateRequest) returns (DeactivateResponse);
+  // Heartbeat — periodic license check
+  rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse);
+  // Challenge-response for binary integrity
+  rpc Challenge (ChallengeRequest) returns (ChallengeResponse);
+}
+
+message ValidateRequest {
+  string key_secret = 1;
+}
+
+message ValidateResponse {
+  bool valid = 1;
+  string key_id = 2;
+  string tier = 3;
+  bool revoked = 4;
+  bool expired = 5;
+  bool signature_valid = 6;
+  int32 max_agents = 7;
+  int32 max_events = 8;
+  int32 retention_days = 9;
+  int32 active_instances = 10;
+  int32 max_activations = 11;
+}
+
+message ActivateRequest {
+  string key_secret = 1;
+  string machine_id = 2;
+  string hostname = 3;
+  string binary_hash = 4;
+}
+
+message ActivateResponse {
+  bool success = 1;
+  string instance_id = 2;
+  string key_id = 3;
+  string tier = 4;
+  string error = 5;
+  int32 max_agents = 6;
+  int32 max_events = 7;
+  int32 retention_days = 8;
+}
+
+message DeactivateRequest {
+  string instance_id = 1;
+  string key_id = 2;
+}
+
+message DeactivateResponse {
+  bool success = 1;
+}
+
+message HeartbeatRequest {
+  string instance_id = 1;
+  string key_id = 2;
+  string machine_id = 3;
+  int32 agents = 4;
+  int32 packets = 5;
+  int32 trust_score = 6;
+  string binary_hash = 7;
+}
+
+message HeartbeatResponse {
+  bool ack = 1;
+  bool key_valid = 2;
+  bool instance_valid = 3;
+  bool within_limits = 4;
+  bool binary_valid = 5;
+  int32 next_heartbeat_secs = 6;
+}
+
+message ChallengeRequest {
+  string instance_id = 1;
+  string nonce = 2;
+}
+
+message ChallengeResponse {
+  string signed_nonce = 1;
+  string public_key = 2;
+  bool valid = 3;
+}

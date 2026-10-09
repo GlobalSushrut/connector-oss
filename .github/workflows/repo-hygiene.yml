@@ -1,0 +1,78 @@
+name: repo-hygiene
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  audit-removed-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Phase 0.7 removal audit (no reintroduced compose / Dockerfiles / monitoring paths)
+        run: bash scripts/audit-removed-paths.sh
+
+      - name: Secret grep heuristic (SECURITY.md)
+        run: bash scripts/audit-secrets-in-repo.sh
+
+      - name: Plugin cage manifest audit
+        run: bash scripts/audit-plugin-cage-hosts.sh
+
+      - name: Operator env allowlist doc
+        run: bash scripts/audit-operator-env-allowlist.sh
+
+      - name: Phase 0.7.7 release exclude list vs workspace exclude
+        run: bash scripts/audit-release-tar-excludes.sh
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Phase 1.7 — package script sanity (full release tar: connector-platform-kernel workflow)
+        run: bash -n scripts/package-connector-os.sh && test -x scripts/package-connector-os.sh
+
+      - name: Phase 1.1 — connector-supervisor crate builds
+        run: cargo test --manifest-path platform/supervisor/Cargo.toml
+
+      - name: Phase 1.3 — connector-plugin-manifest crate builds
+        run: cargo test --manifest-path platform/plugin-manifest/Cargo.toml
+
+      - name: Phase 1.4 — connector-plugin-handshake crate builds
+        run: cargo test --manifest-path platform/plugin-handshake/Cargo.toml
+
+      - name: Phase 6.1 — agos-abi crate builds
+        run: cargo test --manifest-path agos-abi/Cargo.toml
+
+      - name: Phase 6.2 — agos-sdk crate builds
+        run: cargo test --manifest-path agos-sdk/Cargo.toml
+
+      - name: Phase 6.3 — cargo-connector (cargo connector new scaffold)
+        run: cargo test --manifest-path cargo-connector/Cargo.toml
+
+      - name: Phase 6.7 — AGOS reference plugins (agos-sdk only)
+        run: |
+          set -e
+          for d in examples/agos-reference-plugins/acme-slack-notifier \
+                   examples/agos-reference-plugins/acme-jira-bridge \
+                   examples/agos-reference-plugins/acme-datadog-forwarder; do
+            cargo check --manifest-path "$d/Cargo.toml"
+          done
+
+      - name: Phase 4.1–4.2 — connector-cpkg (format + Ed25519)
+        run: cargo test --manifest-path platform/cpkg/Cargo.toml
+
+      - name: Backend trust gates (CFNI, usage SoT, honesty)
+        run: bash scripts/audit-backend-trust.sh
+
+      - name: Product promise + final outcomes honesty (S28)
+        run: bash scripts/audit-product-promise.sh
+
+      - name: Effect exclusivity surface (S24)
+        run: bash scripts/audit-effect-exclusivity.sh
+
+      - name: Authority-attack honesty (A28/S10)
+        run: bash scripts/audit-authority-attack.sh
+
+      - name: Phase 4.3 — connector-hub binary compiles
+        run: cargo check --manifest-path platform/hub/Cargo.toml

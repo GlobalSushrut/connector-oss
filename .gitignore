@@ -1,19 +1,110 @@
+# Rust
 target/
 **/target/
-.cargo-target-umesh/
+platform/server/.cargo-target/
+platform/deploy/artifacts/connector-platform
+platform/deploy/artifacts/tracetramp
+platform/deploy/artifacts/witnessctl
+platform/deploy/artifacts/*.old*
+platform/deploy/artifacts/*-docker
+platform/deploy/playground-target/
+advanced-lab/outputs/lab-runs/*
+!advanced-lab/outputs/lab-runs/.gitkeep
+platform/server/target-user/
+.target-agent/
+**/.target-agent/
+Cargo.lock
+
+# Node / TypeScript
 node_modules/
+**/node_modules/
 dist/
+**/dist/
+.next/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
 .venv/
 venv/
-__pycache__/
-.env
-.env.*
-!.env.example
+
+# Databases
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 *.redb
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.license
 .license-seed
-**/*PLAN*.md
-**/*CHECKLIST*.md
-**/*REMAINING*.md
+.secrets/
+secrets.json
+**/data/keys/
+**/server/data/
+**/licensing/data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Demo runtime
+.demo-node.*
+.demo2-node.*
+.demo3-node.*
+.demo4-node.*
+.demo5-node.*
+.demo6-node.*
+demos/evidence/
+demos/demo2/evidence/
+demos/demo3/evidence/
+demos/demo4/evidence/
+demos/demo5/evidence/
+demos/demo6/evidence/
+
+# Windsurf local config (may contain local paths/keys)
+.windsurf/mcp_config.json
+
+# Build artifacts
+*.whl
+*.so
+*.dylib
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# CVR acceptance run artifacts (keep .gitkeep)
+artifacts/cvr-acceptance/*.json
+artifacts/cvr-acceptance/*.txt
+artifacts/cvr-acceptance/microvm-instances/
+artifacts/cvr-acceptance/*.copy
+artifacts/cvr-acceptance/*-final.json
+
+# Large vendored VMM/guest binaries (fetch via cvr-kvm-acceptance / CONNECTOR_FETCH_FIRECRACKER)
+vendor/firecracker/linux/*/firecracker
+vendor/firecracker/linux/*/jailer
+vendor/microvm/linux/*/vmlinux
+vendor/microvm/linux/*/vmlinux.bin
+vendor/microvm/linux/*/rootfs.ext4
+vendor/microvm/linux/*/bionic.rootfs.ext4
+platform/lab/microvm-assets/vmlinux
+platform/lab/microvm-assets/rootfs.ext4
+
+# Seven-backend deployment secrets and local image digests
+platform/deploy/seven-backends/linux/images.env

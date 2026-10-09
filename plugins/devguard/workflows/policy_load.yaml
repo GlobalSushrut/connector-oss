@@ -1,0 +1,76 @@
+name: policy_load
+description: "Load, validate, and compile a .connector/policy.yaml into active AAPI rules."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl policy load"
+  - on_event: session.start
+
+inputs:
+  path:
+    type: string
+    required: false
+    default: ".connector/policy.yaml"
+  validate_only:
+    type: boolean
+    required: false
+    default: false
+  role:
+    type: string
+    required: false
+    description: "Load rules for a specific role only"
+
+steps:
+  - id: read_yaml
+    action: fs.read
+    params:
+      path: "{{ inputs.path }}"
+      format: yaml
+
+  - id: validate_schema
+    action: devguard.internal.policy_validate
+    params:
+      policy: "{{ steps.read_yaml.content }}"
+      schema_version: "1.0"
+    depends_on: read_yaml
+
+  - id: resolve_includes
+    action: devguard.internal.policy_resolve_includes
+    params:
+      policy: "{{ steps.read_yaml.content }}"
+      base_dir: "{{ steps.read_yaml.directory }}"
+    depends_on: validate_schema
+
+  - id: compile
+    action: devguard.internal.policy_compile
+    condition: "{{ not inputs.validate_only }}"
+    params:
+      policy: "{{ steps.resolve_includes.resolved_policy }}"
+      role: "{{ inputs.role }}"
+    depends_on: resolve_includes
+
+  - id: activate
+    action: connector.aapi.load_rules
+    condition: "{{ not inputs.validate_only }}"
+    params:
+      rules: "{{ steps.compile.aapi_rules }}"
+    depends_on: compile
+
+  - id: audit_entry
+    action: connector.audit.record
+    params:
+      action: "policy.load"
+      resource: "{{ inputs.path }}"
+      details:
+        valid: "{{ steps.validate_schema.valid }}"
+        role: "{{ inputs.role }}"
+        rules_count: "{{ steps.compile.rules_count }}"
+    depends_on: [validate_schema, compile]
+
+outputs:
+  valid: "{{ steps.validate_schema.valid }}"
+  errors: "{{ steps.validate_schema.errors }}"
+  rules_count: "{{ steps.compile.rules_count }}"
+  compiled_policy: "{{ steps.compile.compiled_policy }}"

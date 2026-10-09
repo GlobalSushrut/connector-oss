@@ -1,0 +1,23 @@
+{
+  "name": "devguard-vscode",
+  "displayName": "DevGuard",
+  "description": "DevGuard governance status for coding sessions",
+  "version": "0.0.1",
+  "publisher": "connector",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "devguard.openStatusEndpoint",
+        "title": "DevGuard: Open Status Endpoint"
+      }
+    ]
+  }
+}

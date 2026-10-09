@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM relay_health_checks WHERE function_id = $1 AND checked_at < NOW() - INTERVAL '48 hours'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5e4f73fd4c8405b3da2e1f30ad45401358079c26c451225ed374b7cba2ee7277"
+}

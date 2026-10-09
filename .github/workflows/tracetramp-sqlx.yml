@@ -1,0 +1,88 @@
+name: tracetramp-sqlx
+
+on:
+  pull_request:
+    paths:
+      - "plugins/tracetramp/**"
+      - "oss/connector/crates/connector-report-pdf/**"
+      - "oss/connector/Cargo.toml"
+      - ".github/workflows/tracetramp-sqlx.yml"
+  push:
+    branches: [ main, master ]
+    paths:
+      - "plugins/tracetramp/**"
+      - "oss/connector/crates/connector-report-pdf/**"
+      - "oss/connector/Cargo.toml"
+      - ".github/workflows/tracetramp-sqlx.yml"
+
+jobs:
+  sqlx-prepare-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tracetramp
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tracetramp"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 6379:6379
+
+    env:
+      TRACETRAMP_DATABASE_URL: postgres://postgres:postgres@localhost:5432/tracetramp
+      TRACETRAMP_REDIS_URL: redis://localhost:6379
+      TRACETRAMP_CONNECTOR_BASE_URL: http://localhost:9735
+      TRACETRAMP_CONNECTOR_API_KEY: test-key
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tracetramp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Test connector-report-pdf (HTML shell, no Chromium required)
+        working-directory: oss/connector
+        run: cargo test -p connector-report-pdf
+
+      - name: Test TraceTramp decision_envelope
+        working-directory: plugins/tracetramp
+        run: cargo test decision_envelope
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+
+      - name: Run migrations
+        working-directory: plugins/tracetramp
+        run: cargo sqlx migrate run
+
+      - name: Generate sqlx offline cache
+        working-directory: plugins/tracetramp
+        run: cargo sqlx prepare -- --all-targets --all-features
+
+      - name: Compile schema snapshot tests
+        working-directory: plugins/tracetramp
+        env:
+          SQLX_OFFLINE: "true"
+        run: cargo test --features schema-snapshot --no-run
+
+      - name: Verify sqlx cache is up-to-date
+        working-directory: plugins/tracetramp
+        run: cargo sqlx prepare --check -- --all-targets --all-features

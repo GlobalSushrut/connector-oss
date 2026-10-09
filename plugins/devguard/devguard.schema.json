@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://connector.dev/schemas/devguard.schema.json",
+  "title": "DevGuard Configuration",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string" },
+    "workspace": { "type": "string" },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string" },
+        "org": { "type": "string" },
+        "require_auth": { "type": "boolean" },
+        "mfa_required": { "type": "boolean" }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "clearance": { "type": "integer", "minimum": 0, "maximum": 10 },
+            "extends": { "type": "string" },
+            "files": {
+              "type": "object",
+              "properties": {
+                "read": { "type": "array", "items": { "type": "string" } },
+                "write": { "type": "array", "items": { "type": "string" } },
+                "hidden": { "type": "array", "items": { "type": "string" } },
+                "read_only": { "type": "array", "items": { "type": "string" } },
+                "suggest_only": { "type": "array", "items": { "type": "string" } },
+                "no_delete": { "type": "array", "items": { "type": "string" } },
+                "max_lines_per_file": { "type": "integer" }
+              }
+            },
+            "execution": {
+              "type": "object",
+              "properties": {
+                "allow": { "type": "array", "items": { "type": "string" } },
+                "deny": { "type": "array", "items": { "type": "string" } },
+                "require_approval": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "branches": {
+              "type": "object",
+              "properties": {
+                "allow": { "type": "array", "items": { "type": "string" } },
+                "deny": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "secrets": {
+              "type": "object",
+              "properties": {
+                "allowed_via_broker": { "type": "array", "items": { "type": "string" } },
+                "direct_access": { "type": "string" }
+              }
+            },
+            "network": {
+              "type": "object",
+              "properties": {
+                "allow": { "type": "array", "items": { "type": "string" } },
+                "deny": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "budget": {
+              "type": "object",
+              "properties": {
+                "max_tokens_per_task": { "type": "integer" },
+                "max_cost_usd_per_day": { "type": "number" },
+                "model": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "default_role": { "type": "string" },
+    "assignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["identity", "role", "tools"],
+        "properties": {
+          "identity": { "type": "string" },
+          "role": { "type": "string" },
+          "tools": { "type": "array", "items": { "type": "string" } },
+          "overrides": { "type": "object" }
+        }
+      }
+    },
+    "tool_overrides": { "type": "object" },
+    "files": {
+      "type": "object",
+      "properties": {
+        "always_hidden": { "type": "array", "items": { "type": "string" } },
+        "always_read_only": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "secrets": { "type": "object" },
+    "git": { "type": "object" },
+    "budget": { "type": "object" },
+    "audit": { "type": "object" },
+    "enforcement": { "type": "object" }
+  }
+}

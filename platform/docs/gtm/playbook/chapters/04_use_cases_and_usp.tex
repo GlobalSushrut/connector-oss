@@ -1,0 +1,95 @@
+\chapter{Use Cases and Unique Selling Propositions}
+
+\section{Use cases by industry segment}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{0.15\textwidth} p{0.2\textwidth} p{0.22\textwidth} X@{}}
+\toprule
+Segment & Example workflow & Trigger event & What Connector proves \\
+\midrule
+AI support / CX & Refund or discount automation & Wrong refund; escalation & Decision path + export for team lead \\
+Fintech ops & Transaction review, fraud flags & Auditor or regulator question & Tamper-evident receipt chain \\
+Internal automation & Approvals, routing, exceptions & Cross-team blame after failure & Trace + explain in plain language \\
+Coding agents (eng) & IDE / CLI agent with shell access & Secret leak or destructive command & DevGuard block + live monitor \\
+Platform / ML teams & Multi-agent production fleet & No single pane of glass & TraceTramp graph + AgentLoop (planned) lifecycle \\
+Finance / FinOps & Uncontrolled model spend & Monthly bill shock & LedgerLens attribution + budget gates \\
+Security / GRC & Shadow AI, SOC 2 prep & Audit window opening & WitnessCtl exports + policy evidence \\
+Healthcare (future wedge) & Clinical or PHI-adjacent agents & HIPAA review & Engram + WitnessCtl combination (planned) \\
+\bottomrule
+\end{tabularx}
+\caption{Primary use-case segments (2026 wedge focus: top three rows)}
+\end{table}
+
+\section{Use cases by buyer persona}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{0.13\textwidth} p{0.24\textwidth} p{0.22\textwidth} X@{}}
+\toprule
+Persona & Pain (their words) & Plugins / path & Outcome they buy \\
+\midrule
+Developer & Framework lock-in; no safe memory & Relay + Engram (planned) or custom WF + DevGuard & Ship without rewriting stack \\
+ML Engineer & Hallucinations; no grounding & Engram + WitnessCtl & Decisions with evidence \\
+Platform Engineer & Fleet invisible; no standard egress & TraceTramp + AgentLoop (planned) + Conductor (planned) & One operational model \\
+CTO & \$40K+ LLM burn; no breakdown & LedgerLens + TraceTramp & Cost under control \\
+CISO & No audit trail; shadow AI & WitnessCtl + DevGuard + AgentPassport (planned) & Defensible AI posture \\
+VP Support / CX & Cannot explain AI refunds & WitnessCtl + custom support WF & Faster incidents, customer trust \\
+Head of Risk (fintech) & Unexplained model flags & TraceTramp + WitnessCtl + LedgerLens & Regulatory defensibility \\
+\bottomrule
+\end{tabularx}
+\caption{Persona-to-outcome map (for discovery calls)}
+\end{table}
+
+\section{USP table --- why Connector wins the conversation}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{0.18\textwidth} p{0.28\textwidth} X@{}}
+\toprule
+USP & Alternatives fail because\ldots & Connector difference \\
+\midrule
+Runtime enforcement & Guardrails filter text in/out; observability tools log after the fact & Policy and budgets at the \textbf{action boundary} \\
+Proof, not logs & SIEM lines lack decision semantics & Cryptographic receipts + structured exports (HTML/PDF/JSON) \\
+Self-hosted node & Cloud AI safety is single-vendor; data leaves estate & One binary on customer infra; hosted portal only for account/license \\
+Progressive adoption & Rip-and-replace platforms scare procurement & Start with one plugin + one workflow; expand on same node \\
+OS mental model & Point tools solve one slice (cost OR safety OR trace) & Kernel + plugins: combine DevGuard + TT + WitnessCtl as needed \\
+Trace $\rightarrow$ explain $\rightarrow$ prove & Buyers hear ``AI governance'' as vague & Concrete operator idiom matching how SREs work \\
+Pilot-shaped GTM & Enterprise platforms need 6-month POVs & 2--6 week single-workflow pilot with documented win \\
+\bottomrule
+\end{tabularx}
+\caption{Unique selling propositions vs.\ common alternatives}
+\end{table}
+
+\section{Competitive framing (simple)}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabularx}{0.95\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Category} & \textbf{Why we still win} \\
+\midrule
+LLM safety proxies & Input/output only; no tool execution governance or proof chain \\
+AI observability (LangSmith, etc.) & Evaluation and tracing; not runtime block + cryptographic evidence \\
+Cloud guardrails & Single cloud, model layer; not cross-stack agent OS \\
+Agent frameworks & Composition; not kernel-level isolation, budgets, receipts \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Qualification checklist (3 questions)}
+
+\begin{enumerate}
+  \item Is your AI already \textbf{taking actions}, not only producing text?
+  \item When it makes the wrong call, can you \textbf{explain why}?
+  \item Have you had an incident---or do you \textbf{expect one soon}?
+\end{enumerate}
+
+If yes / no / yes $\rightarrow$ prioritize for outreach.

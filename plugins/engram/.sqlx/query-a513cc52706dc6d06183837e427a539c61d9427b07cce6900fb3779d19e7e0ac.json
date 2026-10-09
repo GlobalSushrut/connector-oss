@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT entropy_score, contradiction_count, redundancy_count,\n               stale_count, knot_score, threads_detected\n        FROM engram_entropy_snapshots\n        WHERE namespace_id = $1\n        ORDER BY snapped_at DESC\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "entropy_score",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "contradiction_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "redundancy_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "stale_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "knot_score",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "threads_detected",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a513cc52706dc6d06183837e427a539c61d9427b07cce6900fb3779d19e7e0ac"
+}

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO engram_entropy_snapshots\n            (namespace_id, entropy_score, contradiction_count, redundancy_count,\n             stale_count, knot_score, threads_detected, action_taken)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float8",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Float8",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2ef0f7aca6d74e0caaa5270cadf6e885b1d45da726bc577f75fd89670eac214c"
+}

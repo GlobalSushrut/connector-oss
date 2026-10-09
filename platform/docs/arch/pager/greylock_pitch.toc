@@ -1,0 +1,37 @@
+\contentsline {section}{\numberline {1}The Greylock Lens: Why This Brief Is Written This Way}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}What Greylock Has Learned from Cloud Security}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}What Greylock Specifically Calls Out as Missing}{3}{subsection.1.2}%
+\contentsline {section}{\numberline {2}The Problem: Three Structural Gaps in Every AI Deployment}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Gap 1 — Silent Budget Drain}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Gap 2 — The Compliance Nightmare}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Gap 3 — Blind Trust Is Not a Strategy}{6}{subsection.2.3}%
+\contentsline {section}{\numberline {3}The Architecture: How Connector OS Works}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}The Three-Stage Pipeline}{7}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}Stage 1 — Isolate (Agent Vaults)}{7}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}Stage 2 — Govern (The Safety Net)}{7}{subsubsection.3.1.2}%
+\contentsline {subsubsection}{\numberline {3.1.3}Stage 3 — Verify (The Proof Plane)}{7}{subsubsection.3.1.3}%
+\contentsline {subsection}{\numberline {3.2}CCL Contracts — Policy as Compiled Code}{8}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Infrastructure Positioning — Crystal Clear}{10}{section.4}%
+\contentsline {subsection}{\numberline {4.1}What Connector IS — and What It Is NOT}{10}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Where Connector Sits in the Stack}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Why LLM Providers Won't Build This}{11}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Why Orchestration Frameworks Won't Build This}{11}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Why Cloud Providers Won't Build This}{11}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Answering the Buyer One-Pager}{12}{section.5}%
+\contentsline {section}{\numberline {6}Moat and Defensibility}{14}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Technical Moat — The 9-Chain Architecture}{14}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Compiler Moat — CCL as Policy-as-Code}{14}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Compliance Lock-In}{15}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Network Effect}{15}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Why Now — The Regulatory and Market Forcing Functions}{16}{section.7}%
+\contentsline {subsection}{\numberline {7.1}The Regulatory Wave Is Landing}{16}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}The Agentic AI Explosion}{16}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}The Cloud Security Timing Parallel}{16}{subsection.7.3}%
+\contentsline {section}{\numberline {8}GTM — The Entry Wedge and Revenue Architecture}{17}{section.8}%
+\contentsline {subsection}{\numberline {8.1}The Wedge: Regulated Industries with AI in Production}{17}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Revenue Architecture}{17}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}The Pilot Is the Sales Motion}{17}{subsection.8.3}%
+\contentsline {section}{\numberline {9}Competitive Landscape}{18}{section.9}%
+\contentsline {section}{\numberline {10}The Ask — What We Are Looking For from Greylock}{19}{section.10}%
+\contentsline {subsection}{\numberline {10.1}What We Want to Explore with Greylock}{19}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}Why This Is Not a Feature — One Final Time}{19}{subsection.10.2}%

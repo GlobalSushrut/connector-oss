@@ -1,0 +1,72 @@
+name: approval_check
+description: "Route actions that require human approval. Queue, notify, wait."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - on_event: verdict.requires_approval
+  - api: "POST /api/v1/sessions/:id/approve"
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  action:
+    type: string
+    required: true
+  resource:
+    type: string
+    required: true
+  require:
+    type: array
+    required: true
+    description: "List of required approver roles"
+  quorum:
+    type: integer
+    required: false
+    default: 1
+
+steps:
+  - id: queue_approval
+    action: connector.tools.queue_approval
+    params:
+      session_id: "{{ inputs.session_id }}"
+      action: "{{ inputs.action }}"
+      resource: "{{ inputs.resource }}"
+      required_approvers: "{{ inputs.require }}"
+      quorum: "{{ inputs.quorum }}"
+      expiry_minutes: "{{ session.policy.approvals.expiry_minutes | default(60) }}"
+
+  - id: notify
+    action: connector.notifications.send
+    params:
+      targets: "{{ inputs.require }}"
+      message: |
+        Approval required: {{ inputs.action }} on {{ inputs.resource }}
+        Session: {{ inputs.session_id }}
+        Role: {{ session.role }}
+        Approve: connectorctl guard approve {{ steps.queue_approval.approval_id }}
+    depends_on: queue_approval
+
+  - id: wait_for_approval
+    action: connector.tools.wait_approval
+    params:
+      approval_id: "{{ steps.queue_approval.approval_id }}"
+      timeout_minutes: "{{ session.policy.approvals.expiry_minutes | default(60) }}"
+    depends_on: notify
+
+  - id: audit_approval
+    action: connector.audit.record
+    params:
+      action: "approval.{{ steps.wait_for_approval.result }}"
+      resource: "{{ inputs.resource }}"
+      details:
+        approval_id: "{{ steps.queue_approval.approval_id }}"
+        approved_by: "{{ steps.wait_for_approval.approved_by }}"
+        result: "{{ steps.wait_for_approval.result }}"
+    depends_on: wait_for_approval
+
+outputs:
+  approved: "{{ steps.wait_for_approval.result == 'approved' }}"
+  approved_by: "{{ steps.wait_for_approval.approved_by }}"
+  approval_id: "{{ steps.queue_approval.approval_id }}"

@@ -1,0 +1,58 @@
+name: policy_check
+description: "Dry-run action check against loaded policy. No side effects."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl policy check"
+  - api: "POST /api/v1/policy/check"
+
+inputs:
+  role:
+    type: string
+    required: true
+  action:
+    type: string
+    required: true
+    description: "Action to check (e.g. 'write src/main.rs', 'run rm -rf /', 'read .env')"
+  resource:
+    type: string
+    required: false
+    description: "Optional resource path"
+
+steps:
+  - id: parse_action
+    action: devguard.internal.action_parse
+    params:
+      action_string: "{{ inputs.action }}"
+
+  - id: check_file_policy
+    action: devguard.internal.file_guard_check
+    condition: "{{ steps.parse_action.type in ['read', 'write', 'delete', 'rename'] }}"
+    params:
+      operation: "{{ steps.parse_action.type }}"
+      path: "{{ steps.parse_action.target }}"
+      role: "{{ inputs.role }}"
+    depends_on: parse_action
+
+  - id: check_exec_policy
+    action: devguard.internal.exec_guard_check
+    condition: "{{ steps.parse_action.type == 'run' }}"
+    params:
+      command: "{{ steps.parse_action.target }}"
+      role: "{{ inputs.role }}"
+    depends_on: parse_action
+
+  - id: check_git_policy
+    action: devguard.internal.git_guard_check
+    condition: "{{ steps.parse_action.type == 'git' }}"
+    params:
+      git_action: "{{ steps.parse_action.target }}"
+      role: "{{ inputs.role }}"
+    depends_on: parse_action
+
+outputs:
+  allowed: "{{ steps.*.allowed }}"
+  reason: "{{ steps.*.reason }}"
+  requires_approval: "{{ steps.*.requires_approval }}"

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE relay_async_jobs SET status = 'failed', error_msg = 'function suspended' WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8f356fe989bf1bfd4129a086aa0f4436e59d8f5fbd9826ffca7f4bed3f36deaa"
+}

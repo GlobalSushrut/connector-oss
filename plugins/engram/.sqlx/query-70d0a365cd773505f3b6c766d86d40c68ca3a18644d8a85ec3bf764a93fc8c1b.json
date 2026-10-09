@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT s.id, s.session_name, s.agent_id, s.threshold, s.on_fail, s.status,\n               s.step_count, s.passed_count, s.failed_count,\n               s.started_at, s.concluded_at, s.proof_cid,\n               n.path AS namespace\n        FROM engram_cot_sessions s\n        JOIN engram_namespaces n ON n.id = s.namespace_id\n        WHERE s.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "session_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "agent_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "threshold",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "on_fail",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "step_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "passed_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "failed_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "started_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "concluded_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "proof_cid",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "namespace",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "70d0a365cd773505f3b6c766d86d40c68ca3a18644d8a85ec3bf764a93fc8c1b"
+}

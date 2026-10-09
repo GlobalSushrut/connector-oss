@@ -1,0 +1,107 @@
+name: guard_windsurf
+description: >
+  Start governed MCP server + API proxy for Windsurf.
+  Provides governed tools via MCP and intercepts LLM calls via proxy.
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl guard windsurf"
+
+inputs:
+  port:
+    type: integer
+    required: false
+    default: 9091
+  policy_path:
+    type: string
+    required: false
+    default: ".connector/policy.yaml"
+  role:
+    type: string
+    required: false
+    default: "builder"
+  mcp_only:
+    type: boolean
+    required: false
+    default: false
+    description: "If true, only start MCP server (no API proxy)"
+
+steps:
+  - id: load_policy
+    action: devguard.internal.policy_compile
+    params:
+      path: "{{ inputs.policy_path }}"
+      role: "{{ inputs.role }}"
+
+  - id: start_session
+    action: connector.session.create
+    params:
+      role: "{{ inputs.role }}"
+      policy: "{{ steps.load_policy.compiled_policy }}"
+    depends_on: load_policy
+
+  - id: start_mcp
+    action: connector.mcp.serve
+    params:
+      session_id: "{{ steps.start_session.session_id }}"
+      tools:
+        - connector_read_file
+        - connector_write_file
+        - connector_run_command
+        - connector_search_files
+        - connector_git
+        - connector_request_approval
+        - connector_verify_claim
+    depends_on: start_session
+
+  - id: start_gateway
+    action: connector.gateway.start
+    condition: "{{ not inputs.mcp_only }}"
+    params:
+      port: "{{ inputs.port }}"
+      protocol: openai
+      session_id: "{{ steps.start_session.session_id }}"
+      features:
+        - file_guard
+        - exec_guard
+        - secret_scan
+        - audit_chain
+    depends_on: start_session
+
+  - id: print_instructions
+    action: shell.print
+    params:
+      message: |
+        DevGuard ready for Windsurf.
+
+        MCP config for .windsurf/mcp_config.json:
+        {
+          "servers": {
+            "connector": {
+              "command": "connectorctl",
+              "args": ["mcp", "serve", "--session", "{{ steps.start_session.session_id }}"]
+            }
+          }
+        }
+
+        API proxy (if enabled): http://localhost:{{ steps.start_gateway.port }}
+    depends_on: [start_mcp, start_gateway]
+
+  - id: wait_for_exit
+    action: signal.wait
+    params:
+      signals: [SIGINT, SIGTERM]
+    depends_on: print_instructions
+
+  - id: end_session
+    action: devguard.workflows.session_end
+    params:
+      session_id: "{{ steps.start_session.session_id }}"
+      generate_proof: true
+    depends_on: wait_for_exit
+    run: always
+
+outputs:
+  session_id: "{{ steps.start_session.session_id }}"

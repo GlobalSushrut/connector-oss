@@ -1,0 +1,37 @@
+# Reviewer Role — read-only, can run checks and linters, cannot write code
+name: reviewer
+clearance: 2  # Standard
+
+files:
+  read: ["**"]
+  write: []  # reviewers cannot write
+
+execution:
+  allow:
+    - "cargo check"
+    - "cargo clippy"
+    - "cargo test"
+    - "npm run lint"
+    - "npm test"
+    - "pytest"
+    - "git diff"
+    - "git log*"
+    - "git status"
+    - "git blame*"
+  deny:
+    - "rm*"
+    - "sudo*"
+    - "git push*"
+    - "git commit*"
+    - "git merge*"
+    - "npm publish"
+
+branches:
+  allow: ["*"]  # can read any branch
+  write: []     # cannot write to any branch
+
+secrets: none
+
+budget:
+  max_tokens_per_task: 50000
+  model: cheap  # reviewers use cheaper model

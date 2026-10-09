@@ -1,0 +1,64 @@
+name: audit_export
+description: "Export audit trail for a session or time range."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl guard audit"
+
+inputs:
+  session_id:
+    type: string
+    required: false
+  time_range:
+    type: string
+    required: false
+    description: "e.g. 'last 24h', 'today', '2025-01-01..2025-01-31'"
+  format:
+    type: string
+    required: false
+    default: "json"
+    enum: [json, csv, pdf]
+  output:
+    type: string
+    required: false
+    description: "Output file path. Defaults to stdout."
+  include_receipts:
+    type: boolean
+    required: false
+    default: true
+
+steps:
+  - id: query_audit
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      time_range: "{{ inputs.time_range }}"
+      include_receipts: "{{ inputs.include_receipts }}"
+
+  - id: format_output
+    action: devguard.internal.audit_format
+    params:
+      entries: "{{ steps.query_audit.entries }}"
+      format: "{{ inputs.format }}"
+    depends_on: query_audit
+
+  - id: write_output
+    action: fs.write
+    condition: "{{ inputs.output }}"
+    params:
+      path: "{{ inputs.output }}"
+      content: "{{ steps.format_output.formatted }}"
+    depends_on: format_output
+
+  - id: print_output
+    action: shell.print
+    condition: "{{ not inputs.output }}"
+    params:
+      message: "{{ steps.format_output.formatted }}"
+    depends_on: format_output
+
+outputs:
+  entry_count: "{{ steps.query_audit.entry_count }}"
+  output_path: "{{ inputs.output }}"

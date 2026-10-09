@@ -1,0 +1,13 @@
+{
+  "name": "tracetramp-client-node",
+  "version": "0.1.0",
+  "description": "Drop-in Node client for TraceTramp cage URL",
+  "type": "module",
+  "main": "src/client.js",
+  "exports": {
+    ".": "./src/client.js"
+  },
+  "scripts": {
+    "check": "node --check src/client.js && node --check examples/basic.mjs"
+  }
+}

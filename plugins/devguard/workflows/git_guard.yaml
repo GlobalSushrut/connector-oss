@@ -1,0 +1,72 @@
+name: git_guard
+description: "Enforce branch, commit, and merge policy on git operations."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - on_event: tool_use.bash  # when command starts with "git"
+  - on_event: mcp.connector_git
+
+inputs:
+  git_command:
+    type: string
+    required: true
+  session_id:
+    type: string
+    required: true
+
+steps:
+  - id: parse_git
+    action: devguard.internal.git_command_parse
+    params:
+      command: "{{ inputs.git_command }}"
+
+  - id: check_branch
+    action: devguard.internal.git_guard_check
+    params:
+      subcommand: "{{ steps.parse_git.subcommand }}"
+      branch: "{{ steps.parse_git.target_branch }}"
+      role: "{{ session.role }}"
+    depends_on: parse_git
+
+  - id: check_diff_size
+    action: devguard.internal.git_diff_size_check
+    condition: "{{ steps.parse_git.subcommand in ['commit', 'push', 'merge'] }}"
+    params:
+      max_files: "{{ session.policy.git.max_diff_files | default(30) }}"
+      max_lines: "{{ session.policy.git.max_diff_lines | default(2000) }}"
+    depends_on: parse_git
+
+  - id: check_force_push
+    action: devguard.internal.git_force_push_check
+    condition: "{{ steps.parse_git.subcommand == 'push' }}"
+    params:
+      args: "{{ steps.parse_git.args }}"
+      force_push_allowed: "{{ session.policy.git.no_force_push | default(true) | not }}"
+    depends_on: parse_git
+
+  - id: audit_git
+    action: connector.audit.record
+    params:
+      action: "git.{{ steps.parse_git.subcommand }}"
+      resource: "{{ steps.parse_git.target_branch }}"
+      verdict: "{{ steps.check_branch.verdict }}"
+      details:
+        role: "{{ session.role }}"
+        subcommand: "{{ steps.parse_git.subcommand }}"
+        branch: "{{ steps.parse_git.target_branch }}"
+    depends_on: [check_branch, check_diff_size, check_force_push]
+
+  - id: enforce
+    action: devguard.internal.enforce_verdict
+    params:
+      verdict: "{{ steps.check_branch.verdict }}"
+      reason: "{{ steps.check_branch.reason }}"
+      requires_approval: "{{ steps.check_branch.requires_approval }}"
+      session_id: "{{ inputs.session_id }}"
+    depends_on: check_branch
+
+outputs:
+  allowed: "{{ steps.check_branch.allowed }}"
+  verdict: "{{ steps.enforce.final_verdict }}"
+  reason: "{{ steps.check_branch.reason }}"

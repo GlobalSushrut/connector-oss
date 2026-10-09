@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Connector OS — Full Software Architecture</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 14mm 18mm 14mm;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #1a1f26;
+    background: #fff;
+    font-size: 10pt;
+    line-height: 1.45;
+  }
+  .page {
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    min-height: 250mm;
+  }
+  .page:last-child { page-break-after: auto; }
+  .cover {
+    background: linear-gradient(165deg, #0f1419 0%, #1a2332 55%, #0d6e6e 140%);
+    color: #f7f5f0;
+    padding: 28mm 18mm;
+    min-height: 260mm;
+  }
+  .cover h1 {
+    font-size: 28pt;
+    font-weight: 700;
+    margin: 40mm 0 8mm;
+    letter-spacing: -0.02em;
+    max-width: 140mm;
+  }
+  .cover .sub {
+    font-size: 13pt;
+    color: #cbd5e1;
+    max-width: 150mm;
+    margin-bottom: 18mm;
+  }
+  .cover .meta {
+    font-size: 9pt;
+    color: #94a3b8;
+    border-top: 1px solid #334155;
+    padding-top: 8mm;
+    margin-top: 30mm;
+  }
+  .badge {
+    display: inline-block;
+    border: 1px solid #2a9d8f;
+    color: #2a9d8f;
+    padding: 3px 10px;
+    font-size: 8pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  h1.sec {
+    font-size: 16pt;
+    color: #0d6e6e;
+    border-bottom: 2px solid #0d6e6e;
+    padding-bottom: 3mm;
+    margin: 0 0 5mm;
+  }
+  h2 {
+    font-size: 12pt;
+    color: #1a1f26;
+    margin: 5mm 0 2mm;
+  }
+  h3 {
+    font-size: 10.5pt;
+    color: #264653;
+    margin: 4mm 0 1.5mm;
+  }
+  p, li { font-size: 9.5pt; }
+  .muted { color: #5a6570; font-size: 8.5pt; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2mm 0 4mm;
+    font-size: 8pt;
+  }
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 1.6mm 2mm;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #1a2332;
+    color: #f7f5f0;
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: #f1f5f9; }
+  .fig {
+    margin: 3mm 0 4mm;
+    border: 1px solid #334155;
+    background: #0f1419;
+    overflow: hidden;
+  }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .caption {
+    font-size: 8pt;
+    color: #5a6570;
+    margin: -2mm 0 4mm;
+    font-style: italic;
+  }
+  .cols { display: flex; gap: 5mm; }
+  .cols > div { flex: 1; }
+  .callout {
+    border-left: 3px solid #b45309;
+    background: #fff7ed;
+    padding: 3mm 4mm;
+    margin: 3mm 0;
+    font-size: 9pt;
+  }
+  .callout.teal {
+    border-left-color: #0d6e6e;
+    background: #f0fdfa;
+  }
+  .callout.danger {
+    border-left-color: #9b2226;
+    background: #fef2f2;
+  }
+  .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    font-size: 7.5pt;
+    color: #94a3b8;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 2mm;
+    display: flex;
+    justify-content: space-between;
+  }
+  .toc li { margin: 1.2mm 0; }
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 7.5pt;
+  }
+  ul.compact { margin: 1mm 0; padding-left: 4.5mm; }
+  ul.compact li { margin: 0.6mm 0; }
+  .two-col-table td:first-child { width: 32%; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ========== COVER ========== -->
+<section class="page cover">
+  <div class="badge">Architecture Booklet · Encyclopedia Edition · 2026</div>
+  <h1>Connector OS<br/>Complete Software Architecture</h1>
+  <p class="sub">Installable governance node: identity, memory, policy, audit, and effect mediation for agentic workloads — Seven Pillars solidification, Linux host enforcement, and court-grade claim discipline.</p>
+  <div class="cols">
+    <div>
+      <p style="color:#94a3b8;font-size:9pt;margin:0">Includes</p>
+      <ul style="color:#e2e8f0;font-size:9.5pt">
+        <li>Isometric internal system drawings</li>
+        <li>Kernel · substrate · services census</li>
+        <li>Effect exclusivity · ZT · microVM · LLM distrust</li>
+        <li>Seven Pillars · eBPF · unbypassable profile</li>
+        <li>Court/military claim grades · testing left</li>
+      </ul>
+    </div>
+    <div>
+      <p style="color:#94a3b8;font-size:9pt;margin:0">Truth rule</p>
+      <p style="color:#cbd5e1;font-size:9.5pt">Coding of the governance bar is in-repo. Military/court attach is evidence-gated. Overclaim without signed verdict is refused.</p>
+    </div>
+  </div>
+  <div class="meta">
+    Source of record: platform/docs/arch/CONNECTOR_FULL_ARCHITECTURE.md<br/>
+    Living status: SEVEN_PILLARS_STATUS.md · COURT_GRADE_CLAIMS.md · security_claim_registry.json<br/>
+    Slices: EFFECT_EXCLUSIVITY · ZT_HANDSHAKE · MICROVM_CHANNELS · PROBABILISTIC_LLM<br/>
+    Audience: architects · security reviewers · operators · node owners · counsel
+  </div>
+</section>
+
+<!-- ========== TOC ========== -->
+<section class="page">
+  <h1 class="sec">Contents</h1>
+  <ol class="toc" style="font-size:10pt;line-height:1.7">
+    <li>Product topology &amp; mental model <span class="muted">(with 3D drawing)</span></li>
+    <li>Nine rings + intelligence overlay <span class="muted">(with 3D stack)</span></li>
+    <li>Only legal effect path &amp; alternate-path closure</li>
+    <li>Zero-trust handshake &amp; probabilistic LLM guard</li>
+    <li>MicroVM tool &amp; world channels <span class="muted">(with 3D drawing)</span></li>
+    <li>In-daemon anatomy · kernel &amp; substrate encyclopedia</li>
+    <li>Services census · binaries · OSS · plugins</li>
+    <li>Data plane · presets · production hardening</li>
+    <li>API surface · hard problems solved</li>
+    <li>Seven Pillars · unbypassable · court/military grades</li>
+    <li>Testing remaining · real limitations · humans always trusted</li>
+  </ol>
+  <div class="callout teal">
+    <strong>How to read:</strong> Figures are isometric projections of control, data/effect, and guest planes.
+    Tables list every module an architect must locate. Closing pages state what we do <em>not</em> claim.
+  </div>
+  <div class="footer"><span>Connector OS Architecture</span><span>2</span></div>
+</section>
+
+<!-- ========== P1 Topology ========== -->
+<section class="page">
+  <h1 class="sec">1. Product topology</h1>
+  <div class="fig">
+<svg viewBox="0 0 920 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Product topology isometric">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2332"/>
+      <stop offset="100%" stop-color="#0f1419"/>
+    </linearGradient>
+    <filter id="soft"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-opacity="0.35"/></filter>
+  </defs>
+  <rect width="920" height="520" fill="url(#sky)"/>
+  <text x="40" y="36" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial" font-size="18" font-weight="700">Figure 1 — Product topology (isometric)</text>
+  <text x="40" y="56" fill="#94a3b8" font-family="Segoe UI, Helvetica, Arial" font-size="11">Vendor control plane above · Customer node stack · External worlds</text>
+  <g filter="url(#soft)">
+    <polygon points="460.0,84.0 650.5,194.0 589.9,229.0 399.4,119.0" fill="#1e3a5f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="460.0,84.0 650.5,194.0 650.5,230.0 460.0,120.0" fill="#16304f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="650.5,194.0 589.9,229.0 589.9,265.0 650.5,230.0" fill="#0f2740" stroke="#0f1419" stroke-width="0.8"/>
+<text x="525.0" y="154.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">VENDOR CONTROL PLANE</text>
+<text x="525.0" y="168.5" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">license · www · keys · Stripe</text>
+  </g>
+  <line x1="460" y1="155" x2="460" y2="210" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3"/>
+  <g filter="url(#soft)">
+    <polygon points="460.0,238.0 702.5,378.0 615.9,428.0 373.4,288.0" fill="#0d6e6e" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="460.0,238.0 702.5,378.0 702.5,420.0 460.0,280.0" fill="#0a5858" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="702.5,378.0 615.9,428.0 615.9,470.0 702.5,420.0" fill="#084545" stroke="#0f1419" stroke-width="0.8"/>
+<text x="537.9" y="331.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11" font-weight="600">CUSTOMER NODE</text>
+<text x="537.9" y="345.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9">connector-platform + connectorctl</text>
+    <polygon points="400.0,312.0 573.2,412.0 525.6,439.5 352.4,339.5" fill="#457b9d" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="400.0,312.0 573.2,412.0 573.2,440.0 400.0,340.0" fill="#356381" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="573.2,412.0 525.6,439.5 525.6,467.5 573.2,440.0" fill="#2a4f68" stroke="#0f1419" stroke-width="0.8"/>
+<text x="462.8" y="373.8" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">CONTROL</text>
+<text x="462.8" y="387.8" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="7">auth · HITL · catalog</text>
+    <polygon points="520.0,332.0 693.2,432.0 645.6,459.5 472.4,359.5" fill="#2a9d8f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="520.0,332.0 693.2,432.0 693.2,460.0 520.0,360.0" fill="#218278" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="693.2,432.0 645.6,459.5 645.6,487.5 693.2,460.0" fill="#1a6b63" stroke="#0f1419" stroke-width="0.8"/>
+<text x="582.8" y="393.8" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">DATA / EFFECT</text>
+<text x="582.8" y="407.8" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="7">ZT · memory · MCP</text>
+    <polygon points="460.0,392.0 650.5,502.0 598.6,532.0 408.0,422.0" fill="#e9c46a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="460.0,392.0 650.5,502.0 650.5,530.0 460.0,420.0" fill="#c9a84a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="650.5,502.0 598.6,532.0 598.6,560.0 650.5,530.0" fill="#a8892e" stroke="#0f1419" stroke-width="0.8"/>
+<text x="529.3" y="460.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">GUEST ISOLATION</text>
+<text x="529.3" y="474.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="7">microVM · docker · channels</text>
+  </g>
+  <!-- external labels -->
+  <text x="70" y="300" fill="#cbd5e1" font-size="11" font-family="Segoe UI, Helvetica, Arial">LLM providers</text>
+  <text x="70" y="320" fill="#cbd5e1" font-size="11" font-family="Segoe UI, Helvetica, Arial">MCP bridges</text>
+  <text x="780" y="300" fill="#cbd5e1" font-size="11" font-family="Segoe UI, Helvetica, Arial">Robots / IoT</text>
+  <text x="780" y="320" fill="#cbd5e1" font-size="11" font-family="Segoe UI, Helvetica, Arial">Operators / CI</text>
+  <path d="M160 310 L280 340" stroke="#64748b" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M760 310 L620 350" stroke="#64748b" stroke-width="1.5"/>
+</svg>
+</div>
+  <p class="caption">Vendor plane is outside the customer install. One node = one governance kernel + optional host helpers.</p>
+  <h2>What people install vs what we run</h2>
+  <table>
+    <tr><th>Role</th><th>Binary</th><th>UI</th><th>State</th></tr>
+    <tr><td>Customer node</td><td class="mono">connector-platform</td><td>Embedded Leptos dashboard</td><td class="mono">CONNECTOR_DATA_DIR</td></tr>
+    <tr><td>Customer CLI</td><td class="mono">connectorctl</td><td>—</td><td>systemd / HTTP</td></tr>
+    <tr><td>Vendor license</td><td class="mono">connector-license-server</td><td>www + admin</td><td>Postgres (typical)</td></tr>
+    <tr><td>Optional hub</td><td class="mono">connector-hub</td><td>—</td><td>.cpkg registry</td></tr>
+    <tr><td>Host egress helper</td><td class="mono">connector-kerneld</td><td>—</td><td>systemd/nft + eBPF mark-deny</td></tr>
+    <tr><td>Guest agent</td><td class="mono">connector-vm-agent</td><td>—</td><td>inside microVM</td></tr>
+  </table>
+  <div class="callout">
+    <strong>Mental model:</strong> workflows, .cpkg plugins, and world adapters are workloads on the substrate — not a kit of unrelated services. Vendor billing stays outside the on-prem governance kernel.
+  </div>
+  <h2>Three in-node planes</h2>
+  <table>
+    <tr><th>Plane</th><th>Secrets?</th><th>World sockets?</th><th>Primary code</th></tr>
+    <tr><td>Control</td><td>Yes (vault)</td><td>Yes (broker)</td><td class="mono">services/*, auth/*</td></tr>
+    <tr><td>Data / effect</td><td>vault: at last mile</td><td>Only broker + ZT</td><td class="mono">substrate/*, kernel/*, vac</td></tr>
+    <tr><td>Guest</td><td><strong>No</strong></td><td><strong>No</strong> under distrust</td><td class="mono">plugin-runtime, microvm_tool_plane</td></tr>
+  </table>
+  <div class="footer"><span>Connector OS Architecture</span><span>3</span></div>
+</section>
+
+<!-- ========== P2 Rings ========== -->
+<section class="page">
+  <h1 class="sec">2. Nine rings + intelligence overlay</h1>
+  <div class="fig">
+<svg viewBox="0 0 920 540" xmlns="http://www.w3.org/2000/svg">
+  <rect width="920" height="540" fill="#0f1419"/>
+  <text x="40" y="36" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial" font-size="18" font-weight="700">Figure 2 — Nine rings + intelligence overlay (3D stack)</text>
+  <text x="40" y="56" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">Concentric enforcement · each ring fail-closed · ACS / NSFS / grants sit on top</text>
+<polygon points="420.0,462.0 497.9,507.0 473.7,521.0 395.8,476.0" fill="#334155" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,462.0 497.9,507.0 497.9,525.0 420.0,480.0" fill="#334155" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="497.9,507.0 473.7,521.0 473.7,539.0 497.9,525.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="446.8" y="489.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R9 Surface output</text><polygon points="420.0,424.0 513.5,478.0 485.8,494.0 392.3,440.0" fill="#3b4a5c" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,424.0 513.5,478.0 513.5,496.0 420.0,442.0" fill="#3b4a5c" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="513.5,478.0 485.8,494.0 485.8,512.0 513.5,496.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="452.9" y="457.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R8 Audit chain</text><polygon points="420.0,386.0 529.1,449.0 497.9,467.0 388.8,404.0" fill="#0d6e6e" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,386.0 529.1,449.0 529.1,467.0 420.0,404.0" fill="#0d6e6e" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="529.1,449.0 497.9,467.0 497.9,485.0 529.1,467.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="459.0" y="424.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R7 Tool execution</text><polygon points="420.0,348.0 544.7,420.0 510.1,440.0 385.4,368.0" fill="#1d7874" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,348.0 544.7,420.0 544.7,438.0 420.0,366.0" fill="#1d7874" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="544.7,420.0 510.1,440.0 510.1,458.0 544.7,438.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="465.0" y="392.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R6 Reasoning / LLM</text><polygon points="420.0,310.0 560.3,391.0 522.2,413.0 381.9,332.0" fill="#b45309" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,310.0 560.3,391.0 560.3,409.0 420.0,328.0" fill="#b45309" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="560.3,391.0 522.2,413.0 522.2,431.0 560.3,409.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="471.1" y="359.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R5 Policy / HITL</text><polygon points="420.0,272.0 575.9,362.0 534.3,386.0 378.4,296.0" fill="#457b9d" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,272.0 575.9,362.0 575.9,380.0 420.0,290.0" fill="#457b9d" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="575.9,362.0 534.3,386.0 534.3,404.0 575.9,380.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="477.2" y="327.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R4 Memory kernel</text><polygon points="420.0,234.0 591.5,333.0 546.4,359.0 375.0,260.0" fill="#9b2226" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,234.0 591.5,333.0 591.5,351.0 420.0,252.0" fill="#9b2226" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="591.5,333.0 546.4,359.0 546.4,377.0 591.5,351.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="483.2" y="294.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R3 Firewall / guard</text><polygon points="420.0,196.0 607.1,304.0 558.6,332.0 371.5,224.0" fill="#264653" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,196.0 607.1,304.0 607.1,322.0 420.0,214.0" fill="#264653" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="607.1,304.0 558.6,332.0 558.6,350.0 607.1,322.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="489.3" y="262.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R2 Network / gateway</text><polygon points="420.0,158.0 622.6,275.0 570.7,305.0 368.0,188.0" fill="#1a2332" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,158.0 622.6,275.0 622.6,293.0 420.0,176.0" fill="#1a2332" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="622.6,275.0 570.7,305.0 570.7,323.0 622.6,293.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="495.3" y="229.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="9" font-weight="600">R1 Identity / boot</text>
+  <g transform="translate(620,120)">
+    <rect x="0" y="0" width="260" height="200" rx="6" fill="#1a2332" stroke="#334155"/>
+    <text x="16" y="28" fill="#e2e8f0" font-size="13" font-weight="700" font-family="Segoe UI, Helvetica, Arial">Intelligence overlay</text>
+    <text x="16" y="52" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">principal · ACS · NS FS</text>
+    <text x="16" y="72" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">world grants · AutonomyGateway</text>
+    <text x="16" y="92" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">agentic context · identity stack</text>
+    <text x="16" y="112" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">ZT handshake · DockLock</text>
+    <text x="16" y="132" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">effect exclusivity</text>
+    <text x="16" y="160" fill="#e9c46a" font-size="11" font-family="Segoe UI, Helvetica, Arial">LLM is probabilistic — not root</text>
+  </g>
+</svg>
+</div>
+  <table>
+    <tr><th>Ring</th><th>Concern</th><th>Primary code</th></tr>
+    <tr><td>1</td><td>Identity &amp; boot</td><td class="mono">auth/, boot/, data/keys/</td></tr>
+    <tr><td>2</td><td>Network &amp; gateway</td><td class="mono">router.rs, middleware</td></tr>
+    <tr><td>3</td><td>Firewall &amp; guard</td><td>DevGuard, AutonomyGateway, graph firewall</td></tr>
+    <tr><td>4</td><td>Memory kernel</td><td class="mono">vac-core, services/memory*, Knot</td></tr>
+    <tr><td>5</td><td>Policy &amp; governance</td><td>CCL/CLS, contracts, HITL, admission</td></tr>
+    <tr><td>6</td><td>Reasoning &amp; LLM</td><td class="mono">gateway.rs, agentic inject</td></tr>
+    <tr><td>7</td><td>Tool execution</td><td>ZT → microVM / MCP / CONP</td></tr>
+    <tr><td>8</td><td>Audit chain</td><td>HMAC journal, receipts, forensics</td></tr>
+    <tr><td>9</td><td>Surface output</td><td>SOE / role redaction</td></tr>
+  </table>
+  <h3>Intelligence overlay (on top of rings)</h3>
+  <table>
+    <tr><th>Piece</th><th>Module</th><th>Binds</th></tr>
+    <tr><td>Principal</td><td class="mono">kernel/agent_principal.rs</td><td>Cryptographic agent identity</td></tr>
+    <tr><td>Envelope</td><td class="mono">agent_identity_envelope.rs</td><td>Setup/activate, grants</td></tr>
+    <tr><td>ACS</td><td class="mono">acs.rs</td><td>Character / cage posture</td></tr>
+    <tr><td>NS FS</td><td class="mono">nsfs.rs</td><td>/m /k /p /share per pid</td></tr>
+    <tr><td>World grants</td><td class="mono">world_gateway.rs</td><td>(agent × address)</td></tr>
+    <tr><td>AutonomyGateway</td><td class="mono">action_binding.rs</td><td>Allow | Ask | Block</td></tr>
+    <tr><td>Agentic context</td><td class="mono">substrate/agentic_context.rs</td><td>Who-am-I into talk</td></tr>
+  </table>
+  <div class="footer"><span>Connector OS Architecture</span><span>4</span></div>
+</section>
+
+<!-- ========== P3 Effect path ========== -->
+<section class="page">
+  <h1 class="sec">3. Effect path &amp; exclusivity</h1>
+  <div class="fig">
+<svg viewBox="0 0 920 560" xmlns="http://www.w3.org/2000/svg">
+  <rect width="920" height="560" fill="#0f1419"/>
+  <text x="40" y="36" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial" font-size="18" font-weight="700">Figure 3 — Only legal effect path (pipeline in depth)</text>
+<polygon points="140.0,120.0 217.9,165.0 174.6,190.0 96.7,145.0" fill="#457b9d" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="140.0,120.0 217.9,165.0 217.9,205.0 140.0,160.0" fill="#457b9d" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="217.9,165.0 174.6,190.0 174.6,230.0 217.9,205.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="157.3" y="153.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">1</text>
+<text x="157.3" y="167.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">Agentic context</text><polygon points="340.0,120.0 417.9,165.0 374.6,190.0 296.7,145.0" fill="#2a9d8f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="340.0,120.0 417.9,165.0 417.9,205.0 340.0,160.0" fill="#2a9d8f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="417.9,165.0 374.6,190.0 374.6,230.0 417.9,205.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="357.3" y="153.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">2</text>
+<text x="357.3" y="167.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">governed_effect</text><polygon points="540.0,120.0 617.9,165.0 574.6,190.0 496.7,145.0" fill="#b45309" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="540.0,120.0 617.9,165.0 617.9,205.0 540.0,160.0" fill="#b45309" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="617.9,165.0 574.6,190.0 574.6,230.0 617.9,205.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="557.3" y="153.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">3</text>
+<text x="557.3" y="167.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">AutonomyGateway</text><polygon points="740.0,120.0 817.9,165.0 774.6,190.0 696.7,145.0" fill="#9b2226" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="740.0,120.0 817.9,165.0 817.9,205.0 740.0,160.0" fill="#9b2226" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="817.9,165.0 774.6,190.0 774.6,230.0 817.9,205.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="757.3" y="153.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">4</text>
+<text x="757.3" y="167.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">Exclusivity</text><polygon points="140.0,300.0 217.9,345.0 174.6,370.0 96.7,325.0" fill="#0d6e6e" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="140.0,300.0 217.9,345.0 217.9,385.0 140.0,340.0" fill="#0d6e6e" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="217.9,345.0 174.6,370.0 174.6,410.0 217.9,385.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="157.3" y="333.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">5</text>
+<text x="157.3" y="347.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">ZT ticket</text><polygon points="340.0,300.0 417.9,345.0 374.6,370.0 296.7,325.0" fill="#264653" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="340.0,300.0 417.9,345.0 417.9,385.0 340.0,340.0" fill="#264653" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="417.9,345.0 374.6,370.0 374.6,410.0 417.9,385.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="357.3" y="333.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">6</text>
+<text x="357.3" y="347.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">Credential proxy</text><polygon points="540.0,300.0 617.9,345.0 574.6,370.0 496.7,325.0" fill="#e9c46a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="540.0,300.0 617.9,345.0 617.9,385.0 540.0,340.0" fill="#e9c46a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="617.9,345.0 574.6,370.0 574.6,410.0 617.9,385.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="557.3" y="333.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">7</text>
+<text x="557.3" y="347.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">Route channel</text><polygon points="740.0,300.0 817.9,345.0 774.6,370.0 696.7,325.0" fill="#334155" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="740.0,300.0 817.9,345.0 817.9,385.0 740.0,340.0" fill="#334155" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="817.9,345.0 774.6,370.0 774.6,410.0 817.9,385.0" fill="#0f1419" stroke="#0f1419" stroke-width="0.8"/>
+<text x="757.3" y="333.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">8</text>
+<text x="757.3" y="347.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">Journal + audit</text>
+  <text x="40" y="500" fill="#94a3b8" font-size="12" font-family="Segoe UI, Helvetica, Arial">Step 7 routes: microVM I/O · microVM physical channel · host MCP broker · WM kernel</text>
+  <text x="40" y="520" fill="#94a3b8" font-size="12" font-family="Segoe UI, Helvetica, Arial">Bypass → quarantine · pillar fail → mandatory HITL · session key never given to LLM</text>
+</svg>
+</div>
+  <h2>Effect exclusivity standard</h2>
+  <p>Under hardened posture an agent <strong>cannot</strong> produce a consequential effect except through the Connector effect mediator. Production: <span class="mono">CONNECTOR_EFFECT_EXCLUSIVITY=1</span>.</p>
+  <table>
+    <tr><th>Alternate path</th><th>How it is closed</th></tr>
+    <tr><td>Raw network / TCP / HTTP</td><td>L7 + MCP egress + Ring-1; guest deny_all / vsock-only</td></tr>
+    <tr><td>Ungoverned shell / subprocess</td><td>Isolation ≠ subprocess; shell I/O via microVM tool plane</td></tr>
+    <tr><td>In-process ToolDispatch / MCP</td><td>Isolation bar + ZT; no ALLOW_IN_PROCESS_EFFECTS</td></tr>
+    <tr><td>Secrets in guest env</td><td>Cage strip + isolation membrane</td></tr>
+    <tr><td>Ungoverned memory</td><td>governed_effect + identity stack + Ring-1</td></tr>
+    <tr><td>A2A without grant</td><td>Inter-intelligence or world address grant</td></tr>
+  </table>
+  <p class="muted">APIs: GET …/effect-exclusivity/status · POST …/probe · adversarial script platform/scripts/effect-exclusivity-adversarial.sh</p>
+  <div class="callout danger">
+    <strong>Break-glass (weakens claim):</strong>
+    <span class="mono">CONNECTOR_ALLOW_IN_PROCESS_EFFECTS=1</span>,
+    <span class="mono">CONNECTOR_ALLOW_GUEST_EGRESS=1</span>
+  </div>
+  <div class="footer"><span>Connector OS Architecture</span><span>5</span></div>
+</section>
+
+<!-- ========== P4 ZT + LLM ========== -->
+<section class="page">
+  <h1 class="sec">4. Zero-trust handshake &amp; probabilistic LLM</h1>
+  <h2>ZT handshake (blockchain-grade tool binding)</h2>
+  <p>Policy admission is not enough if the model can call MCP/HTTP directly. Connector is the <strong>only signer</strong> of tool authority. Session key is <strong>never</strong> given to the LLM.</p>
+  <table>
+    <tr><th>Property</th><th>How</th></tr>
+    <tr><td>Genesis immutability</td><td>SHA-256 genesis + node Ed25519</td></tr>
+    <tr><td>Session secrecy</td><td>Rederived from node signature of zt-session|handshake_id</td></tr>
+    <tr><td>Chain continuity</td><td>Each ticket prev_hash = previous block_hash</td></tr>
+    <tr><td>Single-use</td><td>Nonce spent; replay denied</td></tr>
+    <tr><td>Forgery resistance</td><td>HMAC-SHA256 MAC + node signature</td></tr>
+  </table>
+  <p class="muted">Env: CONNECTOR_ZT_HANDSHAKE=1 · Module: kernel/zt_handshake.rs · admit_tool_effect on every ToolDispatch</p>
+  <h2>Probabilistic LLM guard</h2>
+  <p>Connector does not treat the model as ready for unaugmented autonomy. Identity, memory, character, knowledge, HITL, and parameters stay <strong>Connector-owned</strong>.</p>
+  <table>
+    <tr><th>Event</th><th>Action</th></tr>
+    <tr><td>Bypass of Connector rule (forged ticket, in-process path, exclusivity skip)</td><td><strong>Quarantine</strong> → human retrieval (unquarantine HITL)</td></tr>
+    <tr><td>Failure of identity / memory / character / knowledge / HITL / parameters</td><td><strong>Mandatory human approval</strong></td></tr>
+  </table>
+  <p class="muted">Env: CONNECTOR_LLM_DISTRUST=1 · Module: substrate/probabilistic_llm.rs · Status: GET …/probabilistic-llm/status</p>
+  <div class="callout teal">
+    Pair the runtime membrane with docker_lab / microVM so guests physically cannot open sockets around Connector.
+  </div>
+  <div class="footer"><span>Connector OS Architecture</span><span>6</span></div>
+</section>
+
+<!-- ========== P5 MicroVM ========== -->
+<section class="page">
+  <h1 class="sec">5. MicroVM tool &amp; world channels</h1>
+  <div class="fig">
+<svg viewBox="0 0 920 520" xmlns="http://www.w3.org/2000/svg">
+  <rect width="920" height="520" fill="#0f1419"/>
+  <text x="40" y="36" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial" font-size="18" font-weight="700">Figure 4 — MicroVM tool &amp; world channel plane</text>
+  <text x="40" y="56" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">Agentic brain never holds host HAL · effects leave via guest channel</text>
+  <polygon points="200.0,170.0 303.9,230.0 243.3,265.0 139.4,205.0" fill="#457b9d" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="200.0,170.0 303.9,230.0 303.9,280.0 200.0,220.0" fill="#356381" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="303.9,230.0 243.3,265.0 243.3,315.0 303.9,280.0" fill="#2a4f68" stroke="#0f1419" stroke-width="0.8"/>
+<text x="221.7" y="215.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">LLM BRAIN</text>
+<text x="221.7" y="229.5" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">in platform</text>
+  <polygon points="420.0,185.0 541.2,255.0 472.0,295.0 350.7,225.0" fill="#0d6e6e" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="420.0,185.0 541.2,255.0 541.2,310.0 420.0,240.0" fill="#0a5858" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="541.2,255.0 472.0,295.0 472.0,350.0 541.2,310.0" fill="#084545" stroke="#0f1419" stroke-width="0.8"/>
+<text x="446.0" y="238.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">ADMISSION</text>
+<text x="446.0" y="252.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">ZT · grants · HITL</text>
+  <polygon points="660.0,200.0 798.6,280.0 720.6,325.0 582.1,245.0" fill="#e9c46a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="660.0,200.0 798.6,280.0 798.6,340.0 660.0,260.0" fill="#c9a84a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="798.6,280.0 720.6,325.0 720.6,385.0 798.6,340.0" fill="#a8892e" stroke="#0f1419" stroke-width="0.8"/>
+<text x="690.3" y="260.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">microVM GUEST</text>
+<text x="690.3" y="274.5" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">vsock · deny_all</text>
+  <text x="600" y="400" fill="#cbd5e1" font-size="11" font-family="Segoe UI, Helvetica, Arial">→ local I/O · robot · IoT · MQTT · Modbus · machine</text>
+  <text x="40" y="460" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">Flags: CONNECTOR_TOOLS_IN_MICROVM · CONNECTOR_WORLD_CHANNEL_VIA_MICROVM</text>
+  <text x="40" y="480" fill="#94a3b8" font-size="11" font-family="Segoe UI, Helvetica, Arial">Assets: CONNECTOR_MICROVM_KERNEL + ROOTFS (missing → fail closed)</text>
+</svg>
+</div>
+  <table>
+    <tr><th>Channel</th><th>Examples</th><th>Env</th></tr>
+    <tr><td>Local I/O</td><td>shell, read/write, exec</td><td class="mono">CONNECTOR_TOOLS_IN_MICROVM=1</td></tr>
+    <tr><td>Robotics</td><td>robot:…, HAL, ROS</td><td class="mono">CONNECTOR_WORLD_CHANNEL_VIA_MICROVM=1</td></tr>
+    <tr><td>IoT</td><td>iot:…, sensors/actuators</td><td>same</td></tr>
+    <tr><td>MQTT / Modbus</td><td>mqtt://…, modbus:…</td><td>same</td></tr>
+    <tr><td>Machine / device</td><td>machine:…, CNC, PLC</td><td>same</td></tr>
+  </table>
+  <p>Remote MCP HTTPS may remain a <strong>host broker</strong> when <span class="mono">CONNECTOR_ALLOW_HOST_MCP_BROKER=1</span> — it still cannot do local I/O or physical channels on the host.</p>
+  <p class="muted">APIs: GET/POST …/microvm-tools/* · CONP command routes physical entities via microVM when flags on · Assets: KERNEL + ROOTFS required</p>
+  <h2>Isolation backends</h2>
+  <table>
+    <tr><th>Backend</th><th>When</th><th>Under distrust</th></tr>
+    <tr><td>subprocess</td><td>Lab/dev</td><td>Weak — host process</td></tr>
+    <tr><td>docker_lab</td><td>Lab / optional</td><td>--network none</td></tr>
+    <tr><td>microvm</td><td>Production hardening</td><td>vsock-only, no TAP</td></tr>
+    <tr><td>wasm</td><td>Constrained</td><td>WASI, no TCP</td></tr>
+    <tr><td>internal</td><td>Break-glass / lab</td><td>In-process</td></tr>
+  </table>
+  <div class="footer"><span>Connector OS Architecture</span><span>7</span></div>
+</section>
+
+<!-- ========== P6 Daemon + kernel ========== -->
+<section class="page">
+  <h1 class="sec">6. In-daemon anatomy &amp; kernel</h1>
+  <div class="fig">
+<svg viewBox="0 0 920 560" xmlns="http://www.w3.org/2000/svg">
+  <rect width="920" height="560" fill="#0f1419"/>
+  <text x="40" y="36" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial" font-size="18" font-weight="700">Figure 5 — In-daemon anatomy (3D layers)</text>
+  <polygon points="460.0,70.0 719.8,220.0 650.5,260.0 390.7,110.0" fill="#1e3a5f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="460.0,70.0 719.8,220.0 719.8,250.0 460.0,100.0" fill="#16304f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="719.8,220.0 650.5,260.0 650.5,290.0 719.8,250.0" fill="#0f2740" stroke="#0f1419" stroke-width="0.8"/>
+<text x="555.3" y="163.0" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">HTTP EDGE</text>
+<text x="555.3" y="177.0" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">router · auth · ring1 mw</text>
+  <polygon points="460.0,152.0 702.5,292.0 641.9,327.0 399.4,187.0" fill="#457b9d" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="460.0,152.0 702.5,292.0 702.5,320.0 460.0,180.0" fill="#356381" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="702.5,292.0 641.9,327.0 641.9,355.0 702.5,320.0" fill="#2a4f68" stroke="#0f1419" stroke-width="0.8"/>
+<text x="550.9" y="237.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">services/ (~160)</text>
+<text x="550.9" y="251.5" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">REST business surface</text>
+  <polygon points="340.0,244.0 478.6,324.0 430.9,351.5 292.4,271.5" fill="#b45309" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="340.0,244.0 478.6,324.0 478.6,360.0 340.0,280.0" fill="#94440a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="478.6,324.0 430.9,351.5 430.9,387.5 478.6,360.0" fill="#7a3808" stroke="#0f1419" stroke-width="0.8"/>
+<text x="385.5" y="295.8" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">kernel/ (41)</text>
+<text x="385.5" y="309.8" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">IIA · ZT · ACS</text>
+  <polygon points="560.0,264.0 698.6,344.0 650.9,371.5 512.4,291.5" fill="#2a9d8f" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="560.0,264.0 698.6,344.0 698.6,380.0 560.0,300.0" fill="#218278" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="698.6,344.0 650.9,371.5 650.9,407.5 698.6,380.0" fill="#1a6b63" stroke="#0f1419" stroke-width="0.8"/>
+<text x="605.5" y="315.8" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">substrate/ (33)</text>
+<text x="605.5" y="329.8" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">exclusivity · context</text>
+  <polygon points="460.0,370.0 667.8,490.0 611.5,522.5 403.7,402.5" fill="#264653" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="460.0,370.0 667.8,490.0 667.8,520.0 460.0,400.0" fill="#1e3844" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="667.8,490.0 611.5,522.5 611.5,552.5 667.8,520.0" fill="#162b34" stroke="#0f1419" stroke-width="0.8"/>
+<text x="535.8" y="444.2" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">OSS PATH-DEPS</text>
+<text x="535.8" y="458.2" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">vac-core · engine · trust</text>
+  <polygon points="460.0,452.0 633.2,552.0 589.9,577.0 416.7,477.0" fill="#e9c46a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="460.0,452.0 633.2,552.0 633.2,580.0 460.0,480.0" fill="#c9a84a" stroke="#0f1419" stroke-width="0.8"/>
+<polygon points="633.2,552.0 589.9,577.0 589.9,605.0 633.2,580.0" fill="#a8892e" stroke="#0f1419" stroke-width="0.8"/>
+<text x="525.0" y="512.5" text-anchor="middle" fill="#f7f5f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="10" font-weight="600">plugin-runtime</text>
+<text x="525.0" y="526.5" text-anchor="middle" fill="#e2e8f0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="8">guests</text>
+</svg>
+</div>
+  <p class="muted">HTTP edge → services (~160) → kernel (41) + substrate (33) → OSS vac/engine → plugin-runtime guests</p>
+  <h2>Kernel encyclopedia (selected critical modules)</h2>
+  <table>
+    <tr><th>Module</th><th>Responsibility</th></tr>
+    <tr><td class="mono">operating_layer / aios</td><td>AIOS sockets; Memory OS syscalls</td></tr>
+    <tr><td class="mono">acs / nsfs</td><td>Character surface; per-agent FS homes</td></tr>
+    <tr><td class="mono">address_cage / world_gateway</td><td>Typed world addresses; owner grants</td></tr>
+    <tr><td class="mono">admission_layers / action_binding</td><td>Root/Cone/App; AutonomyGateway</td></tr>
+    <tr><td class="mono">agent_principal / envelope</td><td>Mint principal; setup/activate</td></tr>
+    <tr><td class="mono">zt_handshake</td><td>Ed25519 + hash-chained tool tickets</td></tr>
+    <tr><td class="mono">docklock / ring1_context</td><td>ExecutionQuantum; per-request quantum</td></tr>
+    <tr><td class="mono">credential_proxy / mission_journal</td><td>vault: resolve; durable steps</td></tr>
+    <tr><td class="mono">membrane_posture / isolation_tiers</td><td>Refuse if backends missing; tier ladder</td></tr>
+    <tr><td class="mono">forensics / decision_trace</td><td>Receipt chains; court packages</td></tr>
+    <tr><td class="mono">share_portal / council</td><td>Cross-agent share; sibling intelligences</td></tr>
+  </table>
+  <p class="muted">Full 41-module table: CONNECTOR_FULL_ARCHITECTURE.md Part V</p>
+  <h2>Substrate (critical)</h2>
+  <table>
+    <tr><th>Module</th><th>Responsibility</th></tr>
+    <tr><td class="mono">governed_effect</td><td>Unified effect admission</td></tr>
+    <tr><td class="mono">effect_exclusivity</td><td>Close six alternate paths</td></tr>
+    <tr><td class="mono">probabilistic_llm</td><td>Quarantine / mandatory HITL</td></tr>
+    <tr><td class="mono">agentic_context / identity_stack</td><td>Who-am-I inject; pillar gate</td></tr>
+    <tr><td class="mono">microvm_tool_plane</td><td>I/O + physical channel routing</td></tr>
+    <tr><td class="mono">cage_security / egress_policy / cfni</td><td>Cage caps; L7/MCP; hop headers</td></tr>
+    <tr><td class="mono">agent_lifecycle_gate / progeny</td><td>Only path to lifecycle syscalls</td></tr>
+  </table>
+  <div class="footer"><span>Connector OS Architecture</span><span>8</span></div>
+</section>
+
+<!-- ========== P7 Services + crates ========== -->
+<section class="page">
+  <h1 class="sec">7. Services, binaries, OSS, plugins</h1>
+  <h2>Services groups (~160 modules)</h2>
+  <table>
+    <tr><th>Group</th><th>Examples</th></tr>
+    <tr><td>Agents / IIA</td><td class="mono">agents, agent_identity, admission, iia_runtime, world_gateway, council, missions</td></tr>
+    <tr><td>Memory / knowledge</td><td class="mono">memory, memory2, memory_graph, knowledge_*, assets, cognitive</td></tr>
+    <tr><td>Tools / gateway</td><td class="mono">tools, gateway, anthropic_gateway, protocols, conp_protocol, mcp_hosting</td></tr>
+    <tr><td>Plugins / workflows</td><td class="mono">plugin_*, workflow_*, cls, apps_catalog, cage_proof</td></tr>
+    <tr><td>DevGuard / TT / WC</td><td class="mono">devguard*, fs_guard, exec_guard, tracetramp_proxy, witnessctl_proxy</td></tr>
+    <tr><td>Runtime / mesh</td><td class="mono">runtime_*, mesh_*, ha_federation, kernel_host</td></tr>
+    <tr><td>Audit / proof</td><td class="mono">actionlog, proof*, forensics, compliance, books, verify</td></tr>
+    <tr><td>Business</td><td class="mono">licensing, billing, playground*, settings_*, setup</td></tr>
+  </table>
+  <h2>Platform crates (census)</h2>
+  <table>
+    <tr><th>Package</th><th>Binary</th><th>Job</th></tr>
+    <tr><td>connector-platform</td><td>platform + connectorctl</td><td>Commercial kernel + CLI</td></tr>
+    <tr><td>connector-plugin-runtime</td><td>lib</td><td>Isolation backends + membrane</td></tr>
+    <tr><td>connector-microvm / vm-agent</td><td>vm-agent</td><td>Firecracker types + guest PID1</td></tr>
+    <tr><td>connector-kerneld</td><td>kerneld</td><td>systemd/nft reconcile + eBPF cgroup/skb load</td></tr>
+    <tr><td>connector-cpkg / hub</td><td>hub</td><td>.cpkg format + registry</td></tr>
+    <tr><td>connector-license-server</td><td>license-server</td><td>Vendor keys / portal</td></tr>
+    <tr><td>connector-ui / www / admin / trial</td><td>UIs</td><td>Dashboard &amp; vendor surfaces</td></tr>
+  </table>
+  <h2>OSS path-deps &amp; first-party plugins</h2>
+  <p><strong>OSS:</strong> vac-core/store/crypto/… · connector-engine/api/protocols/trust/caps · aapi-*</p>
+  <p><strong>Plugins:</strong> TraceTramp · WitnessCtl · DevGuard · Conductor · AgentLoop · AgentPassport · Engram · LedgerLens · Relay</p>
+  <div class="footer"><span>Connector OS Architecture</span><span>9</span></div>
+</section>
+
+<!-- ========== P8 Data + presets ========== -->
+<section class="page">
+  <h1 class="sec">8. Data plane, presets, hardening</h1>
+  <h2>Persistence (<span class="mono">CONNECTOR_DATA_DIR</span>, default ./data)</h2>
+  <table>
+    <tr><th>Path</th><th>Role</th></tr>
+    <tr><td class="mono">engine.db</td><td>SQLite — engine/audit/secrets</td></tr>
+    <tr><td class="mono">kernel.redb</td><td>redb — memory kernel packets, agents</td></tr>
+    <tr><td class="mono">users.db</td><td>Auth/users</td></tr>
+    <tr><td class="mono">keys/</td><td>Signing / verifying keys</td></tr>
+    <tr><td class="mono">workflows/, catalog/</td><td>Workflow catalog</td></tr>
+    <tr><td class="mono">plugins/cpkg_store</td><td>Installed .cpkg rollouts</td></tr>
+    <tr><td class="mono">nsfs/{pid}/</td><td>Per-intelligence filesystem homes</td></tr>
+    <tr><td class="mono">object_fabric_cas/</td><td>CAS blobs</td></tr>
+  </table>
+  <h2>Presets (<span class="mono">CONNECTOR_PRESET</span>)</h2>
+  <table>
+    <tr><th>Class</th><th>Values</th><th>Posture</th></tr>
+    <tr><td>Lab</td><td>local, ci, docker-local, plugin-workbench</td><td>Stub LLM OK, weak isolation</td></tr>
+    <tr><td>Prod-like</td><td>staging, production, airgap, defense-strict, unbypassable, edge-satellite</td><td>Hardening + microVM + sandbox bar</td></tr>
+    <tr><td>Trial</td><td>playground, trial, saas-trial</td><td>TTL, caps — not enterprise secret gates</td></tr>
+  </table>
+  <h2>Production hardening defaults (non-exhaustive)</h2>
+  <ul class="compact">
+    <li>Ring-1 / QPR / DockLock / HITL · setup gate · ban anon gateway</li>
+    <li>Kernel + Landlock fail-closed · L7 + MCP egress · CFNI · flow lease enforce</li>
+    <li>Effect exclusivity · ZT handshake · LLM distrust · agentic context require</li>
+    <li>Isolation microVM · tools/world via microVM · guest deny_all · vsock tickets</li>
+    <li><span class="mono">CONNECTOR_SANDBOX_UNBYPASSABLE</span> · matrix host egress · eBPF require</li>
+    <li>Profile file: <span class="mono">platform/deploy/unbypassable.env</span></li>
+  </ul>
+  <h2>Core ports</h2>
+  <table>
+    <tr><th>Env</th><th>Default</th></tr>
+    <tr><td class="mono">CONNECTOR_PORT</td><td>9091</td></tr>
+    <tr><td class="mono">CONNECTOR_PROTOCOL_PORT</td><td>9092 (MCP/A2A/…)</td></tr>
+    <tr><td class="mono">CONNECTOR_UI_RPC_PORT</td><td>9093</td></tr>
+  </table>
+  <div class="footer"><span>Connector OS Architecture</span><span>10</span></div>
+</section>
+
+<!-- ========== P9 API + problems ========== -->
+<section class="page">
+  <h1 class="sec">9. API surface &amp; hard problems</h1>
+  <h2>HTTP mounts</h2>
+  <table>
+    <tr><th>Mount</th><th>Role</th></tr>
+    <tr><td class="mono">/api/v1/*</td><td>Primary REST (auth-gated)</td></tr>
+    <tr><td class="mono">/api/v2/*</td><td>Simplified V2</td></tr>
+    <tr><td class="mono">/v1/chat/completions, /v1/messages</td><td>OpenAI / Anthropic gateway</td></tr>
+    <tr><td class="mono">/plugin/&lt;slug&gt;/*</td><td>Cage reverse-proxy</td></tr>
+    <tr><td>Protocol port</td><td>MCP / A2A / ACP / ANP / AP2</td></tr>
+    <tr><td>UI-RPC port</td><td>Dashboard WebSocket JSON-RPC</td></tr>
+  </table>
+  <h2>Hard problems → solvers</h2>
+  <table>
+    <tr><th>Hard problem</th><th>Pieces</th></tr>
+    <tr><td>LLM invents who it is</td><td>principal, ACS, agentic_context, identity_stack</td></tr>
+    <tr><td>Model calls tools directly</td><td>ZT + exclusivity + guest deny_all</td></tr>
+    <tr><td>Identity collapse across agents</td><td>NS FS + share portal + A2A grants</td></tr>
+    <tr><td>Host ambient authority</td><td>address_cage + world grants + eBPF/nft cut</td></tr>
+    <tr><td>Robot/IoT on control plane</td><td>microvm_tool_plane + vsock tickets</td></tr>
+    <tr><td>Sandbox bypass / revoke race</td><td>sandbox_unbypassable + atomic_revoke</td></tr>
+    <tr><td>Probabilistic bypass / drift</td><td>quarantine + mandatory HITL</td></tr>
+    <tr><td>Resume re-fires effects</td><td>mission_journal + digests</td></tr>
+    <tr><td>Secrets in the cage</td><td>credential_proxy + membrane</td></tr>
+  </table>
+  <h2>Talk path (summary)</h2>
+  <p>Auth → budgets / injection → inject who-am-I + agentic context + memory → incomplete stack under REQUIRE → HITL → LlmRouter → provider → audit + recall.</p>
+  <div class="footer"><span>Connector OS Architecture</span><span>11</span></div>
+</section>
+
+<!-- ========== P10 Seven Pillars + Court ========== -->
+<section class="page">
+  <h1 class="sec">10. Seven Pillars · unbypassable · court grades</h1>
+  <div class="callout teal">
+    <strong>Status discipline:</strong>
+    <span class="mono">SHIPPED_VERIFIED</span> |
+    <span class="mono">IMPLEMENTED_GATED</span> |
+    <span class="mono">PLANNED</span> |
+    <span class="mono">ASPIRATIONAL</span>.
+    Living table: <span class="mono">SEVEN_PILLARS_STATUS.md</span>. PDF checklist coding is complete; attach proofs remain host-gated.
+  </div>
+  <h2>Seven Engineering Solidification Pillars</h2>
+  <table>
+    <tr><th>#</th><th>Pillar</th><th>Coding bar</th></tr>
+    <tr><td>1</td><td>Agent identity &amp; cognitive confinement</td><td>Principal · ACS · agentic context · soak non-collision</td></tr>
+    <tr><td>2</td><td>OS-grade L1/L2/L3 + kerneld</td><td>Landlock FC · cgroup bind · eBPF mark-deny · desired-vs-applied</td></tr>
+    <tr><td>3</td><td>Cryptographic HITL / exact-action</td><td>EffectAuthorization · one-byte deny · nonce/expiry</td></tr>
+    <tr><td>4</td><td>Network identity &amp; flow admission</td><td>Flow lease · socket binding · peer overlay · raw-socket deny</td></tr>
+    <tr><td>5</td><td>Invariant effect routing</td><td>EffectEnvelope · exclusivity · governed_effect</td></tr>
+    <tr><td>6</td><td>Isolation contract</td><td>Manifest · vsock HMAC tickets · measured microVM · atomic revoke</td></tr>
+    <tr><td>7</td><td>cpkg / CLS / AAPI / CNP</td><td>Security contract · compile · wire signing</td></tr>
+  </table>
+  <h2>Court / military claim grades</h2>
+  <table>
+    <tr><th>Grade</th><th>Meaning</th><th>Typical verdict</th></tr>
+    <tr><td><strong>GOVERNANCE</strong></td><td>Authority model + crypto HITL/effect evidence</td><td>Met when unit/adversarial green</td></tr>
+    <tr><td><strong>HOST_LAB</strong></td><td>Fail-closed host lab (nft/bpftool; eBPF load <em>or</em> REQUIRE fail-closed)</td><td>Met on locked profile lab</td></tr>
+    <tr><td><strong>MILITARY_COURT</strong></td><td>eBPF <em>loaded</em> · Landlock visible · measured microVM · kerneld Active · no break-glass</td><td>Refused until attach evidence</td></tr>
+  </table>
+  <p class="muted">Registry: <span class="mono">security_claim_registry.json</span> · Binder: <span class="mono">court-grade-evidence-bind.sh</span> · Overclaim: <span class="mono">CLAIM_MILITARY_COURT=1</span> exits non-zero when unmet.</p>
+  <h2>Linux host plane (coded)</h2>
+  <table>
+    <tr><th>Piece</th><th>Path</th></tr>
+    <tr><td>eBPF mark-deny</td><td class="mono">platform/ebpf/connector_mark_deny.bpf.c</td></tr>
+    <tr><td>kerneld load/status</td><td class="mono">connector-kerneld ebpf-load|status|deny-mark</td></tr>
+    <tr><td>Unbypassable gate</td><td class="mono">substrate/sandbox_unbypassable.rs</td></tr>
+    <tr><td>Locked profile</td><td class="mono">platform/deploy/unbypassable.env</td></tr>
+    <tr><td>Host lab</td><td class="mono">seven-pillars-host-adversarial-lab.sh</td></tr>
+  </table>
+  <div class="footer"><span>Connector OS Architecture</span><span>12</span></div>
+</section>
+
+<!-- ========== P11 Tests + limits ========== -->
+<section class="page">
+  <h1 class="sec">11. Testing remaining &amp; human trust</h1>
+  <div class="callout">
+    <strong>Honest split:</strong> governance and fail-closed <em>paths</em> are coded.
+    What remains is host/adversarial <em>evidence</em> so attach claims can become
+    <span class="mono">SHIPPED_VERIFIED</span> / <span class="mono">MILITARY_COURT</span>.
+  </div>
+  <h2>Host evidence backlog (testing left)</h2>
+  <table>
+    <tr><th>ID</th><th>Proof needed</th><th>Gate</th></tr>
+    <tr><td>H1</td><td>eBPF program loaded + pinned (CAP_BPF)</td><td>Military/court</td></tr>
+    <tr><td>H2</td><td>Landlock ABI visible + applied in opener process</td><td>Military/court</td></tr>
+    <tr><td>H3</td><td>Measured microVM kernel/rootfs at every tool spawn</td><td>Military/court</td></tr>
+    <tr><td>H4</td><td>kerneld HostApplyState::Active (not Simulated)</td><td>Military/court</td></tr>
+    <tr><td>H5</td><td>Packet lab: marked cgroup egress drop</td><td>Release</td></tr>
+    <tr><td>H6</td><td>Retain CONNECTOR_AUDIT_HMAC_KEY + court verdict package</td><td>Custody</td></tr>
+  </table>
+  <h2>Product / partner backlog</h2>
+  <table>
+    <tr><th>ID</th><th>Status</th><th>Bar</th></tr>
+    <tr><td>T2</td><td>Complete</td><td>eBPF connect4 + nft NAT + <span class="mono">connector-egress-proxy</span> TLS terminate (Connector CA)</td></tr>
+    <tr><td>T4</td><td>Solidified · RG-09</td><td>Idempotent journal + refuse Pending re-fire + abandon on resume</td></tr>
+    <tr><td>T6</td><td>Complete</td><td>ROS/Modbus/MQTT/TCP wire HAL + SIL safety interlock (partner certifies SIL body)</td></tr>
+    <tr><td>T7</td><td>Solidified</td><td><span class="mono">TOOLS_IN_MICROVM_STRICT</span> · host MCP broker off in unbypassable</td></tr>
+    <tr><td>T8</td><td>Solidified</td><td><span class="mono">/apps</span> · <span class="mono">/apps/parity</span> · workflow catalog routes</td></tr>
+  </table>
+  <p class="muted">Host attach: <span class="mono">seven-pillars-host-attach-proofs.sh</span> → <span class="mono">military_court_ready=true</span> when eBPF loaded + Landlock applied + measured microVM + TLS/SIL coded.</p>
+  <h2>Real limitations (do not overclaim)</h2>
+  <ul class="compact">
+    <li>Membrane ≠ full OS syscall proof until H2/H5 pass on the target host</li>
+    <li>LLM forward-pass still runs in connector-platform (distrusted)</li>
+    <li>Remote MCP ignoring ZT needs network isolation</li>
+    <li>MicroVM needs operator-supplied measured kernel/rootfs</li>
+    <li>eBPF is a real loader — attach still requires CAP_BPF / bpffs</li>
+    <li>CONP lab HAL is echo (SIL is partner) · CNP ENABLE is not a live event bus</li>
+    <li>Break-glass flags weaken the claim · court binder refuses military overclaim</li>
+  </ul>
+  <h2>Humans always trusted — by design</h2>
+  <table>
+    <tr><th>Role</th><th>Owns</th></tr>
+    <tr><td>Identity author</td><td>Purpose, character, denied ops</td></tr>
+    <tr><td>Grant author</td><td>Which addresses an intelligence may touch</td></tr>
+    <tr><td>Approver</td><td>Ask digests + unquarantine after bypass</td></tr>
+    <tr><td>Trust-anchor operator</td><td>Node keys, license roots, guest images, audit HMAC</td></tr>
+    <tr><td>Physical safety owner</td><td>Robots / CNC / IoT beyond lab echo</td></tr>
+  </table>
+  <div class="callout danger">
+    <strong>The LLM is never:</strong> root of identity · signer of tool authority · issuer of world grants · judge of quarantine · source of secrets.
+  </div>
+  <h2>Closing claim</h2>
+  <p>Connector OS is an installable governance node. Under production / defense-strict / unbypassable hardening it closes alternate effect paths, distrusts the probabilistic model, projects policy to Linux (systemd/nft/eBPF connect4 + mark-deny), redirects egress into a Connector proxy hop, and pushes tool/physical I/O into microVM channels with vsock tickets and partner HAL wire adapters. It claims <strong>GOVERNANCE</strong> and <strong>HOST_LAB</strong> when evidence is green. It does <strong>not</strong> claim <strong>MILITARY_COURT</strong> without signed attach evidence, SIL robotics certification, live CNP bus, or model autonomy.</p>
+  <p class="muted" style="margin-top:6mm">Sources: CONNECTOR_FULL_ARCHITECTURE.md · SEVEN_PILLARS_STATUS.md · COURT_GRADE_CLAIMS.md · EFFECT_EXCLUSIVITY.md · ZT_HANDSHAKE.md · MICROVM_CHANNELS.md · PROBABILISTIC_LLM.md</p>
+  <div class="footer"><span>Connector OS Architecture</span><span>13</span></div>
+</section>
+
+<!-- ========== APPENDIX kernel denser ========== -->
+<section class="page">
+  <h1 class="sec">Appendix A — Full kernel module list</h1>
+  <table>
+    <tr><th>Module</th><th>Job</th></tr>
+    <tr><td class="mono">operating_layer</td><td>AIOS three sockets; vendor-blind absorb</td></tr>
+    <tr><td class="mono">aios</td><td>Memory OS syscalls core/recall/archival</td></tr>
+    <tr><td class="mono">intelligence_matrix</td><td>CDMI Albus SP·WM·VJ·BG</td></tr>
+    <tr><td class="mono">acs / nsfs</td><td>Character; per-pid FS</td></tr>
+    <tr><td class="mono">address_cage / address_contracts / address_dac_api</td><td>Typed addresses; DAC; HTTP</td></tr>
+    <tr><td class="mono">world_gateway / admission_layers</td><td>Grants; Root/Cone/App</td></tr>
+    <tr><td class="mono">action_binding</td><td>AutonomyGateway + digests</td></tr>
+    <tr><td class="mono">agent_principal / foundation / envelope</td><td>Identity mint &amp; activate</td></tr>
+    <tr><td class="mono">compliance_contract / continuity</td><td>Auditor bind; reality manifest</td></tr>
+    <tr><td class="mono">intelligence_spec / purge</td><td>Declare-apply; kill cleanup</td></tr>
+    <tr><td class="mono">share_portal / council</td><td>Cross-agent; siblings</td></tr>
+    <tr><td class="mono">docklock / ring1_context</td><td>Quantum + cage env</td></tr>
+    <tr><td class="mono">zt_handshake / credential_proxy</td><td>Tickets; vault materialize</td></tr>
+    <tr><td class="mono">mission_journal / membrane_posture / isolation_tiers</td><td>Resume safety; readiness; tiers</td></tr>
+    <tr><td class="mono">matrix_isolation / matrix_host_egress / agent_cgroup</td><td>Continuity break; nft/eBPF cut; cgroup bind</td></tr>
+    <tr><td class="mono">isolation_manifest / effect_authz</td><td>Desired/measured isolation; EffectAuthorization</td></tr>
+    <tr><td class="mono">vault_seal / fabric_task</td><td>AES vault; A2A task SoT</td></tr>
+    <tr><td class="mono">decision_trace / forensics* / forensic_*</td><td>Traces; receipts; packages; rollups</td></tr>
+    <tr><td class="mono">agent_chat / agent_explain / iia_llm_inject</td><td>Talk persist; explain; inject</td></tr>
+    <tr><td class="mono">node_fabric / witnessctl_align</td><td>Topology honesty; WC align</td></tr>
+  </table>
+  <h2>Substrate full list</h2>
+  <p class="mono" style="font-size:7.5pt;line-height:1.55">
+  governed_effect · admission_gate · admission_matrix · admission_status · identity_stack · agentic_context · probabilistic_llm · effect_exclusivity · microvm_tool_plane · sandbox_unbypassable · atomic_revoke · effect_envelope_bus · seven_pillars_soak · cage_security · egress_policy · cfni · flow_lease · graph_firewall · sgke_gate · agent_lifecycle_gate · agent_progeny · outbound · proxy_auth · artifact_log · causal · usage_event · usage_receipt · cnp_edge · durability · memwrite_durability · knot_rebuild · handoff_queue · projection · retention · status · docklock_bridge
+  </p>
+  <div class="footer"><span>Connector OS Architecture</span><span>14</span></div>
+</section>
+
+<section class="page">
+  <h1 class="sec">Appendix B — Repo anatomy &amp; talk/plugin paths</h1>
+  <h2>Top-level repository</h2>
+  <table>
+    <tr><th>Path</th><th>Role</th></tr>
+    <tr><td class="mono">platform/</td><td>Commercial OS (ships)</td></tr>
+    <tr><td class="mono">platform/ebpf/</td><td>Host eBPF programs (mark-deny)</td></tr>
+    <tr><td class="mono">platform/deploy/unbypassable.env</td><td>Locked defense profile</td></tr>
+    <tr><td class="mono">oss/</td><td>Path-deps: connector, vac, aapi</td></tr>
+    <tr><td class="mono">plugins/</td><td>First-party AGOS products</td></tr>
+    <tr><td class="mono">agos-abi/ · agos-sdk/ · cargo-connector/</td><td>Plugin authoring</td></tr>
+    <tr><td class="mono">docs/ · lab/ · advanced-lab/</td><td>Library; non-prod labs</td></tr>
+    <tr><td class="mono">data/ · dist/ · vendor/</td><td>State; package; Firecracker assets</td></tr>
+  </table>
+  <h2>Plugin / workflow path</h2>
+  <p>.cpkg / workflow.yaml → Ed25519 verify → IsolationRuntime → plugin-runtime spawn <strong>or</strong> CLS lease runner → catalog row (id · status · PID · URI).</p>
+  <h2>Supporting in-daemon packages</h2>
+  <p class="mono" style="font-size:8pt">auth · api_v2 · operator · boot · cls · cnp · intelligence_admission · quanta_polar · protocol_gateway · internal_dns · ui_rpc · middleware · kms · knowledge · knot · distributed · export · compliance · data · proof · policy · privacy</p>
+  <div class="callout teal" style="margin-top:8mm">
+    <strong>System of record:</strong> When you add a kernel/substrate/service module, crate, binary, or preset, update
+    <span class="mono">platform/docs/arch/CONNECTOR_FULL_ARCHITECTURE.md</span> and
+    <span class="mono">SEVEN_PILLARS_STATUS.md</span> in the same PR, then regenerate this PDF via
+    <span class="mono">bash platform/docs/arch/pdf-assets/rebuild_pdf.sh</span>.
+  </div>
+  <p style="margin-top:10mm;color:#5a6570;font-size:9pt">End of booklet · Connector OS Full Software Architecture · Encyclopedia edition · Seven Pillars + court-grade honesty</p>
+  <div class="footer"><span>Connector OS Architecture</span><span>15</span></div>
+</section>
+
+</body>
+</html>

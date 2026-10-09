@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE engram_cot_sessions\n        SET status       = 'concluded',\n            concluded_at = $1,\n            proof_cid    = $2\n        WHERE id = $3\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9035f2e1e577893c43e75ae86729bad11bf91f75a5ba76ae65324b71c3a2ce54"
+}

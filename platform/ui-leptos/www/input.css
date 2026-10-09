@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Connector brand tokens ────────────────────────────────────────────────── */
+:root {
+  --cn-bg:          #0a0a0b;
+  --cn-bg-elevated: #0d0d0f;
+  --cn-panel:       #141418;
+  --cn-border:      #2a2a30;
+  --cn-text:        #e8e8ec;
+  --cn-muted:       #9898a4;
+  --cn-accent:      #3ecf8e;
+  --cn-accent-dim:  rgba(62,207,142,.12);
+  --cn-accent-blue: #5ba8ff;
+  --cn-warn:        #ffb020;
+  --cn-danger:      #f87171;
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color-scheme: dark;
+    background: var(--cn-bg);
+    color: var(--cn-text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body { margin: 0; min-height: 100svh; background: var(--cn-bg); }
+
+  a { color: var(--cn-accent-blue); text-underline-offset: 3px; }
+  a:hover { color: var(--cn-accent); }
+
+  code, pre {
+    font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, monospace;
+    font-size: 0.88em;
+    background: var(--cn-panel);
+    border: 1px solid var(--cn-border);
+    border-radius: 4px;
+  }
+  code { padding: .12em .35em; }
+  pre  { padding: 1rem; overflow-x: auto; }
+
+  h1, h2, h3, h4 { color: var(--cn-text); letter-spacing: -0.02em; }
+  p { color: var(--cn-muted); }
+
+  input, select, textarea {
+    background: var(--cn-panel);
+    border: 1px solid var(--cn-border);
+    color: var(--cn-text);
+    border-radius: 8px;
+  }
+  input::placeholder { color: var(--cn-muted); }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--cn-accent);
+    box-shadow: 0 0 0 3px rgba(62,207,142,.15);
+  }
+}
+
+@layer components {
+  /* ── Buttons ────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 cursor-pointer;
+    background: var(--cn-accent);
+    color: #0a0a0b;
+  }
+  .btn-primary:hover { background: #5ffab0; }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all;
+    background: transparent;
+    color: var(--cn-text);
+    border: 1px solid var(--cn-border);
+  }
+  .btn-secondary:hover {
+    background: var(--cn-panel);
+    border-color: var(--cn-accent);
+    color: var(--cn-accent);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all;
+    color: var(--cn-muted);
+    background: transparent;
+  }
+  .btn-ghost:hover { color: var(--cn-text); }
+
+  /* ── Inputs ─────── */
+  .input {
+    @apply w-full rounded-lg px-3 py-2 text-sm;
+    background: var(--cn-panel);
+    border: 1px solid var(--cn-border);
+    color: var(--cn-text);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--cn-accent);
+    box-shadow: 0 0 0 3px rgba(62,207,142,.15);
+  }
+  .input::placeholder { color: var(--cn-muted); }
+
+  /* ── Cards ──────── */
+  .card {
+    @apply rounded-xl p-5;
+    background: var(--cn-panel);
+    border: 1px solid var(--cn-border);
+  }
+  .card-elevated {
+    @apply rounded-xl p-5;
+    background: var(--cn-bg-elevated);
+    border: 1px solid var(--cn-border);
+  }
+
+  /* ── Badges ─────── */
+  .badge-green {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold;
+    background: rgba(62,207,142,.12);
+    color: var(--cn-accent);
+    border: 1px solid rgba(62,207,142,.25);
+  }
+  .badge-blue {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold;
+    background: rgba(91,168,255,.12);
+    color: var(--cn-accent-blue);
+    border: 1px solid rgba(91,168,255,.25);
+  }
+  .badge-amber {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold;
+    background: rgba(255,176,32,.12);
+    color: var(--cn-warn);
+    border: 1px solid rgba(255,176,32,.25);
+  }
+  .badge-red {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold;
+    background: rgba(248,113,113,.12);
+    color: var(--cn-danger);
+    border: 1px solid rgba(248,113,113,.25);
+  }
+  .btn-sm {
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.9rem !important;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--cn-border);
+    color: var(--cn-muted);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .btn-ghost:hover {
+    color: var(--cn-danger);
+    border-color: rgba(248,113,113,.3);
+  }
+  .badge-zinc {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    background: var(--cn-panel);
+    color: var(--cn-muted);
+    border: 1px solid var(--cn-border);
+  }
+
+  /* ── Nav ─────────── */
+  .cn-nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center;
+    height: 3.5rem; padding: 0 1.25rem; gap: 1.5rem;
+    background: rgba(10,10,11,.9);
+    border-bottom: 1px solid var(--cn-border);
+    backdrop-filter: blur(12px);
+  }
+  .cn-nav__brand {
+    font-weight: 700; font-size: 0.9rem; letter-spacing: -0.02em;
+    color: var(--cn-text); text-decoration: none; white-space: nowrap;
+  }
+  .cn-nav__brand:hover { color: var(--cn-accent); }
+  .cn-nav__link {
+    font-size: 0.8rem; font-weight: 500;
+    color: var(--cn-muted); text-decoration: none; white-space: nowrap;
+  }
+  .cn-nav__link:hover { color: var(--cn-text); }
+
+  /* ── Section helpers ─ */
+  .cn-page { min-height: 100svh; background: var(--cn-bg); }
+  .cn-inner { max-width: 64rem; margin: 0 auto; padding: 0 1.25rem; }
+
+  /* ── Divider ─────── */
+  .cn-divider {
+    border: none;
+    border-top: 1px solid var(--cn-border);
+    margin: 0;
+  }
+
+  /* ── Label ──────── */
+  .cn-label {
+    font-size: 0.7rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--cn-accent);
+  }
+
+  /* ── Info box ─────── */
+  .cn-info {
+    @apply rounded-xl px-5 py-4 flex gap-3;
+    background: var(--cn-accent-dim);
+    border: 1px solid rgba(62,207,142,.2);
+  }
+  .cn-warn-box {
+    @apply rounded-xl px-5 py-4 flex gap-3;
+    background: rgba(255,176,32,.08);
+    border: 1px solid rgba(255,176,32,.2);
+  }
+}

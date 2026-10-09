@@ -1,0 +1,59 @@
+# Lab-side config (TOML for tooling / docs alignment).
+# Upstream OpenFang (Rust AIOS): https://github.com/RightNow-AI/openfang · https://openfang.sh/docs/getting-started
+# Here: every LLM call routes via TraceTramp → DeepSeek (never direct to DeepSeek from agents).
+#
+# Data flow:
+#   OpenFang agent → TraceTramp (PII/policy/approval) → DeepSeek API
+#   All traffic captured by WitnessCtl via handoff.
+
+[server]
+host = "0.0.0.0"
+port = 4200
+log_level = "info"
+
+# ── LLM Provider: DeepSeek via TraceTramp interceptor ──────────────────────
+# IMPORTANT: api_base points to TraceTramp data plane, NOT DeepSeek directly.
+# Every agent call is intercepted, scanned, and audited before reaching DeepSeek.
+[providers.deepseek]
+kind = "openai"
+api_base = "http://tracetramp:9741/v1"
+api_key = "${DEEPSEEK_API_KEY}"
+model = "deepseek-chat"
+default = true
+max_tokens = 2048
+temperature = 0.3
+
+# ── Agent definitions ──────────────────────────────────────────────────────
+[agents.researcher]
+name = "Researcher"
+description = "Autonomous deep research agent — cross-references sources, evaluates credibility, generates cited reports"
+model = "deepseek-chat"
+system_prompt = """You are an expert research analyst. You cross-reference multiple sources, evaluate credibility using CRAAP criteria, and generate comprehensive cited reports. You are operating inside a governed AI infrastructure — all your outputs are monitored, PII is automatically redacted, and policy violations are blocked."""
+
+[agents.collector]
+name = "Collector"
+description = "OSINT-grade intelligence collector — monitors targets, detects changes, builds knowledge graphs"
+model = "deepseek-chat"
+system_prompt = """You are an OSINT intelligence collector. You monitor targets, track changes, build knowledge graphs, and alert on critical events. You operate inside a zero-trust AI infrastructure where all data flows are audited and sensitive information is automatically controlled."""
+
+[agents.analyst]
+name = "Analyst"
+description = "Security analyst — reviews AI agent outputs for compliance violations and risk signals"
+model = "deepseek-chat"
+system_prompt = """You are a security compliance analyst specializing in AI governance. You review AI agent outputs, identify SOC2/HIPAA/GDPR violations, flag PII exposure, and recommend remediation. You operate inside a TraceTramp-governed environment where every decision is logged."""
+
+# ── Hands (autonomous capability packages) ────────────────────────────────
+[hands.researcher]
+enabled = true
+schedule = "manual"
+
+[hands.collector]
+enabled = true
+schedule = "manual"
+
+# ── Security settings ──────────────────────────────────────────────────────
+[security]
+prompt_injection_scanner = true
+loop_guard = true
+max_tool_iterations = 10
+require_approval_for_purchases = true

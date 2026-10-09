@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO engram_consolidations\n                (namespace_id, merged_count, expired_count, flagged_count,\n                 before_entropy, initiated_by, completed_at)\n            VALUES ($1, 0, 0, 0, $2, 'api', NOW())\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3c509cce31617655a4b3305666843a8c25cbc1a86bd79ef786c71c9f1b112094"
+}

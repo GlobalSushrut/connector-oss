@@ -1,0 +1,317 @@
+\chapter{Protocol Layers}
+
+\section{Why Three Protocols?}
+
+Agent communication in production spans three distinct contexts, each with
+different requirements:
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Native intra-node} — Agents on the same Connector node need
+        fast, capability-gated, typed messaging with full auditability.
+        This is what \textbf{CNP} (Connector Native Protocol) is designed for.
+
+  \item \textbf{Cross-platform} — An agent may need to communicate with an agent
+        running on a different platform (LangChain, AutoGen, another Connector node).
+        The \textbf{A2A} (Agent-to-Agent) bridge handles cross-platform interop.
+
+  \item \textbf{External tools} — Agents need access to databases, APIs, search
+        engines, and other services. The \textbf{MCP} (Model Context Protocol)
+        bridge connects to any MCP-compatible tool server.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, rounded corners=4pt, draw=#1!70, fill=#1!9,
+              text width=3.2cm, align=center, minimum height=1.3cm,
+              font=\small\bfseries, inner sep=5pt},
+  bridge/.style={rectangle, rounded corners=3pt, draw=gray!50, fill=gray!6,
+                 text width=2.4cm, align=center, minimum height=0.9cm,
+                 font=\footnotesize\bfseries},
+  node distance=1.5cm and 2cm
+]
+\node[box=CKernel] (agent) {Connector\\Agent};
+
+\node[box=CProto, above right=1cm and 2.5cm of agent] (cnp)
+  {CNP\\{\footnotesize Native 7-layer}};
+\node[box=CDX, right=2.5cm of agent] (a2a)
+  {A2A Bridge\\{\footnotesize Cross-platform}};
+\node[box=CBiz, below right=1cm and 2.5cm of agent] (mcp)
+  {MCP Bridge\\{\footnotesize External tools}};
+
+\node[box=CExec, right=2.2cm of cnp] (peer)   {Peer\\Agent};
+\node[box=CExec, right=2.2cm of a2a] (extern) {External\\Agent};
+\node[box=CExec, right=2.2cm of mcp] (tool)   {Tool Server};
+
+\draw[arr=CProto] (agent) -- (cnp);
+\draw[arr=CDX]    (agent) -- (a2a);
+\draw[arr=CBiz]   (agent) -- (mcp);
+\draw[arr=CProto] (cnp) -- (peer);
+\draw[arr=CDX]    (a2a) -- (extern);
+\draw[arr=CBiz]   (mcp) -- (tool);
+
+\node[above=0.1cm of cnp, font=\scriptsize\itshape, text=CProto]
+  {typed, capability-gated};
+\node[above=0.1cm of a2a, font=\scriptsize\itshape, text=CDX]
+  {DID-addressed};
+\node[below=0.1cm of mcp, font=\scriptsize\itshape, text=CBiz]
+  {JSON-RPC, stdio};
+
+\end{tikzpicture}
+\caption{Connector protocol landscape — CNP (native), A2A (cross-platform), MCP (tools)}
+\label{fig:protocol-landscape}
+\end{figure}
+
+\section{CNP: Connector Native Protocol}
+
+CNP is the primary communication protocol for agents running on the same
+Connector node. It is modelled on the OSI 7-layer model, but every layer is
+designed specifically for agent-to-agent communication: content addressing,
+capability gating, and cryptographic receipts are first-class concerns.
+
+\subsection{The 7-Layer Stack}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.45cm]
+  \node[layerbox=CBiz]
+    {L7 — Application\quad Message types, payload routing, application semantics};
+  \node[layerbox=CDX, below=0.45cm of current bounding box.south]
+    {L6 — Session\quad Session establishment, lifecycle, teardown, receipts};
+  \node[layerbox=CDX, below=0.45cm of current bounding box.south]
+    {L5 — Routing\quad Cross-cell routing, delivery guarantees, dead-letter queue};
+  \node[layerbox=CLogic, below=0.45cm of current bounding box.south]
+    {L4 — Port Management\quad Typed channels, capability gating, buffer management};
+  \node[layerbox=CProto, below=0.45cm of current bounding box.south]
+    {L3 — Security\quad HMAC signatures, anti-replay tokens, TTL enforcement};
+  \node[layerbox=CProto, below=0.45cm of current bounding box.south]
+    {L2 — Encryption\quad AEAD encryption (ChaCha20-Poly1305), nonce management};
+  \node[layerbox=CKernel, below=0.45cm of current bounding box.south]
+    {L1 — Content-Addressed Codec\quad CID computation, size validation, serialisation};
+\end{tikzpicture}
+\caption{CNP 7-layer stack — modelled on OSI, purpose-built for agents}
+\label{fig:cnp-stack}
+\end{figure}
+
+Every message passes through all seven layers on the way out, and all seven
+in reverse on the way in. Layer 1 gives tamper detection; Layer 2 gives
+confidentiality; Layer 3 gives authentication and replay prevention; Layer 4
+gives capability enforcement; Layers 5--7 give routing, sessions, and
+application semantics.
+
+\subsection{Port-Based Communication}
+
+CNP does not use raw sockets or queues. All communication happens through
+\textbf{typed Ports} — named, capability-gated channels attached to an agent.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Port Type} & \textbf{Direction} & \textbf{Used for} \\
+\midrule
+\texttt{Sensor}    & Inbound  & Receiving raw sensor/environmental data \\
+\texttt{Actuator}  & Outbound & Sending commands to physical or virtual actuators \\
+\texttt{Memory}    & Both     & Sharing MemPackets between agents \\
+\texttt{Tool}      & Outbound & Invoking tools and receiving results \\
+\texttt{Cognitive} & Both     & Passing cognitive messages between agents \\
+\texttt{Generic}   & Both     & Untyped fallback for custom payloads \\
+\bottomrule
+\end{tabularx}
+\caption{CNP port types and their communication semantics}
+\end{table}
+
+Opening a port requires a \textbf{Capability} token signed by the issuing agent.
+No capability, no port — the kernel rejects unauthorised connection attempts at
+Layer 4 before any payload is processed.
+
+\subsection{Capability Attenuation}
+
+Capabilities can be \emph{delegated} (shared with another agent) but only with
+equal or reduced scope — never expanded. This UCAN-style attenuation forms a
+trust chain:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  capnode/.style={rectangle, rounded corners=3pt, draw=CLogic!70, fill=CLogic!8,
+              text width=3.8cm, align=left, minimum height=1.4cm,
+              font=\footnotesize, inner sep=6pt},
+  node distance=1.8cm
+]
+\node[capnode] (root) {
+  \textbf{Root capability}\\
+  issuer: platform\\
+  actions: [read, write, exec]\\
+  depth: 0
+};
+\node[capnode, right=of root] (d1) {
+  \textbf{Delegated (depth 1)}\\
+  issuer: agent-A\\
+  actions: [read, write]\\
+  depth: 1
+};
+\node[capnode, right=of d1] (d2) {
+  \textbf{Delegated (depth 2)}\\
+  issuer: agent-B\\
+  actions: [read]\\
+  depth: 2
+};
+\node[rectangle, draw=CDanger!60, fill=CDanger!6, rounded corners=3pt,
+      text width=2.2cm, align=center, minimum height=1.0cm, font=\footnotesize,
+      right=of d2] (reject) {\textbf{Depth 3}\\rejected\\by kernel};
+
+\draw[arr=CLogic] (root) -- node[above, font=\scriptsize]{\textit{attenuate}} (d1);
+\draw[arr=CLogic] (d1)   -- node[above, font=\scriptsize]{\textit{attenuate}} (d2);
+\draw[arr=CDanger, dashed] (d2) -- (reject);
+
+\end{tikzpicture}
+\caption{Capability attenuation chain — scope can only be reduced, never expanded; max depth is 3}
+\label{fig:capability-chain}
+\end{figure}
+
+\subsection{Delivery Guarantees}
+
+CNP supports three delivery modes, selectable per message:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.45}
+\begin{tabularx}{\textwidth}{@{}llXl@{}}
+\toprule
+\textbf{Mode} & \textbf{Retries} & \textbf{Behaviour} & \textbf{Use case} \\
+\midrule
+\texttt{AtMostOnce}   & 0 & Fire and forget; no acknowledgement required
+  & Telemetry, non-critical events \\
+\texttt{AtLeastOnce}  & $\infty$ & Retry until acked; possible duplicates
+  & Commands requiring eventual delivery \\
+\texttt{ExactlyOnce}  & $\infty$ & Idempotent delivery with deduplication key
+  & Financial transactions, state mutations \\
+\bottomrule
+\end{tabularx}
+\caption{CNP delivery guarantee modes}
+\end{table}
+
+Undeliverable messages go to a per-agent \textbf{dead-letter queue}, where they
+can be inspected and replayed by an operator via \texttt{connectorctl}.
+
+\section{A2A: Agent-to-Agent Bridge}
+
+The A2A bridge allows Connector agents to communicate with agents on external
+platforms — LangChain, AutoGen, CrewAI, or other Connector nodes — without
+requiring CNP on both sides.
+
+The bridge is \textbf{bidirectional}: Connector can receive inbound A2A messages
+and convert them to CNP for internal routing, and it can convert outbound CNP
+messages to A2A for delivery to external agents.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, rounded corners=4pt, draw=#1!70, fill=#1!9,
+              text width=3cm, align=center, minimum height=1.1cm,
+              font=\small\bfseries},
+  bridge/.style={rectangle, rounded corners=3pt, draw=CDX!60, fill=CDX!8,
+                 text width=3.2cm, align=center, minimum height=1.1cm,
+                 font=\small\bfseries},
+  node distance=1.2cm
+]
+\node[box=CKernel] (cn) {Connector\\Agent (CNP)};
+\node[bridge, right=2cm of cn] (br) {A2A $\Longleftrightarrow$ CNP\\Bridge};
+\node[box=CExec, right=2cm of br] (ext) {External\\Agent (A2A)};
+
+\draw[darr=CDX] (cn) -- (br);
+\draw[darr=CDX] (br) -- (ext);
+
+\node[below=0.2cm of br, font=\footnotesize\itshape, text=gray]
+  {DID translation, payload mapping};
+
+\end{tikzpicture}
+\caption{A2A bridge — bidirectional protocol translation between CNP and A2A}
+\end{figure}
+
+All inbound A2A messages are logged as MemPackets by the bridge, so even
+cross-platform communication is auditable from the Connector side.
+
+\section{MCP: Model Context Protocol Bridge}
+
+MCP is an open standard for connecting AI systems to external tool and data
+providers. Connector implements an MCP client bridge that allows any registered
+MCP server to be used as a tool by Connector agents.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, rounded corners=4pt, draw=#1!70, fill=#1!9,
+              text width=3cm, align=center, minimum height=1.1cm,
+              font=\small\bfseries},
+  node distance=1.6cm
+]
+\node[box=CKernel] (ag) {Agent\\(CLS contract)};
+\node[box=CBiz, right=of ag] (bridge) {MCP Bridge\\(L4 tool gate)};
+\node[box=CExec, right=of bridge] (server) {MCP Server\\(stdio/HTTP)};
+\node[box=gray, right=of server] (tool) {Database\\API / Search};
+
+\draw[arr=CKernel!60] (ag)     -- node[above, font=\scriptsize]{\texttt{tool\_call}} (bridge);
+\draw[arr=CBiz!60]    (bridge) -- node[above, font=\scriptsize]{JSON-RPC} (server);
+\draw[arr=CExec!60]   (server) -- (tool);
+\draw[arr=CExec!60, bend left=20] (tool.north) to (server.north);
+\draw[arr=CBiz!60, bend left=20]  (server.north) to (bridge.north);
+\draw[arr=CKernel!60, bend left=20] (bridge.north) to
+  node[above, font=\scriptsize]{MemPacket} (ag.north);
+
+\end{tikzpicture}
+\caption{MCP tool invocation flow — every call is wrapped in a MemPacket for auditability}
+\end{figure}
+
+MCP servers are configured at node startup. Each registered server exposes
+a list of named tools with JSON Schema input specifications. Agents address
+tools by name; the bridge handles the protocol translation transparently.
+
+\section{Protocol Selection Guide}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.45}
+\rowcolors{2}{gray!5}{white}
+\begin{tabularx}{\textwidth}{@{}Xccc@{}}
+\toprule
+\textbf{Use case} &
+  \textbf{CNP} & \textbf{A2A} & \textbf{MCP} \\
+\midrule
+Intra-node agent-to-agent messaging   & \checkmark & & \\
+Cross-platform agent communication    & & \checkmark & \\
+External tool / API integration       & & & \checkmark \\
+Capability-gated typed channels       & \checkmark & & \\
+Typed sensor / actuator data          & \checkmark & & \\
+Cognitive reasoning message passing   & \checkmark & \checkmark & \\
+MemPacket sharing between agents      & \checkmark & \checkmark & \\
+Memory knowledge base queries         & \checkmark & & \checkmark \\
+Cross-node cluster communication      & \checkmark & \checkmark & \\
+\bottomrule
+\end{tabularx}
+\caption{Protocol selection guide — choose based on topology and capability requirements}
+\end{table}
+
+\section{Shared Security Properties}
+
+Regardless of which protocol is used, all three provide a common set of
+security guarantees enforced at the kernel level:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Property} & \textbf{How it is enforced} \\
+\midrule
+\textbf{Authentication}    & Sender DID verified via Ed25519 signature on every message \\
+\textbf{Integrity}         & L1 CID detects any in-flight tampering; L3 HMAC prevents forgery \\
+\textbf{Confidentiality}   & L2 AEAD encryption (CNP); TLS for A2A and MCP \\
+\textbf{Non-repudiation}   & Signed delivery receipts stored as MemPackets \\
+\textbf{Audit trail}       & Every protocol operation logged to the Memory Kernel \\
+\bottomrule
+\end{tabularx}
+\caption{Security properties shared across all three protocol systems}
+\end{table}

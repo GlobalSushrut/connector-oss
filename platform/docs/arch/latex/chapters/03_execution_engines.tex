@@ -1,0 +1,341 @@
+\chapter{Execution Engines}
+
+\section{Two Engines, One Platform}
+
+Connector provides two distinct execution engines, designed for complementary
+problem spaces. Understanding when to use each one — and how they interoperate
+— is central to building effective agents on the platform.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+ & \textbf{Cognitive Substrate} & \textbf{CLS Runtime} \\
+\midrule
+\textbf{What it is} &
+  An 11-layer deliberative reasoning pipeline inspired by cognitive
+  architectures (BDI, ACT-R, Soar) &
+  A contract compiler and VM for governed, structured agent logic \\
+\textbf{Best for} &
+  Open-ended reasoning, planning under uncertainty, multi-step
+  deliberation &
+  Deterministic workflows, compliance enforcement, auditable
+  structured execution \\
+\textbf{Input} &
+  Raw perception (text, sensor, multimodal) &
+  A compiled SolutionContract (CID-addressed, signed) \\
+\textbf{Output} &
+  Commitment + action plan + reflection record &
+  Signed ExecutionReceipt with full operation trace \\
+\textbf{Governance} &
+  Checkpointed at each of the 11 layers &
+  Pre/post/invariant predicates enforced by the VM \\
+\bottomrule
+\end{tabularx}
+\caption{Cognitive Substrate vs.\ CLS Runtime — when to use each engine}
+\end{table}
+
+Both engines write all intermediate and final state to the Memory Kernel as
+MemPackets, ensuring that every reasoning step and every contract execution is
+auditable and recoverable.
+
+\section{Cognitive Substrate}
+
+The Cognitive Substrate is Connector's reasoning engine. It transforms raw
+inputs — text, sensor data, API responses — into committed, explainable actions
+through an eleven-layer pipeline. Each layer produces a typed output that
+becomes the input of the next, and each output is stored as a MemPacket with
+its own CID.
+
+\begin{insightbox}{Why a pipeline, not a loop?}
+Most LLM agent frameworks use a simple observe → think → act loop. This works
+for simple tasks but breaks down when agents need to explain their reasoning,
+recover from mid-task failures, or satisfy compliance requirements. The 11-layer
+pipeline makes each reasoning \emph{stage} explicit, checkpointed, and
+independently verifiable.
+\end{insightbox}
+
+\subsection{The 11-Layer Thought Pipeline}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  step/.style={rectangle, rounded corners=3pt,
+               draw=#1!70, fill=#1!10,
+               text width=2.0cm, align=center,
+               minimum height=1.05cm,
+               font=\scriptsize\bfseries, inner sep=4pt},
+  node distance=0.35cm and 0.35cm
+]
+
+%% Row 1 (layers 1-6)
+\node[step=CKernel]  (l1) at (0,2.6)    {1\\Perception};
+\node[step=CKernel]  (l2) at (2.45,2.6) {2\\Meaning};
+\node[step=CExec]    (l3) at (4.9,2.6)  {3\\Tension\\Detection};
+\node[step=CExec]    (l4) at (7.35,2.6) {4\\Knowledge\\Retrieval};
+\node[step=CLogic]   (l5) at (9.8,2.6)  {5\\Possibility\\Generation};
+\node[step=CLogic]   (l6) at (12.25,2.6){6\\Expertise\\Application};
+
+%% Row 2 (layers 7-11, right to left so arrow flows left-to-right visually)
+\node[step=CProto]   (l7)  at (12.25,1.1){7\\Evaluation};
+\node[step=CProto]   (l8)  at (9.8,1.1)  {8\\Commitment};
+\node[step=CDX]      (l9)  at (7.35,1.1) {9\\Planning};
+\node[step=CDX]      (l10) at (4.9,1.1)  {10\\Reflection};
+\node[step=CBiz]     (l11) at (2.45,1.1) {11\\Exposure};
+
+%% Arrows row 1
+\foreach \a/\b in {l1/l2, l2/l3, l3/l4, l4/l5, l5/l6}
+  \draw[arr=gray!70] (\a) -- (\b);
+
+%% Turn arrow
+\draw[arr=gray!70] (l6.south) -- ++(0,-0.3) -- (l7.north |- 0,-0.0) -- (l7.north);
+
+%% Arrows row 2 (right to left)
+\foreach \a/\b in {l7/l8, l8/l9, l9/l10, l10/l11}
+  \draw[arr=gray!70] (\a) -- (\b);
+
+%% Labels
+\node[above=0.15cm of l1, font=\scriptsize\itshape, text=gray] {raw input};
+\node[below=0.15cm of l11, font=\scriptsize\itshape, text=gray] {action + explanation};
+
+%% Checkpoint annotation
+\draw[decorate, decoration={brace,amplitude=5pt,raise=3pt}, CKernel!50]
+  (l1.north west) -- (l6.north east)
+  node[midway, above=8pt, font=\scriptsize\itshape, text=CKernel]
+    {MemPacket written at each layer};
+
+\end{tikzpicture}
+\caption{Cognitive Substrate 11-layer thought pipeline — each step is checkpointed as a MemPacket}
+\label{fig:cognitive-pipeline}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}clXl@{}}
+\toprule
+\textbf{\#} & \textbf{Layer} & \textbf{What it does} & \textbf{Output type} \\
+\midrule
+1  & Perception           & Normalises raw input (text, sensor, multimodal) into a typed object & \texttt{PerceptionObject} \\
+2  & Meaning Extraction   & Extracts entities, relations, intent from the perception & \texttt{MeaningObject} \\
+3  & Tension Detection    & Identifies unresolved pressures — goals vs.\ reality gaps & \texttt{Tension[]} \\
+4  & Knowledge Retrieval  & Queries memory for relevant facts (8 knowledge forms) & \texttt{KnowledgeSet} \\
+5  & Possibility Generation & Generates candidate actions from tensions + knowledge & \texttt{Possibility[]} \\
+6  & Expertise Application & Domain kernel scores each possibility (medical, finance…) & \texttt{EvaluationScores} \\
+7  & Evaluation           & Multi-dimensional scoring: feasibility, impact, risk, cost & \texttt{RankedPossibilities} \\
+8  & Commitment           & Selects best possibility; records revision history & \texttt{Commitment} \\
+9  & Planning             & Builds a DAG of operations to execute the commitment & \texttt{ExecutionPlan} \\
+10 & Reflection           & Compares expected vs.\ actual outcomes; extracts learnings & \texttt{ReflectionRecord} \\
+11 & Exposure             & Renders result for human, peer agent, auditor, or debugger & \texttt{ExposurePacket} \\
+\bottomrule
+\end{tabularx}
+\caption{Cognitive Substrate layer descriptions}
+\end{table}
+
+\subsection{Expertise Kernels}
+
+Layer 6 is domain-aware. Rather than evaluating possibilities generically, the
+Cognitive Substrate delegates to a pluggable \textbf{ExpertiseKernel} that
+applies domain-specific rules. Built-in kernels include:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=2pt]
+  \item \textbf{General} — Default scoring without domain constraints
+  \item \textbf{Medical} — HIPAA-aware; flags PHI access, requires consent verification
+  \item \textbf{Financial} — Compliance-aware; checks regulatory limits and disclosure rules
+  \item \textbf{Legal} — Privilege-aware; enforces attorney-client boundary rules
+\end{itemize}
+
+Custom expertise kernels implement a single trait and are registered at boot time.
+
+\section{CLS: Connector Logic Standard}
+
+CLS is the \emph{contract system} of Connector: a language for declaring agent
+logic, a compiler that transforms declarations into governed executables, and a
+runtime VM that executes them with full predicate enforcement.
+
+The key insight of CLS is that agent logic should be declared, compiled, and
+verified \emph{before} it runs — not interpreted at runtime from prompts or
+configuration files. A compiled contract is a content-addressed, signed
+artifact: it cannot be tampered with, and any execution of it is fully
+attributable.
+
+\subsection{CLS Compiler Pipeline}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  pass/.style={rectangle, rounded corners=4pt,
+               draw=CExec!70, fill=CExec!10,
+               text width=2.8cm, align=center,
+               minimum height=1.1cm,
+               font=\footnotesize\bfseries, inner sep=5pt},
+  io/.style={rectangle, rounded corners=4pt,
+             draw=gray!50, fill=gray!8,
+             text width=2.2cm, align=center,
+             minimum height=0.9cm, font=\footnotesize},
+  node distance=0.5cm and 0.55cm
+]
+
+\node[io] (src) {YAML surface\\declaration};
+\node[pass, right=of src]  (p1) {1. Parse\\YAML → AST};
+\node[pass, right=of p1]   (p2) {2. Desugar\\Normalise};
+\node[pass, right=of p2]   (p3) {3. Lower\\AST → IR};
+\node[pass, below=0.8cm of p3] (p4) {4. Verify\\Type check};
+\node[pass, left=of p4]    (p5) {5. Optimise\\DCE, fold};
+\node[pass, left=of p5]    (p6) {6. Emit\\IR → Contract};
+\node[io, left=of p6] (out) {SolutionContract\\(CID-signed)};
+
+\draw[arr=gray] (src) -- (p1);
+\draw[arr=CExec!60] (p1) -- (p2);
+\draw[arr=CExec!60] (p2) -- (p3);
+\draw[arr=CExec!60] (p3) -- (p4);
+\draw[arr=CExec!60] (p4) -- (p5);
+\draw[arr=CExec!60] (p5) -- (p6);
+\draw[arr=gray] (p6) -- (out);
+
+\node[below=0.15cm of p4, font=\scriptsize\itshape, text=gray]
+  {reachability, predicate sat.};
+\node[below=0.15cm of p5, font=\scriptsize\itshape, text=gray]
+  {dead state elim., const fold};
+
+\end{tikzpicture}
+\caption{CLS 6-pass compiler pipeline — YAML declaration to signed SolutionContract}
+\label{fig:cls-compiler}
+\end{figure}
+
+Pass 4 (Verify) is the most important: the compiler checks that all predicates
+are satisfiable, all state transitions are reachable, and all tool requirements
+can be resolved. A contract that fails verification is \emph{never} stored and
+\emph{never} executed.
+
+\subsection{SolutionContract Anatomy}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  field/.style={rectangle, draw=CExec!50, fill=CExec!6,
+                text width=4.0cm, align=left,
+                minimum height=0.8cm, inner sep=5pt, font=\footnotesize},
+  node distance=0.28cm
+]
+
+\node[rectangle, rounded corners=5pt, draw=CExec, fill=CExec!4,
+      minimum width=10cm, minimum height=6.6cm,
+      label={[font=\bfseries\small, text=CExec]above:SolutionContract}]
+  (box) at (0,0) {};
+
+\node[field] (cid)  at (0, 2.4) {\texttt{cid}\quad\footnotesize\itshape cls1-sha256-… (content address)};
+\node[field] (iface) at (0, 1.6){\texttt{interface}\quad\footnotesize\itshape inputs, outputs, tool reqs, memory reqs};
+\node[field] (sm)   at (0, 0.8) {\texttt{state\_machine}\quad\footnotesize\itshape states, transitions, operations};
+\node[field] (gov)  at (0, 0.0) {\texttt{governance}\quad\footnotesize\itshape preconditions, postconditions, invariants};
+\node[field] (res)  at (0,-0.8) {\texttt{resource\_envelope}\quad\footnotesize\itshape max tokens, memory, time, tools};
+\node[field] (bill) at (0,-1.6) {\texttt{billing\_spec}\quad\footnotesize\itshape cost model, metering unit, rate};
+\node[field] (sig)  at (0,-2.4) {\texttt{signature}\quad\footnotesize\itshape Ed25519 over canonical JSON};
+
+\end{tikzpicture}
+\caption{SolutionContract field anatomy — every field is included in the CID computation}
+\label{fig:contract-anatomy}
+\end{figure}
+
+\subsection{Runtime Execution Lifecycle}
+
+When a contract is executed, the CLS runtime follows a deterministic
+seven-phase lifecycle:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  ph/.style={rectangle, rounded corners=3pt,
+             draw=CExec!70, fill=CExec!9,
+             text width=1.9cm, align=center,
+             minimum height=0.95cm, font=\scriptsize\bfseries},
+  node distance=0.4cm
+]
+\node[ph] (load)  {Load\\by CID};
+\node[ph, right=of load]  (val)  {Validate\\signature};
+\node[ph, right=of val]   (res)  {Resolve\\tools \& mem};
+\node[ph, right=of res]   (init) {Initialise\\state machine};
+\node[ph, right=of init]  (exec) {Execute\\with predicates};
+\node[ph, right=of exec]  (rec)  {Emit\\Receipt};
+\node[ph, right=of rec]   (clean){Cleanup\\resources};
+
+\foreach \a/\b in {load/val, val/res, res/init, init/exec, exec/rec, rec/clean}
+  \draw[arr=CExec!60] (\a) -- (\b);
+
+\node[below=0.25cm of exec, font=\scriptsize\itshape, text=gray]
+  {11-layer predicate chain};
+\node[below=0.25cm of rec, font=\scriptsize\itshape, text=gray]
+  {signed, CID-anchored};
+
+\end{tikzpicture}
+\caption{CLS runtime execution lifecycle — deterministic seven-phase flow}
+\label{fig:cls-runtime}
+\end{figure}
+
+\section{Resource Budgets}
+
+Both engines enforce a shared resource budget model. Budgets are specified when
+a session is created and enforced by the kernel in real time. Budget violations
+trigger immediate session termination, and the partial execution is still
+receipted — so operators can see exactly how much was consumed before the limit
+was hit.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Dimension} & \textbf{Unit} & \textbf{What it controls} \\
+\midrule
+\texttt{max\_tokens}       & tokens         & Total LLM tokens consumed in the session \\
+\texttt{max\_memory\_bytes}& bytes          & Total MemPacket storage written \\
+\texttt{max\_wall\_time\_ms}& milliseconds  & End-to-end session wall-clock time \\
+\texttt{max\_tool\_calls}  & count          & Number of external tool invocations \\
+\texttt{max\_memory\_ops}  & count          & Number of kernel read/write syscalls \\
+\bottomrule
+\end{tabularx}
+\caption{Resource budget dimensions enforced by both execution engines}
+\end{table}
+
+\begin{warnbox}{Budget violation behaviour}
+When any budget dimension is exhausted, the session is terminated immediately.
+The kernel writes a final \texttt{BudgetExceeded} receipt with the exact
+consumption at time of violation. No partial results are silently discarded —
+the partial execution is fully traceable in the receipt chain.
+\end{warnbox}
+
+\section{Engine Integration Patterns}
+
+The two engines are designed to complement each other. Complex agent deployments
+typically use both:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  eng/.style={rectangle, rounded corners=5pt, draw=#1!70, fill=#1!8,
+              text width=4.2cm, align=center, minimum height=1.4cm,
+              font=\small\bfseries},
+  node distance=2.2cm
+]
+\node[eng=CKernel] (cog) {Cognitive Substrate\\{\footnotesize deliberation, planning}};
+\node[eng=CExec, right=3.5cm of cog] (cls) {CLS Runtime\\{\footnotesize structured execution}};
+
+\draw[arr=CKernel!60, bend left=20]
+  (cog.north) to node[above, font=\footnotesize\itshape]
+    {invoke contract for structured step} (cls.north);
+\draw[arr=CExec!60, bend left=20]
+  (cls.south) to node[below, font=\footnotesize\itshape]
+    {delegate open-ended reasoning} (cog.south);
+
+\node[below=2.0cm of cog, font=\footnotesize, text=gray, align=center,
+      text width=4cm]
+  {\textit{Use when:}\\open-ended, uncertain,\\multi-step reasoning needed};
+\node[below=2.0cm of cls, font=\footnotesize, text=gray, align=center,
+      text width=4cm]
+  {\textit{Use when:}\\deterministic, auditable,\\compliance-critical workflow};
+
+\end{tikzpicture}
+\caption{Engine integration — Cognitive and CLS engines delegate to each other as needed}
+\label{fig:engine-integration}
+\end{figure}

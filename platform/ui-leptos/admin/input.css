@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-primary   { @apply inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50 transition-colors; }
+  .btn-secondary { @apply inline-flex items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors; }
+  .input         { @apply rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500; }
+  .card          { @apply rounded-xl border border-zinc-800 bg-zinc-900 p-5; }
+  .table         { @apply w-full text-sm text-left; }
+  .table thead tr { @apply border-b border-zinc-800; }
+  .table thead th { @apply py-2.5 px-4 text-xs font-medium text-zinc-500 uppercase tracking-wider; }
+  .table tbody tr { @apply border-b border-zinc-800/50 hover:bg-zinc-800/20; }
+  .table tbody td { @apply py-2.5 px-4 text-zinc-300; }
+  .badge-green   { @apply inline-flex rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400; }
+  .badge-red     { @apply inline-flex rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400; }
+  .badge-zinc    { @apply inline-flex rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-400; }
+  .tab-bar       { @apply flex gap-1 border-b border-zinc-800 mb-5; }
+  .tab-item      { @apply px-4 py-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors border-b-2 border-transparent -mb-px; }
+  .tab-item-active { @apply px-4 py-2 text-sm text-red-400 font-medium border-b-2 border-red-500 -mb-px; }
+}

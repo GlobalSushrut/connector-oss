@@ -1,0 +1,44 @@
+# Release Agent Role — can tag, prepare release artifacts, requires approval for publish
+name: release_agent
+clearance: 4  # Confidential
+
+files:
+  read: ["**"]
+  write: ["CHANGELOG.md", "Cargo.toml", "package.json", "version.*"]
+
+execution:
+  allow:
+    - "cargo build --release"
+    - "cargo test"
+    - "npm run build"
+    - "npm test"
+    - "git tag*"
+    - "git log*"
+    - "git diff*"
+    - "git status"
+  require_approval:
+    - "git push*"
+    - "cargo publish"
+    - "npm publish"
+    - "docker push*"
+  deny:
+    - "rm*"
+    - "sudo*"
+    - "git rebase*"
+    - "git reset --hard*"
+
+branches:
+  allow: ["release/*", "main"]
+  deny: ["feature/*"]  # release agent should not touch feature branches
+
+secrets:
+  allowed_via_broker: ["npm_token", "cargo_token", "docker_token"]
+  direct_access: none
+
+budget:
+  max_tokens_per_task: 100000
+  model: standard
+
+approvals:
+  all_writes: { require: tech_lead }
+  publish: { require: [tech_lead, product_owner], quorum: 2 }

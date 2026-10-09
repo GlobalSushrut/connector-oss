@@ -1,0 +1,81 @@
+name: verify_changes
+description: "Post-change verification: compile, test, lint, forbidden pattern scan."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - on_event: file.write_complete
+  - on_event: session.verify
+  - manual
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  workspace:
+    type: string
+    required: false
+    default: "."
+  checks:
+    type: array
+    required: false
+    default: [compiles, tests_pass, lint_clean]
+
+steps:
+  - id: detect_language
+    action: devguard.internal.detect_project_language
+    params:
+      workspace: "{{ inputs.workspace }}"
+
+  - id: check_compiles
+    action: shell.exec
+    condition: "{{ 'compiles' in inputs.checks }}"
+    params:
+      command: "{{ steps.detect_language.build_command }}"
+      workspace: "{{ inputs.workspace }}"
+      timeout_seconds: 120
+    depends_on: detect_language
+
+  - id: check_tests
+    action: shell.exec
+    condition: "{{ 'tests_pass' in inputs.checks }}"
+    params:
+      command: "{{ steps.detect_language.test_command }}"
+      workspace: "{{ inputs.workspace }}"
+      timeout_seconds: 300
+    depends_on: detect_language
+
+  - id: check_lint
+    action: shell.exec
+    condition: "{{ 'lint_clean' in inputs.checks }}"
+    params:
+      command: "{{ steps.detect_language.lint_command }}"
+      workspace: "{{ inputs.workspace }}"
+      timeout_seconds: 60
+    depends_on: detect_language
+
+  - id: check_forbidden
+    action: devguard.internal.forbidden_pattern_scan
+    condition: "{{ 'no_forbidden_patterns' in inputs.checks }}"
+    params:
+      workspace: "{{ inputs.workspace }}"
+      patterns: "{{ session.policy.knowledge.forbidden_patterns }}"
+    depends_on: detect_language
+
+  - id: audit_verification
+    action: connector.audit.record
+    params:
+      action: "verify.changes"
+      details:
+        compiles: "{{ steps.check_compiles.exit_code == 0 }}"
+        tests_pass: "{{ steps.check_tests.exit_code == 0 }}"
+        lint_clean: "{{ steps.check_lint.exit_code == 0 }}"
+        forbidden_found: "{{ steps.check_forbidden.found_count | default(0) }}"
+    depends_on: [check_compiles, check_tests, check_lint, check_forbidden]
+
+outputs:
+  all_passed: "{{ steps.check_compiles.exit_code == 0 and steps.check_tests.exit_code == 0 and steps.check_lint.exit_code == 0 }}"
+  compiles: "{{ steps.check_compiles.exit_code == 0 }}"
+  tests_pass: "{{ steps.check_tests.exit_code == 0 }}"
+  lint_clean: "{{ steps.check_lint.exit_code == 0 }}"
+  forbidden_count: "{{ steps.check_forbidden.found_count | default(0) }}"

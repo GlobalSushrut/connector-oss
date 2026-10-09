@@ -1,0 +1,381 @@
+\chapter{Memory Kernel}
+
+\section{The Foundation Layer}
+
+The Memory Kernel is the bedrock of the entire Connector platform. Every other
+layer — execution engines, protocol stacks, developer tooling — sits on top of
+it. Its job is deceptively simple: \textbf{ensure that all agent state is
+persistent, immutable, addressable by content, and cryptographically
+verifiable}. Nothing happens in Connector that is not mediated by the kernel.
+
+The best analogy is an operating system kernel combined with a content-addressed
+filesystem. An OS kernel mediates every system call a process makes; Connector's
+Memory Kernel mediates every operation an agent performs. An OS filesystem
+tracks file paths and permissions; the Memory Kernel tracks content hashes and
+cryptographic lineage.
+
+\begin{insightbox}{Why content addressing?}
+Traditional databases identify records by primary key — an arbitrary number that
+tells you nothing about the data. Content addressing identifies records by their
+\emph{content hash}. If you have the CID, you can verify the content is
+unchanged without trusting any server. Identical content produces identical CIDs,
+giving automatic deduplication. This is how Connector provides tamper-evident
+audit trails without a separate audit database.
+\end{insightbox}
+
+\section{The MemPacket}
+
+A \textbf{MemPacket} is the atomic unit of all state in Connector. Every piece
+of information — an agent's reasoning output, a tool call result, a compliance
+record, a session checkpoint — is stored as a MemPacket. There is no other
+storage primitive.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  field/.style={rectangle, draw=MidnightBlue!50, fill=MidnightBlue!6,
+                text width=3.8cm, align=center, minimum height=0.75cm,
+                inner sep=4pt},
+  label/.style={font=\footnotesize\itshape, text=gray, align=left},
+  node distance=0.3cm
+]
+
+%% Outer packet box
+\node[rectangle, rounded corners=6pt, draw=MidnightBlue, fill=MidnightBlue!4,
+      minimum width=10cm, minimum height=6.8cm, label={[font=\bfseries\small,
+      text=MidnightBlue]above:MemPacket}] (packet) at (0,0) {};
+
+%% Fields
+\node[field] (cid) at (0, 2.6)     {\texttt{cid}\\\footnotesize cls1-sha256-<64hex>};
+\node[field] (content) at (0, 1.7) {\texttt{content}\\\footnotesize Typed union (8 variants)};
+\node[field] (meta) at (0, 0.8)    {\texttt{metadata}\\\footnotesize Timestamps, tags, lineage};
+\node[field] (sig) at (0,-0.1)     {\texttt{signature}\\\footnotesize Ed25519 (optional)};
+\node[field] (enc) at (0,-1.0)     {\texttt{encryption}\\\footnotesize Envelope (optional)};
+
+%% Content variants panel
+\node[rectangle, rounded corners=4pt, draw=CExec!60, fill=CExec!6,
+      text width=3cm, align=center, minimum height=3.8cm,
+      font=\footnotesize, inner sep=6pt]
+  (variants) at (4.4, 1.2) {
+    \textbf{Content Types}\\[4pt]
+    Text\\Structured\\Binary\\Perception\\Meaning\\Thought\\Action\\Evidence
+  };
+
+\draw[-Stealth, dashed, CExec!60] (content.east) -- (variants.west);
+
+%% Lineage annotation
+\node[label, right=0.2cm of meta.east, text width=2.8cm] (linann)
+  {parent\_cids: [\ldots]\\session\_id\\agent\_did\\tags};
+
+\end{tikzpicture}
+\caption{MemPacket anatomy — the atomic state unit of Connector}
+\label{fig:mempacket}
+\end{figure}
+
+\subsection{Content Types}
+
+The \texttt{content} field is a typed union with eight variants, covering the
+full range of information an agent might produce:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Type} & \textbf{Use case} & \textbf{Typical producer} \\
+\midrule
+\texttt{Text}        & Raw text, prompts, responses      & LLM gateway \\
+\texttt{Structured}  & JSON data, query results          & Tool calls, API responses \\
+\texttt{Binary}      & Files, images, embeddings         & Asset pipeline \\
+\texttt{Perception}  & Sensor input, multimodal data     & Cognitive substrate Layer 1 \\
+\texttt{Meaning}     & Semantic extraction result        & Cognitive substrate Layer 2 \\
+\texttt{Thought}     & Deliberation record               & Cognitive substrate Layers 3--10 \\
+\texttt{Action}      & Tool call, memory write record    & Execution engine \\
+\texttt{Evidence}    & Audit chain, compliance record    & Kernel, SOE layer \\
+\bottomrule
+\end{tabularx}
+\caption{MemPacket content type variants and their producers}
+\end{table}
+
+\section{Content Addressing and CIDs}
+
+Every MemPacket is identified by its \textbf{Content Identifier (CID)}, computed
+deterministically from the packet's content:
+
+\[
+\texttt{CID} = \texttt{cls1-sha256-} \;\|\; \text{SHA256}\!\left(\text{canonical\_json}(\textit{content})\right)
+\]
+
+The prefix \texttt{cls1-sha256-} identifies the Connector namespace and hash
+algorithm, making CIDs self-describing and forward-compatible.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  box/.style={rectangle, rounded corners=3pt, draw=#1!70, fill=#1!10,
+              align=center, font=\footnotesize\bfseries, inner sep=6pt,
+              minimum height=0.8cm},
+  node distance=0.9cm and 1.1cm
+]
+
+\node[box=CExec, text width=3cm] (content) {Agent Output\\(any content)};
+\node[box=CProto, text width=3.2cm, right=of content] (json)
+  {Canonical JSON\\serialisation};
+\node[box=CKernel, text width=3.2cm, right=of json] (hash)
+  {SHA-256\\hash};
+\node[box=CKernel, text width=3.4cm, right=of hash] (cid)
+  {\texttt{cls1-sha256-}\\$\langle$64 hex chars$\rangle$};
+
+\draw[arr=gray] (content) -- (json);
+\draw[arr=gray] (json) -- (hash);
+\draw[arr=gray] (hash) -- (cid);
+
+\node[below=0.5cm of json, font=\footnotesize\itshape, text=gray]
+  {deterministic, field-sorted};
+\node[below=0.5cm of hash, font=\footnotesize\itshape, text=gray]
+  {32 bytes = 256 bits};
+\node[below=0.5cm of cid, font=\footnotesize\itshape, text=gray]
+  {self-describing prefix};
+
+\end{tikzpicture}
+\caption{CID computation pipeline — content → canonical JSON → SHA-256 → CID}
+\label{fig:cid-flow}
+\end{figure}
+
+Four properties flow directly from this design:
+
+\begin{enumerate}
+  \item \textbf{Deduplication} — Two packets with identical content share a CID.
+        The storage layer never writes the same data twice.
+  \item \textbf{Integrity} — Any modification to content changes the CID.
+        Corruption is detected without a separate checksum database.
+  \item \textbf{Independent verification} — Anyone with the content can recompute
+        the CID and verify it matches, without trusting the server.
+  \item \textbf{Immutability} — MemPackets are write-once. Updating data means
+        writing a new packet that references the old CID as its parent, creating
+        an auditable lineage chain.
+\end{enumerate}
+
+\section{Namespace Hierarchy}
+
+The kernel organises memory into nine namespace types, each with distinct
+security levels and access semantics, analogous to Linux filesystem mounts:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}cllll@{}}
+\toprule
+\textbf{Prefix} & \textbf{Type} & \textbf{Linux Analogy} & \textbf{Security} & \textbf{Purpose} \\
+\midrule
+\texttt{/m/} & Memory     & \texttt{/home} & Standard & Private agent working memory \\
+\texttt{/k/} & Knowledge  & \texttt{/usr}  & Protected & Shared, validated knowledge bases \\
+\texttt{/v/} & Asset      & \texttt{/var}  & Tool I/O & Raw input files, staging area \\
+\texttt{/x/} & App        & \texttt{/opt}  & Tool I/O & Executable apps via MCP \\
+\texttt{/c/} & Core       & \texttt{/bin}  & Control  & Native tools via CNP \\
+\texttt{/a/} & Agent      & \texttt{/proc} & Control  & Agent control plane \\
+\texttt{/t/} & Tool       & \texttt{/tmp}  & Tool I/O & Ephemeral tool I/O \\
+\texttt{/s/} & System     & \texttt{/sys}  & Kernel   & Kernel-reserved, read-only \\
+\texttt{/p/} & Public     & \texttt{/srv}  & Public   & Announcements, shared outputs \\
+\bottomrule
+\end{tabular}
+\caption{Memory namespace types and their security boundaries}
+\end{table}
+
+\section{Syscall Interface}
+
+The kernel exposes over 60 syscalls organised into eight categories.
+Rather than raw code, what matters is the contract each category provides:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  cat/.style={rectangle, rounded corners=4pt, draw=MidnightBlue!50,
+              fill=MidnightBlue!7, text width=4.8cm, align=left,
+              minimum height=1.1cm, font=\footnotesize, inner sep=6pt},
+  node distance=0.45cm and 0.7cm
+]
+\node[cat] (mem)  {\textbf{Memory R/W}\\\texttt{Write, Read, Query, Search}};
+\node[cat, right=of mem] (agent) {\textbf{Agent Lifecycle}\\\texttt{Register, Start, Pause, Terminate}};
+\node[cat, below=of mem] (sess) {\textbf{Session Mgmt}\\\texttt{Create, Close, Checkpoint, Restore}};
+\node[cat, right=of sess] (cap)  {\textbf{Capabilities}\\\texttt{Grant, Revoke, Attenuate, Verify}};
+\node[cat, below=of sess] (pred) {\textbf{Predicate Eval}\\\texttt{Check, Enforce, Audit}};
+\node[cat, right=of pred] (lin)  {\textbf{Lineage}\\\texttt{GetLineage, GetChildren, Trace}};
+\node[cat, below=of pred] (cry)  {\textbf{Cryptography}\\\texttt{Sign, Verify, Seal, Open}};
+\node[cat, right=of cry] (tool)  {\textbf{Tool Bridge}\\\texttt{Invoke, List, Grant, Revoke}};
+\end{tikzpicture}
+\caption{Eight syscall categories exposed by the Memory Kernel}
+\label{fig:syscalls}
+\end{figure}
+
+\section{Agent Lifecycle}
+
+Every agent in Connector passes through a well-defined state machine. The kernel
+enforces these transitions — no agent can execute outside an \texttt{Active}
+state, and no agent exits \texttt{Active} without a checkpoint.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  state/.style={circle, draw=MidnightBlue!70, fill=MidnightBlue!10,
+                minimum size=1.8cm, align=center, font=\small\bfseries},
+  term/.style={circle, draw=CDanger!70, fill=CDanger!10,
+               minimum size=1.8cm, align=center, font=\small\bfseries},
+  init/.style={circle, draw=CGreen!70, fill=CGreen!10,
+               minimum size=1.8cm, align=center, font=\small\bfseries},
+  node distance=2.4cm
+]
+
+\node[init]  (reg) {Registered};
+\node[state, right=of reg]  (act) {Active};
+\node[state, below=of act]  (pau) {Paused};
+\node[term,  right=of act]  (ter) {Terminated};
+
+\draw[arr=CGreen] (reg) -- node[above,font=\footnotesize]{\texttt{start}} (act);
+\draw[arr=MidnightBlue] (act) -- node[right,font=\footnotesize]{\texttt{pause}} (pau);
+\draw[arr=MidnightBlue] (pau.north) to[bend right=20]
+  node[left,font=\footnotesize]{\texttt{resume}} (act.south);
+\draw[arr=CDanger] (act) -- node[above,font=\footnotesize]{\texttt{terminate}} (ter);
+\draw[arr=CDanger] (pau) to[bend right=15]
+  node[below right,font=\footnotesize]{\texttt{terminate}} (ter);
+
+%% Checkpoint annotations
+\node[below=0.3cm of pau, font=\footnotesize\itshape, text=gray]
+  {kernel writes checkpoint};
+\node[above=0.3cm of act, font=\footnotesize\itshape, text=gray]
+  {predicates enforced on every op};
+
+\end{tikzpicture}
+\caption{Agent lifecycle state machine enforced by the Memory Kernel}
+\label{fig:agent-lifecycle}
+\end{figure}
+
+A key constraint: the transition from \texttt{Active} to any other state
+\emph{always} triggers a checkpoint write. This means that even an unexpected
+crash (which skips the \texttt{terminate} transition) leaves the kernel able to
+restore the agent to its last checkpoint on the next boot.
+
+\section{Session Management}
+
+An \textbf{Agent} is a long-lived identity; a \textbf{Session} is a scoped
+execution context within that agent. Think of the agent as a Unix process and
+the session as a single system call batch — isolated, budgeted, and auditable.
+
+\begin{conceptbox}{Session Contract}
+A session is created with three inputs, and produces one output:
+\begin{itemize}[noitemsep]
+  \item \textbf{Budget} — Maximum tokens, memory bytes, tool calls, wall time
+  \item \textbf{Predicates} — Governance rules that must hold throughout execution
+  \item \textbf{Agent DID} — The identity executing within this session
+\end{itemize}
+Output: a signed \textbf{ExecutionReceipt} containing the full operation log,
+final state CID, and budget consumption.
+\end{conceptbox}
+
+The session lifecycle is: \textbf{Create → Execute → Checkpoint* → Close → Receipt}.
+Checkpointing can occur multiple times during execution. If the node crashes
+mid-session, the session can be restored from the last checkpoint.
+
+\section{The 11-Layer Predicate Chain}
+
+Before any kernel operation executes, the request passes through eleven
+enforcement layers in sequence. If any layer rejects the operation, execution
+stops immediately and an audit entry is written.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  layer/.style={rectangle, rounded corners=2pt,
+                draw=#1!70, fill=#1!9,
+                text width=8cm, align=left,
+                minimum height=0.72cm, inner sep=5pt,
+                font=\footnotesize},
+  num/.style={font=\footnotesize\bfseries, text=#1},
+  node distance=0.22cm
+]
+\node[layer=CKernel]  (l1)  {\textbf{1. Identity}\enspace Agent DID verification and signature check};
+\node[layer=CKernel,  below=of l1] (l2)  {\textbf{2. Capability}\enspace UCAN-style tool and memory access grants};
+\node[layer=CExec,    below=of l2] (l3)  {\textbf{3. Budget}\enspace Token, memory, time, and tool-call limits};
+\node[layer=CExec,    below=of l3] (l4)  {\textbf{4. Safety}\enspace Invariant checks, bounds, poison-pill detection};
+\node[layer=CLogic,   below=of l4] (l5)  {\textbf{5. Governance}\enspace Pre/post conditions from CLS contracts};
+\node[layer=CLogic,   below=of l5] (l6)  {\textbf{6. Compliance}\enspace Regulatory rules — HIPAA, GDPR, SOC2};
+\node[layer=CProto,   below=of l6] (l7)  {\textbf{7. Audit}\enspace Logging requirements and retention policies};
+\node[layer=CProto,   below=of l7] (l8)  {\textbf{8. Rate Limit}\enspace Per-agent and per-tenant throttling};
+\node[layer=CDX,      below=of l8] (l9)  {\textbf{9. Quota}\enspace Tenant-level resource ceilings};
+\node[layer=CDX,      below=of l9] (l10) {\textbf{10. Policy}\enspace Organisation-specific custom rules};
+\node[layer=CDanger, below=of l10] (l11) {\textbf{11. Emergency}\enspace Circuit breaker and kill switch};
+
+\node[right=0.3cm of l1, font=\tiny\itshape, text=CKernel] {always-on};
+\node[right=0.3cm of l11, font=\tiny\itshape, text=CDanger] {last resort};
+
+\end{tikzpicture}
+\caption{11-layer predicate enforcement chain — evaluated in order for every kernel operation}
+\label{fig:predicate-chain}
+\end{figure}
+
+\section{Cryptographic Receipt Chain}
+
+Every session close produces a signed \textbf{ExecutionReceipt}. Receipts are
+themselves stored as \texttt{Evidence} MemPackets, so the full history of any
+agent's execution is a chain of content-addressed, signed receipts — each
+referencing the CID of the previous one.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  receipt/.style={rectangle, rounded corners=4pt,
+                  draw=CKernel!70, fill=CKernel!8,
+                  text width=3cm, align=center,
+                  minimum height=1.4cm, font=\footnotesize,
+                  inner sep=5pt},
+  node distance=1.4cm
+]
+\node[receipt] (r1) at (0,0)   {Receipt\\\texttt{cid: R-001}\\sig: Ed25519};
+\node[receipt] (r2) at (3.6,0) {Receipt\\\texttt{cid: R-002}\\parent: R-001};
+\node[receipt] (r3) at (7.2,0) {Receipt\\\texttt{cid: R-003}\\parent: R-002};
+\node[rectangle, draw=gray!50, fill=gray!5, rounded corners=3pt,
+      text width=2cm, align=center, minimum height=1.4cm, font=\footnotesize]
+  (r4) at (10.2,0) {\ldots\\(chain head)};
+
+\draw[arr=CKernel] (r1) -- (r2);
+\draw[arr=CKernel] (r2) -- (r3);
+\draw[arr=CKernel, dashed] (r3) -- (r4);
+
+\node[below=0.2cm of r1, font=\footnotesize\itshape, text=gray]
+  {session 1};
+\node[below=0.2cm of r2, font=\footnotesize\itshape, text=gray]
+  {session 2};
+\node[below=0.2cm of r3, font=\footnotesize\itshape, text=gray]
+  {session 3};
+
+\end{tikzpicture}
+\caption{Execution receipt chain — each receipt CID-references its predecessor, forming a tamper-evident audit log}
+\label{fig:receipt-chain}
+\end{figure}
+
+To verify that an agent's history has not been tampered with, an auditor needs
+only the chain head CID and the raw content of each receipt. No trusted third
+party is required.
+
+\section{Storage Backends}
+
+The kernel abstracts over multiple storage backends through a single
+\texttt{MemoryStore} trait. All backends provide the same read/write/query
+semantics; only durability and scale characteristics differ:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Backend} & \textbf{Use case} & \textbf{Characteristics} \\
+\midrule
+SQLite       & Local development, single-node & Zero-config, embedded, ACID \\
+PostgreSQL   & Production, multi-node         & Full replication, WAL, high throughput \\
+S3-compatible & Large binary content           & Object storage, unlimited scale \\
+IPFS         & Decentralised deployments      & Content-addressed natively, p2p \\
+\bottomrule
+\end{tabularx}
+\caption{Supported storage backends — all implement the same MemoryStore interface}
+\end{table}

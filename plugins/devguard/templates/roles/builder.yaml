@@ -1,0 +1,48 @@
+# Builder Role — can read and write code, run tests, create branches
+name: builder
+clearance: 3  # Protected
+
+files:
+  read: ["src/**", "tests/**", "docs/**", "*.toml", "*.json", "*.yaml", "*.md"]
+  write: ["src/**", "tests/**"]
+
+execution:
+  allow:
+    - "cargo build"
+    - "cargo test"
+    - "cargo check"
+    - "cargo clippy"
+    - "cargo fmt"
+    - "npm test"
+    - "npm run build"
+    - "npm run lint"
+    - "pytest"
+    - "python -m pytest"
+    - "make"
+    - "git status"
+    - "git diff"
+    - "git add"
+    - "git commit"
+    - "git log -n *"
+    - "git branch"
+    - "git checkout -b *"
+  deny:
+    - "rm -rf*"
+    - "sudo*"
+    - "curl | bash"
+    - "eval*"
+    - "ssh*"
+  require_approval:
+    - "git push*"
+    - "npm publish"
+    - "cargo publish"
+
+branches:
+  allow: ["feature/*", "fix/*", "refactor/*"]
+  deny: ["main", "production", "release/*"]
+
+secrets: none
+
+budget:
+  max_tokens_per_task: 200000
+  model: standard

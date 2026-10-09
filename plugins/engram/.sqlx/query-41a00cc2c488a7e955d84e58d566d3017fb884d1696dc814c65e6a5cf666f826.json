@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO engram_cot_steps\n            (session_id, step_number, claim_text, grounding_score,\n             source_cids, outcome, retry_count)\n        VALUES ($1, $2, $3, $4, $5, $6, $7)\n        ON CONFLICT (session_id, step_number) DO UPDATE\n            SET outcome         = EXCLUDED.outcome,\n                grounding_score = EXCLUDED.grounding_score,\n                source_cids     = EXCLUDED.source_cids,\n                retry_count     = engram_cot_steps.retry_count + 1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Text",
+        "Float8",
+        "Jsonb",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "41a00cc2c488a7e955d84e58d566d3017fb884d1696dc814c65e6a5cf666f826"
+}

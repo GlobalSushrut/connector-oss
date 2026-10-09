@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE relay_functions\n        SET invocation_count = invocation_count + 1,\n            total_cost_usd   = total_cost_usd + $1,\n            updated_at       = NOW()\n        WHERE id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Float8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "34192c2314e0e00f2e5b79eae77ee6f0f3d845c476b83ba20ba059e6f1e5c493"
+}

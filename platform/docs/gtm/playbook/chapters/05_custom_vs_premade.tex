@@ -1,0 +1,70 @@
+\chapter{Custom Workflows vs.\ Pre-Made Plugins}
+
+This is one of the most common semi-technical questions: \emph{``Should we build our own workflow or turn on WitnessCtl / TraceTramp / DevGuard?''}
+
+\section{Definitions}
+
+\begin{itemize}
+  \item \textbf{Pre-made (first-party) plugins} --- Maintained Connector applications (DevGuard, TraceTramp, WitnessCtl, LedgerLens, and planned Conductor, AgentLoop, etc.). Installed on the node; solve a \textbf{horizontal} problem (safety, trace, audit, cost).
+  \item \textbf{Custom workflows (CLS)} --- Customer-specific automation: your refund logic, your risk rules, your internal routing. Authored for \textbf{your} business process; still runs \textbf{on} the Connector kernel so governance applies.
+  \item \textbf{Community / AGOS plugins} --- Packaged \texttt{.cpkg} integrations (Slack, Jira, Datadog patterns). Faster than bespoke code for standard connectors.
+\end{itemize}
+
+\section{Decision table}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{0.95\textwidth}{@{}>{\bfseries}p{0.32\textwidth} >{\bfseries}p{0.32\textwidth} X@{}}
+\toprule
+\textbf{Choose custom workflow when\ldots} & \textbf{Choose pre-made plugin when\ldots} & \textbf{Notes} \\
+\midrule
+The logic is unique to your business & The need is industry-standard (audit, proxy, finops, coding safety) & Plugins are faster time-to-value \\
+\midrule
+You already have agent code you cannot rewrite & You need a control point \textbf{before} production traffic & TraceTramp sits in the water line \\
+\midrule
+The buyer cares about \emph{this} refund policy & The buyer cares about \emph{any} governed API call & WitnessCtl is horizontal \\
+\midrule
+You are proving ROI on one operational flow & You are proving security/compliance posture & Pilot often = custom WF + 1--2 plugins \\
+\midrule
+Engineering owns the business rules & Platform/security owns the boundary & Different champions, same node \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Why not only custom workflows?}
+
+Building everything yourself recreates what the plugins already productize:
+
+\begin{itemize}
+  \item A proxy with metering, quarantine, and policy versioning (TraceTramp).
+  \item Tamper-evident session export and compliance shells (WitnessCtl).
+  \item Host-level enforcement for coding agents (DevGuard).
+  \item CFO-grade attribution and budget gates (LedgerLens).
+\end{itemize}
+
+\textbf{GTM rule:} sell custom workflow \textbf{for the business story}; sell plugins \textbf{for the control plane}. Almost every serious deployment uses \textbf{both}.
+
+\section{Why not only pre-made plugins?}
+
+Plugins do not know your company's refund rules, credit policy, or internal escalation matrix. Without a custom workflow (or heavy configuration), you only get \textbf{infrastructure}, not \textbf{your} automated decision.
+
+\begin{insightbox}{Combined pitch}
+Pre-made plugins answer: \emph{``How do we govern AI in production?''}
+
+Custom workflows answer: \emph{``How do we automate \textbf{our} decision safely?''}
+\end{insightbox}
+
+\section{Typical adoption path}
+
+\begin{enumerate}
+  \item \textbf{Week 1--2:} Node up + one plugin matching acute pain (often WitnessCtl or TraceTramp).
+  \item \textbf{Week 2--4:} Wire \textbf{one} custom workflow through that boundary.
+  \item \textbf{Month 2+:} Add plugins (LedgerLens for cost, DevGuard for eng agents).
+  \item \textbf{Quarter 2+:} More workflows on catalog; platform team standardizes patterns.
+\end{enumerate}
+
+\section{What to say in a meeting}
+
+\begin{quote}
+\emph{``We are not asking you to throw away your agent. We give you a governed runtime boundary---TraceTramp or WitnessCtl---and your workflow runs inside it. You keep your business logic; we make it provable.''}
+\end{quote}

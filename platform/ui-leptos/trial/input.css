@@ -1,0 +1,1312 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    --accent: 99 102 241;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+
+    /* ────────────────────────────────────────────────────────────
+       Phase 7.1 — 6-token semantic palette.
+       Each token is an `R G B` triple so it composes with
+       Tailwind's `<alpha-value>` syntax: `text-brand`,
+       `bg-success/10`, etc. New UI code should consume these
+       tokens; raw Tailwind hues (indigo-400, emerald-500…) are
+       grandfathered in older modules but should not be added to
+       new code.
+       brand   → primary action / focus / link
+       success → ok / healthy / online
+       warn    → degraded / pending / amber
+       danger  → failed / denial / over-cap
+       info    → neutral informational (cool blue)
+       muted   → tertiary surfaces / borders / placeholder
+       ──────────────────────────────────────────────────────────── */
+    --token-brand:   99 102 241;   /* indigo-500 */
+    --token-success: 16 185 129;   /* emerald-500 */
+    --token-warn:    245 158 11;   /* amber-500   */
+    --token-danger:  239 68 68;    /* red-500     */
+    --token-info:    56 189 248;   /* sky-400     */
+    --token-muted:   113 113 122;  /* zinc-500    */
+  }
+  body {
+    @apply bg-zinc-950 text-zinc-50 antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-image: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(16, 185, 129, 0.04), transparent);
+  }
+  * {
+    @apply border-zinc-800;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-zinc-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-600;
+  }
+}
+
+@layer components {
+  /* ═══════════════════════════════════════════════════════════════════════════
+     CARDS — Glass morphism enterprise style
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .card {
+    @apply rounded-xl border border-zinc-800/80 bg-zinc-900/70 p-5 backdrop-blur-sm;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset, 0 4px 24px -4px rgba(0,0,0,0.4);
+  }
+  .card-sm {
+    @apply rounded-lg border border-zinc-800/80 bg-zinc-900/70 p-3 backdrop-blur-sm;
+  }
+  .card-glow {
+    @apply rounded-xl border border-indigo-500/30 bg-zinc-900/80 p-5 backdrop-blur-sm;
+    box-shadow: 0 0 20px -5px rgba(99, 102, 241, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.1) inset;
+  }
+  .card-metric {
+    @apply rounded-xl border border-zinc-800/60 bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 p-5 backdrop-blur-sm relative overflow-hidden;
+  }
+  .card-metric::before {
+    content: '';
+    @apply absolute top-0 right-0 w-24 h-24 opacity-10;
+    background: radial-gradient(circle at top right, currentColor, transparent 70%);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     BUTTONS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .btn-primary {
+    @apply rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white
+           hover:bg-indigo-400 active:bg-indigo-600 shadow-lg shadow-indigo-500/20
+           transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-2
+           text-sm text-zinc-300 hover:bg-zinc-700 hover:border-zinc-600 transition-all;
+  }
+  .btn-danger {
+    @apply rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white
+           hover:bg-red-400 shadow-lg shadow-red-500/20 transition-all;
+  }
+  .btn-ghost {
+    @apply rounded-lg px-4 py-2 text-sm font-medium text-zinc-400
+           hover:bg-zinc-800 hover:text-zinc-100 transition-all;
+  }
+  .btn-icon {
+    @apply rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-all;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     INPUTS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .input {
+    @apply rounded-lg border border-zinc-700/80 bg-zinc-900/80 px-4 py-2.5
+           text-sm text-zinc-100 placeholder-zinc-500
+           focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20
+           disabled:opacity-50 disabled:cursor-not-allowed transition-all;
+  }
+  .textarea {
+    @apply rounded-lg border border-zinc-700/80 bg-zinc-900/80 px-4 py-3
+           text-sm text-zinc-100 placeholder-zinc-500 font-mono
+           focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20
+           resize-y min-h-[100px] transition-all;
+  }
+  .select {
+    @apply rounded-lg border border-zinc-700/80 bg-zinc-900/80 px-4 py-2.5
+           text-sm text-zinc-100
+           focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     BADGES — Status indicators
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .badge-green  { @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/25; }
+  .badge-amber  { @apply bg-amber-500/15 text-amber-400 border border-amber-500/25; }
+  .badge-red    { @apply bg-red-500/15 text-red-400 border border-red-500/25; }
+  .badge-blue   { @apply bg-blue-500/15 text-blue-400 border border-blue-500/25; }
+  .badge-zinc   { @apply bg-zinc-700/60 text-zinc-400 border border-zinc-600/50; }
+  .badge-emerald { @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/25; }
+  .badge-indigo  { @apply bg-indigo-500/15 text-indigo-400 border border-indigo-500/25; }
+  .badge-purple  { @apply bg-purple-500/15 text-purple-400 border border-purple-500/25; }
+  .badge-cyan    { @apply bg-cyan-500/15 text-cyan-400 border border-cyan-500/25; }
+
+  /* Live pulse indicator */
+  .badge-live {
+    @apply relative bg-emerald-500/15 text-emerald-400 border border-emerald-500/25;
+  }
+  .badge-live::before {
+    content: '';
+    @apply absolute -left-0.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-400;
+    animation: pulse-live 2s ease-in-out infinite;
+  }
+  @keyframes pulse-live {
+    0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+    50% { opacity: 0.5; transform: translateY(-50%) scale(0.8); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TABS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .tab-bar {
+    @apply flex gap-1 border-b border-zinc-800/60 mb-6 pb-0;
+  }
+  .tab-item {
+    @apply px-4 py-2.5 text-sm text-zinc-500 hover:text-zinc-300 transition-all cursor-pointer
+           border-b-2 border-transparent -mb-px;
+  }
+  .tab-item-active {
+    @apply px-4 py-2.5 text-sm text-white border-b-2 border-indigo-500 font-medium cursor-pointer -mb-px;
+  }
+
+  /* TraceTramp / WitnessCtl / DevGuard: global .tab-bar uses mb-6 + border-b and
+     .tab-item uses -mb-px — together with plugin-owned outer borders this causes
+     gaps, double rules, and tabs visually overlapping the panel below. */
+  .plugin-dashboard .page-content {
+    @apply flex flex-col gap-4 min-h-0;
+  }
+  .plugin-dashboard .tab-bar {
+    @apply mb-0 border-b-0;
+  }
+  .plugin-dashboard .tab-bar .tab-item,
+  .plugin-dashboard .tab-bar .tab-item-active {
+    margin-bottom: 0;
+  }
+  /* ui::Tabs inside plugin dashboards — avoid double border + overlap */
+  .plugin-dashboard [role="tablist"] {
+    @apply mb-0 border-b-0;
+  }
+  .plugin-dashboard .plugin-tab-panel {
+    @apply flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-4;
+  }
+  .plugin-dashboard--tracetramp [role="tablist"] .border-brand {
+    @apply border-cyan-500;
+  }
+  .plugin-dashboard--witnessctl [role="tablist"] .border-brand {
+    @apply border-amber-500;
+  }
+  .plugin-dashboard--devguard [role="tablist"] .border-brand {
+    @apply border-orange-500;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TABLES — Enterprise data grid
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .table-wrapper {
+    @apply w-full overflow-x-auto rounded-lg;
+  }
+  .table {
+    @apply w-full text-sm;
+  }
+  .table thead tr {
+    @apply border-b border-zinc-800/60 bg-zinc-900/50;
+  }
+  .table th {
+    @apply py-3 px-4 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider;
+  }
+  .table tbody {
+    @apply divide-y divide-zinc-800/40;
+  }
+  .table td {
+    @apply py-3 px-4 text-zinc-300 text-sm;
+  }
+  .table tr {
+    @apply transition-colors;
+  }
+  .table tbody tr:hover {
+    @apply bg-zinc-800/30;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     PAGE LAYOUT
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .page-wrapper {
+    @apply flex-1 overflow-auto;
+  }
+  .page-content {
+    @apply p-6 space-y-6 max-w-[1600px] mx-auto;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     UTILITY COMPONENTS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .json-box {
+    @apply mt-3 p-4 rounded-lg bg-zinc-950/80 border border-zinc-800/60
+           text-xs text-zinc-400 overflow-auto max-h-72 whitespace-pre-wrap font-mono;
+  }
+
+  .stat-pill {
+    @apply flex flex-col gap-1 rounded-lg bg-zinc-800/40 px-4 py-3 min-w-0 border border-zinc-800/40;
+  }
+  .stat-pill-label {
+    @apply text-[10px] uppercase tracking-wider text-zinc-500 font-medium;
+  }
+  .stat-pill-value {
+    @apply font-mono text-base font-semibold text-zinc-100;
+  }
+
+  .flash-ok  { 
+    @apply fixed bottom-6 right-6 z-50 rounded-xl px-5 py-3 text-sm font-medium 
+           bg-emerald-500 text-white shadow-2xl shadow-emerald-500/30;
+  }
+  .flash-err { 
+    @apply fixed bottom-6 right-6 z-50 rounded-xl px-5 py-3 text-sm font-medium 
+           bg-red-500 text-white shadow-2xl shadow-red-500/30;
+  }
+
+  .section-header {
+    @apply flex items-center justify-between mb-4;
+  }
+  .section-title {
+    @apply text-sm font-semibold text-zinc-100 tracking-wide;
+  }
+  .section-subtitle {
+    @apply text-xs text-zinc-500;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     METRIC GRIDS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .metric-grid-2 { @apply grid grid-cols-1 sm:grid-cols-2 gap-4; }
+  .metric-grid-3 { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4; }
+  .metric-grid-4 { @apply grid grid-cols-2 lg:grid-cols-4 gap-4; }
+  .metric-grid-5 { @apply grid grid-cols-2 lg:grid-cols-5 gap-4; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     OS-STYLE COMPONENTS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .os-panel {
+    @apply rounded-xl border border-zinc-800/60 bg-zinc-900/60 backdrop-blur-md overflow-hidden;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 8px 32px -8px rgba(0,0,0,0.5);
+  }
+  .os-panel-header {
+    @apply flex items-center justify-between px-5 py-3 border-b border-zinc-800/60 bg-zinc-900/40;
+  }
+  .os-panel-title {
+    @apply text-sm font-semibold text-zinc-200;
+  }
+  .os-panel-body {
+    @apply p-5;
+  }
+
+  .os-status-bar {
+    @apply flex items-center gap-4 px-4 py-2 bg-zinc-900/80 border-b border-zinc-800/40 text-xs text-zinc-500;
+  }
+
+  .os-metric {
+    @apply flex flex-col;
+  }
+  .os-metric-value {
+    @apply text-2xl font-bold font-mono text-zinc-100 tracking-tight;
+  }
+  .os-metric-label {
+    @apply text-[11px] uppercase tracking-wider text-zinc-500 mt-1;
+  }
+  .os-metric-trend {
+    @apply text-xs mt-1;
+  }
+  .os-metric-trend-up { @apply text-emerald-400; }
+  .os-metric-trend-down { @apply text-red-400; }
+
+  /* Activity feed */
+  .activity-item {
+    @apply flex items-start gap-3 py-3 border-b border-zinc-800/30 last:border-0;
+  }
+  .activity-dot {
+    @apply w-2 h-2 rounded-full mt-1.5 shrink-0;
+  }
+  .activity-dot-ok { @apply bg-emerald-500 shadow-sm shadow-emerald-500/50; }
+  .activity-dot-warn { @apply bg-amber-500 shadow-sm shadow-amber-500/50; }
+  .activity-dot-err { @apply bg-red-500 shadow-sm shadow-red-500/50; }
+  .activity-dot-info { @apply bg-blue-500 shadow-sm shadow-blue-500/50; }
+
+  /* Progress bars */
+  .progress-bar {
+    @apply h-1.5 rounded-full bg-zinc-800 overflow-hidden;
+  }
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+  .progress-bar-fill-green { @apply bg-gradient-to-r from-emerald-500 to-emerald-400; }
+  .progress-bar-fill-blue { @apply bg-gradient-to-r from-blue-500 to-blue-400; }
+  .progress-bar-fill-indigo { @apply bg-gradient-to-r from-indigo-500 to-indigo-400; }
+  .progress-bar-fill-amber { @apply bg-gradient-to-r from-amber-500 to-amber-400; }
+  .progress-bar-fill-red { @apply bg-gradient-to-r from-red-500 to-red-400; }
+
+  /* Sparkline placeholder */
+  .sparkline {
+    @apply h-8 flex items-end gap-0.5;
+  }
+  .sparkline-bar {
+    @apply w-1 rounded-t bg-indigo-500/60 transition-all;
+  }
+
+  /* Empty state */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 text-center;
+  }
+  .empty-state-icon {
+    @apply w-12 h-12 rounded-xl bg-zinc-800/60 flex items-center justify-center text-zinc-600 mb-4;
+  }
+  .empty-state-title {
+    @apply text-sm font-medium text-zinc-400 mb-1;
+  }
+  .empty-state-desc {
+    @apply text-xs text-zinc-600;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply bg-zinc-800/60 rounded animate-pulse;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     HEADER & NAVIGATION INTERACTIVE COMPONENTS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .header-bar {
+    box-shadow: 0 1px 0 0 rgba(255,255,255,0.02), 0 4px 20px -4px rgba(0,0,0,0.3);
+  }
+
+  .header-icon-btn {
+    @apply p-2.5 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 
+           transition-all duration-200 border border-transparent hover:border-zinc-700/50;
+  }
+  .header-icon-btn:hover {
+    box-shadow: 0 4px 12px -2px rgba(0,0,0,0.3);
+  }
+
+  .status-badge-live {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
+           bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
+  }
+  .status-badge-live::before {
+    content: '';
+    @apply w-2 h-2 rounded-full bg-emerald-500;
+    animation: pulse-glow 2s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+    50% { opacity: 0.6; box-shadow: 0 0 4px rgba(16, 185, 129, 0.3); }
+  }
+
+  /* Profile dropdown */
+  .profile-avatar {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .profile-trigger:hover .profile-avatar {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.4);
+  }
+
+  .profile-dropdown {
+    animation: dropdown-enter 0.2s ease-out;
+  }
+  @keyframes dropdown-enter {
+    from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .dropdown-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-zinc-300 
+           hover:bg-zinc-800/60 transition-all duration-150 cursor-pointer;
+  }
+  .dropdown-item:hover {
+    @apply text-zinc-100;
+  }
+
+  /* Search modal */
+  .search-overlay {
+    animation: overlay-enter 0.15s ease-out;
+  }
+  @keyframes overlay-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .search-modal {
+    animation: modal-enter 0.2s ease-out;
+  }
+  @keyframes modal-enter {
+    from { opacity: 0; transform: translateY(-16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .search-result-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-zinc-400 
+           hover:bg-zinc-800/60 hover:text-zinc-100 transition-all duration-150 cursor-pointer;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     3D CARD EFFECTS & GLASSMORPHISM
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .card-3d {
+    @apply rounded-2xl border border-zinc-800/60 bg-zinc-900/70 p-6 backdrop-blur-md relative overflow-hidden;
+    box-shadow: 
+      0 0 0 1px rgba(255,255,255,0.03) inset,
+      0 1px 0 0 rgba(255,255,255,0.05) inset,
+      0 20px 40px -12px rgba(0,0,0,0.5),
+      0 4px 12px -2px rgba(0,0,0,0.3);
+    transform: perspective(1000px) rotateX(0deg);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card-3d:hover {
+    transform: perspective(1000px) rotateX(2deg) translateY(-4px);
+    box-shadow: 
+      0 0 0 1px rgba(255,255,255,0.05) inset,
+      0 1px 0 0 rgba(255,255,255,0.08) inset,
+      0 32px 64px -16px rgba(0,0,0,0.6),
+      0 8px 24px -4px rgba(0,0,0,0.4);
+  }
+
+  .card-glass {
+    @apply rounded-2xl border border-white/10 p-6 relative overflow-hidden;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+    backdrop-filter: blur(20px);
+    box-shadow: 
+      0 0 0 1px rgba(255,255,255,0.05) inset,
+      0 20px 40px -12px rgba(0,0,0,0.4);
+  }
+
+  .card-gradient {
+    @apply rounded-2xl p-6 relative overflow-hidden;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 50%, rgba(0,0,0,0) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    box-shadow: 
+      0 0 40px -10px rgba(99, 102, 241, 0.15),
+      0 0 0 1px rgba(99, 102, 241, 0.1) inset;
+  }
+
+  .card-interactive {
+    @apply rounded-2xl border border-zinc-800/60 bg-zinc-900/70 p-5 backdrop-blur-sm cursor-pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px -4px rgba(0,0,0,0.3);
+  }
+  .card-interactive:hover {
+    @apply border-zinc-700/80 bg-zinc-800/70;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px -8px rgba(0,0,0,0.5);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ANIMATED ELEMENTS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .glow-indigo {
+    box-shadow: 0 0 20px -5px rgba(99, 102, 241, 0.4);
+  }
+  .glow-emerald {
+    box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.4);
+  }
+  .glow-purple {
+    box-shadow: 0 0 20px -5px rgba(139, 92, 246, 0.4);
+  }
+
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hover-scale {
+    transition: transform 0.2s ease;
+  }
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Animated border */
+  .border-animated {
+    position: relative;
+  }
+  .border-animated::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(139, 92, 246, 0.3), rgba(99, 102, 241, 0.5));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: border-rotate 4s linear infinite;
+  }
+  @keyframes border-rotate {
+    from { background-position: 0% 50%; }
+    to { background-position: 200% 50%; }
+  }
+
+  /* Floating animation */
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  /* Pulse ring */
+  .pulse-ring {
+    position: relative;
+  }
+  .pulse-ring::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    border: 2px solid currentColor;
+    opacity: 0;
+    animation: pulse-ring 2s ease-out infinite;
+  }
+  @keyframes pulse-ring {
+    0% { opacity: 0.6; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.2); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     RESPONSIVE UTILITIES
+     ═══════════════════════════════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+    .page-content {
+      @apply p-4 space-y-4;
+    }
+    .card, .card-3d, .card-glass {
+      @apply p-4;
+    }
+    .os-panel-body {
+      @apply p-4;
+    }
+  }
+
+  /* Touch-friendly on mobile */
+  @media (hover: none) {
+    .card-3d:hover,
+    .card-interactive:hover,
+    .hover-lift:hover,
+    .hover-scale:hover {
+      transform: none;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TOGGLE SWITCH
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .toggle-switch {
+    @apply relative w-11 h-6 rounded-full cursor-pointer transition-colors duration-200;
+  }
+  .toggle-switch-on {
+    @apply bg-emerald-500;
+  }
+  .toggle-switch-off {
+    @apply bg-zinc-700;
+  }
+  .toggle-switch-knob {
+    @apply absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-200;
+  }
+  .toggle-switch-on .toggle-switch-knob {
+    @apply translate-x-5;
+  }
+  .toggle-switch-off .toggle-switch-knob {
+    @apply translate-x-0;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ACTION BUTTONS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .action-btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+  }
+  .action-btn-primary {
+    @apply bg-indigo-500 text-white hover:bg-indigo-400 active:bg-indigo-600 shadow-lg shadow-indigo-500/20;
+  }
+  .action-btn-secondary {
+    @apply bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700;
+  }
+  .action-btn-danger {
+    @apply bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30;
+  }
+  .action-btn-success {
+    @apply bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30;
+  }
+  .action-btn-warning {
+    @apply bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30;
+  }
+  .action-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  .action-btn-icon {
+    @apply w-4 h-4;
+  }
+
+  /* Icon buttons */
+  .icon-btn {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-all duration-200;
+  }
+  .icon-btn-danger {
+    @apply text-red-400 hover:text-red-300 hover:bg-red-500/20;
+  }
+  .icon-btn-success {
+    @apply text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20;
+  }
+  .icon-btn-warning {
+    @apply text-amber-400 hover:text-amber-300 hover:bg-amber-500/20;
+  }
+
+  /* Action bar */
+  .action-bar {
+    @apply flex items-center gap-1;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MODALS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+    animation: fadeIn 0.15s ease-out;
+  }
+  .modal-content {
+    @apply w-full max-w-lg rounded-2xl border border-zinc-800/60 bg-zinc-900/95 backdrop-blur-xl shadow-2xl overflow-hidden;
+    animation: slideUp 0.2s ease-out;
+  }
+  .modal-sm {
+    @apply max-w-sm;
+  }
+  .modal-lg {
+    @apply max-w-2xl;
+  }
+  .modal-header {
+    @apply flex items-center justify-between p-4 border-b border-zinc-800/60;
+  }
+  .modal-title {
+    @apply text-lg font-semibold text-zinc-100;
+  }
+  .modal-close {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors;
+  }
+  .modal-body {
+    @apply p-4;
+  }
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 p-4 border-t border-zinc-800/60 bg-zinc-900/50;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     DRAWERS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .drawer-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-50;
+    animation: fadeIn 0.15s ease-out;
+  }
+  .drawer-content {
+    @apply fixed right-0 top-0 h-full w-full max-w-md border-l border-zinc-800/60 bg-zinc-900/98 backdrop-blur-xl shadow-2xl;
+    animation: slideInRight 0.25s ease-out;
+  }
+  .drawer-header {
+    @apply flex items-center justify-between p-4 border-b border-zinc-800/60;
+  }
+  .drawer-title {
+    @apply text-lg font-semibold text-zinc-100;
+  }
+  .drawer-body {
+    @apply p-4 overflow-y-auto;
+    height: calc(100% - 65px);
+  }
+
+  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     FORMS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .form-group {
+    @apply space-y-1.5;
+  }
+  .form-label {
+    @apply block text-sm font-medium text-zinc-400;
+  }
+  .form-input {
+    @apply w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-colors;
+  }
+  .form-select {
+    @apply w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-100 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-colors cursor-pointer;
+  }
+  .form-textarea {
+    @apply w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-colors resize-none;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TOASTS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .toast-container {
+    @apply fixed bottom-4 right-4 z-50 space-y-2;
+  }
+  .toast {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-xl border;
+    animation: slideInUp 0.3s ease-out;
+  }
+  .toast-success {
+    @apply bg-emerald-500/20 border-emerald-500/30 text-emerald-400;
+  }
+  .toast-error {
+    @apply bg-red-500/20 border-red-500/30 text-red-400;
+  }
+  .toast-warning {
+    @apply bg-amber-500/20 border-amber-500/30 text-amber-400;
+  }
+  .toast-info {
+    @apply bg-blue-500/20 border-blue-500/30 text-blue-400;
+  }
+  .toast-icon {
+    @apply w-5 h-5;
+  }
+  .toast-message {
+    @apply text-sm font-medium;
+  }
+
+  @keyframes slideInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     QUICK ACTIONS MENU
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .quick-actions-menu {
+    @apply fixed z-50 min-w-48 rounded-xl border border-zinc-800/60 bg-zinc-900/98 backdrop-blur-xl shadow-2xl overflow-hidden py-1;
+    animation: scaleIn 0.15s ease-out;
+  }
+  .quick-action-item {
+    @apply w-full flex items-center gap-3 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800/50 transition-colors text-left;
+  }
+  .quick-action-danger {
+    @apply text-red-400 hover:bg-red-500/10;
+  }
+  .quick-action-icon {
+    @apply w-4 h-4 text-zinc-500;
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     HITL APPROVAL CARDS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .hitl-card {
+    @apply rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden;
+  }
+  .hitl-header {
+    @apply px-4 py-2 border-b border-amber-500/20 bg-amber-500/10;
+  }
+  .hitl-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400;
+  }
+  .hitl-body {
+    @apply p-4;
+  }
+  .hitl-footer {
+    @apply flex items-center gap-2 p-3 border-t border-amber-500/20 bg-zinc-900/50;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     COMMAND PALETTE
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .command-palette-overlay {
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center pt-24;
+    animation: fadeIn 0.1s ease-out;
+  }
+  .command-palette {
+    @apply w-full max-w-2xl rounded-2xl border border-zinc-800/60 bg-zinc-900/95 backdrop-blur-xl shadow-2xl overflow-hidden;
+    animation: slideDown 0.15s ease-out;
+  }
+  .command-palette-input-wrapper {
+    @apply flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60;
+  }
+  .command-palette-search-icon {
+    @apply w-5 h-5 text-zinc-500;
+  }
+  .command-palette-input {
+    @apply flex-1 bg-transparent text-zinc-100 placeholder-zinc-500 focus:outline-none text-lg;
+  }
+  .command-palette-kbd {
+    @apply px-2 py-1 rounded bg-zinc-800 text-zinc-500 text-xs font-mono;
+  }
+  .command-palette-results {
+    @apply max-h-96 overflow-y-auto py-2;
+  }
+  .command-palette-item {
+    @apply w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-zinc-800/50 transition-colors;
+  }
+  .command-palette-item-icon {
+    @apply w-5 h-5 text-zinc-500;
+  }
+  .command-palette-item-content {
+    @apply flex-1 min-w-0;
+  }
+  .command-palette-item-label {
+    @apply block text-sm text-zinc-200 truncate;
+  }
+  .command-palette-item-category {
+    @apply block text-xs text-zinc-500;
+  }
+  .command-palette-item-shortcut {
+    @apply px-2 py-0.5 rounded bg-zinc-800 text-zinc-500 text-xs font-mono;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* CLS builder — snap-to-grid drop lanes (Phase 3.12) */
+  .builder-snap-grid {
+    background-size: 24px 24px;
+    background-image:
+      linear-gradient(to right, rgba(99, 102, 241, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(99, 102, 241, 0.1) 1px, transparent 1px);
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     Phase 7.1 — 6-token palette utility classes
+     ────────────────────────────────────────────────────────────────────────────
+     Component-layer utilities so new code can use `text-brand`,
+     `bg-success/10`, `border-danger/30`, etc. without depending on
+     a Tailwind config rebuild. Alpha modifiers like `/10` are
+     handled by passing `<alpha-value>` through CSS variable
+     substitution. Stick to multiples of 5 (5/10/20/30/50/80) so
+     the surface stays consistent.
+     ════════════════════════════════════════════════════════════════════════════ */
+  .text-brand    { color: rgb(var(--token-brand)); }
+  .text-success  { color: rgb(var(--token-success)); }
+  .text-warn     { color: rgb(var(--token-warn)); }
+  .text-danger   { color: rgb(var(--token-danger)); }
+  .text-info     { color: rgb(var(--token-info)); }
+  .text-muted    { color: rgb(var(--token-muted)); }
+
+  .bg-brand      { background-color: rgb(var(--token-brand)); }
+  .bg-success    { background-color: rgb(var(--token-success)); }
+  .bg-warn       { background-color: rgb(var(--token-warn)); }
+  .bg-danger     { background-color: rgb(var(--token-danger)); }
+  .bg-info       { background-color: rgb(var(--token-info)); }
+  .bg-muted      { background-color: rgb(var(--token-muted)); }
+
+  .border-brand   { border-color: rgb(var(--token-brand)); }
+  .border-success { border-color: rgb(var(--token-success)); }
+  .border-warn    { border-color: rgb(var(--token-warn)); }
+  .border-danger  { border-color: rgb(var(--token-danger)); }
+  .border-info    { border-color: rgb(var(--token-info)); }
+  .border-muted   { border-color: rgb(var(--token-muted)); }
+
+  /* Alpha tints — use as `.bg-brand-5`, `.border-warn-30`, etc.
+     Hand-rolled because Tailwind v3 can't synthesise these from
+     CSS-variable colour stops without a config rebuild. */
+  .bg-brand-5    { background-color: rgb(var(--token-brand) / 0.05); }
+  .bg-brand-10   { background-color: rgb(var(--token-brand) / 0.10); }
+  .bg-brand-20   { background-color: rgb(var(--token-brand) / 0.20); }
+  .bg-success-5  { background-color: rgb(var(--token-success) / 0.05); }
+  .bg-success-10 { background-color: rgb(var(--token-success) / 0.10); }
+  .bg-success-20 { background-color: rgb(var(--token-success) / 0.20); }
+  .bg-warn-5     { background-color: rgb(var(--token-warn) / 0.05); }
+  .bg-warn-10    { background-color: rgb(var(--token-warn) / 0.10); }
+  .bg-warn-20    { background-color: rgb(var(--token-warn) / 0.20); }
+  .bg-danger-5   { background-color: rgb(var(--token-danger) / 0.05); }
+  .bg-danger-10  { background-color: rgb(var(--token-danger) / 0.10); }
+  .bg-danger-20  { background-color: rgb(var(--token-danger) / 0.20); }
+
+  .border-brand-30   { border-color: rgb(var(--token-brand) / 0.30); }
+  .border-success-30 { border-color: rgb(var(--token-success) / 0.30); }
+  .border-warn-30    { border-color: rgb(var(--token-warn) / 0.30); }
+  .border-danger-30  { border-color: rgb(var(--token-danger) / 0.30); }
+  .border-info-30    { border-color: rgb(var(--token-info) / 0.30); }
+  .border-muted-30   { border-color: rgb(var(--token-muted) / 0.30); }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     Phase 8 — LEVEL-10 DESIGN TOKENS
+     ────────────────────────────────────────────────────────────────────────────
+     This block formalises the design language used by every primitive so the
+     UI feels like one application instead of a collection of pages. The
+     tokens follow the conventions enterprise systems converge on:
+
+     - z-index lives on a named stack so overlays never fight each other.
+     - Elevation is a 5-step shadow scale (level-0 = flat, level-4 = modal).
+     - Motion is two durations × two easings — anything beyond that is noise.
+     - Type is a six-step scale with proper line-height + tracking.
+
+     Touching these tokens propagates through the whole UI. Don't add
+     ad-hoc shadows / z-indices / durations in new components — extend the
+     scale instead.
+     ════════════════════════════════════════════════════════════════════════════ */
+
+  /* ── Z-index stack ──────────────────────────────────────────────────────
+     Named so layered surfaces never collide. Numbers are intentionally
+     spaced so we can insert a level (e.g. command-palette) without
+     renumbering everything else. */
+  .z-base       { z-index: 0; }
+  .z-raised     { z-index: 10; }
+  .z-dropdown   { z-index: 20; }
+  .z-sticky     { z-index: 30; }
+  .z-drawer     { z-index: 40; }
+  .z-overlay    { z-index: 50; }
+  .z-modal      { z-index: 60; }
+  .z-popover    { z-index: 70; }
+  .z-toast      { z-index: 80; }
+  .z-tooltip    { z-index: 90; }
+  .z-max        { z-index: 100; }
+
+  /* ── Elevation (dark-mode-adapted shadows) ─────────────────────────────
+     Level 0 is flat — for inline / dense surfaces.
+     Level 1 is the default card.
+     Level 2 lifts on hover / focus.
+     Level 3 is sticky surfaces (headers, drawers).
+     Level 4 is the modal panel.
+     Level 5 is the toast / tooltip top-stop. */
+  .shadow-elev-0 { box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset; }
+  .shadow-elev-1 { box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset, 0 1px 2px rgba(0,0,0,0.4); }
+  .shadow-elev-2 { box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 4px 12px -2px rgba(0,0,0,0.4); }
+  .shadow-elev-3 { box-shadow: 0 0 0 1px rgba(255,255,255,0.05) inset, 0 8px 24px -4px rgba(0,0,0,0.5); }
+  .shadow-elev-4 { box-shadow: 0 0 0 1px rgba(255,255,255,0.06) inset, 0 16px 48px -8px rgba(0,0,0,0.7); }
+  .shadow-elev-5 { box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 24px 64px -12px rgba(0,0,0,0.8); }
+
+  /* ── Surfaces (background layers) ──────────────────────────────────────
+     Layer-0 is the page background (already on <body>).
+     Layer-1 is a contained surface (card, panel).
+     Layer-2 is a nested surface inside layer-1.
+     Layer-3 is the floating surface (popover / dropdown panel). */
+  .surface-1 { background-color: rgb(24 24 27 / 0.7); border: 1px solid rgb(39 39 42 / 0.8); backdrop-filter: blur(8px); }
+  .surface-2 { background-color: rgb(39 39 42 / 0.6); border: 1px solid rgb(63 63 70 / 0.6); }
+  .surface-3 { background-color: rgb(24 24 27 / 0.95); border: 1px solid rgb(63 63 70 / 0.8); backdrop-filter: blur(12px); }
+
+  /* ── Motion tokens ─────────────────────────────────────────────────────
+     Use sparingly. Most UI changes should snap. Reserve `glide` for
+     overlay enter, `spring` for confirmation feedback. */
+  :root {
+    --dur-instant: 50ms;
+    --dur-fast:    120ms;
+    --dur-base:    180ms;
+    --dur-slow:    280ms;
+    --ease-snap:   cubic-bezier(0.16, 1, 0.3, 1);   /* default — fast in, settled out */
+    --ease-glide:  cubic-bezier(0.4,  0, 0.2, 1);   /* material standard */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* slight overshoot */
+  }
+
+  /* ── Type scale ────────────────────────────────────────────────────────
+     Six steps, designed to compose vertically without manual tuning. Each
+     step pins line-height and tracking so headings always sit on the same
+     baseline regardless of weight. */
+  .text-display { font-size: 2.25rem;  line-height: 2.5rem;   letter-spacing: -0.025em; font-weight: 700; }
+  .text-h1      { font-size: 1.875rem; line-height: 2.25rem;  letter-spacing: -0.02em;  font-weight: 700; }
+  .text-h2      { font-size: 1.5rem;   line-height: 2rem;     letter-spacing: -0.015em; font-weight: 600; }
+  .text-h3      { font-size: 1.25rem;  line-height: 1.75rem;  letter-spacing: -0.01em;  font-weight: 600; }
+  .text-h4      { font-size: 1.0625rem;line-height: 1.5rem;   letter-spacing: -0.005em; font-weight: 600; }
+  .text-body    { font-size: 0.875rem; line-height: 1.375rem; }
+  .text-body-sm { font-size: 0.8125rem;line-height: 1.25rem;  }
+  .text-caption { font-size: 0.75rem;  line-height: 1.125rem; letter-spacing: 0.01em; }
+  .text-eyebrow { font-size: 0.6875rem;line-height: 1rem;     letter-spacing: 0.08em;  text-transform: uppercase; font-weight: 600; }
+  .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+  /* ── Spacing scale (8px grid) ──────────────────────────────────────────
+     Layout primitives consume these via class names (`stack-xs` …
+     `stack-2xl`) so the rhythm stays consistent even when authors compose
+     ad hoc. The 8px grid keeps everything optically aligned. */
+  .stack-3xs > * + * { margin-top: 0.125rem; } /* 2px */
+  .stack-2xs > * + * { margin-top: 0.25rem;  } /* 4px */
+  .stack-xs  > * + * { margin-top: 0.5rem;   } /* 8px */
+  .stack-sm  > * + * { margin-top: 0.75rem;  } /* 12px */
+  .stack-md  > * + * { margin-top: 1rem;     } /* 16px */
+  .stack-lg  > * + * { margin-top: 1.5rem;   } /* 24px */
+  .stack-xl  > * + * { margin-top: 2rem;     } /* 32px */
+  .stack-2xl > * + * { margin-top: 3rem;     } /* 48px */
+  .stack-3xl > * + * { margin-top: 4rem;     } /* 64px */
+
+  /* ── Container widths ──────────────────────────────────────────────────
+     One source of truth for the page padding + max-width. Every page
+     wraps content in `<PageContainer>` which uses these. */
+  .container-page { width: 100%; max-width: 80rem; margin-inline: auto; padding-inline: 1.5rem; }
+  @media (min-width: 1280px) { .container-page { padding-inline: 2rem; } }
+  .container-narrow { width: 100%; max-width: 48rem; margin-inline: auto; padding-inline: 1.5rem; }
+  .container-wide { width: 100%; max-width: 96rem; margin-inline: auto; padding-inline: 1.5rem; }
+
+  /* ── Section header rhythm ─────────────────────────────────────────────
+     `<PageHeader>` and `<PageSection>` use these so a page's header
+     always sits at the same scroll position relative to the topbar. */
+  .section-gap   { padding-block: 2rem; }
+  .section-gap-sm{ padding-block: 1.25rem; }
+
+  /* ── Sticky-safe topbar ────────────────────────────────────────────────
+     Apply to any sticky element so it never paints over a scrolled
+     element. The combination of `position: sticky; top: 0; z-sticky;
+     backdrop-blur` is what makes the topbar feel modern and non-occlusive. */
+  .sticky-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: blur(12px);
+    background-color: rgb(9 9 11 / 0.75);
+    border-bottom: 1px solid rgb(39 39 42 / 0.6);
+  }
+
+  /* ── Alert / Banner shells ─────────────────────────────────────────────
+     The Rust primitives in `components/ui/alert.rs` apply these. */
+  .alert-shell {
+    @apply flex items-start gap-3 rounded-xl border px-4 py-3 text-sm;
+  }
+  .alert-info     { @apply bg-info/10    border-info-30    text-info;    }
+  .alert-success  { @apply bg-success-10 border-success-30 text-success; }
+  .alert-warning  { @apply bg-warn-10    border-warn-30    text-warn;    }
+  .alert-danger   { @apply bg-danger-10  border-danger-30  text-danger;  }
+  .alert-neutral  { @apply bg-zinc-900/60 border-zinc-700/60 text-zinc-200; }
+  .banner-shell {
+    @apply flex items-center gap-3 px-4 py-2.5 border-b text-sm;
+  }
+
+  /* ── EmptyState shell ─────────────────────────────────────────────────
+     One presentation across the app — illustration / icon / headline /
+     description / CTA — composed by `<EmptyState>`. */
+  .empty-shell {
+    @apply card flex flex-col items-center text-center px-6 py-10 gap-3;
+  }
+  .empty-icon {
+    @apply h-14 w-14 rounded-2xl flex items-center justify-center bg-zinc-800/60 border border-zinc-700/60 text-zinc-400;
+  }
+
+  /* ── Progress ──────────────────────────────────────────────────────────
+     Linear / Vercel / Stripe all use this same recipe: a 1.5–2px thin
+     track with a clipped fill. The fill animation is reduced-motion-safe
+     via the global rule above. */
+  .progress-track {
+    @apply relative overflow-hidden rounded-full bg-zinc-800;
+  }
+  .progress-fill {
+    @apply absolute inset-y-0 left-0 rounded-full bg-brand;
+    transition: width var(--dur-base) var(--ease-snap);
+  }
+  .progress-indeterminate::after {
+    content: '';
+    @apply absolute inset-y-0 left-0 w-1/3 rounded-full bg-brand;
+    animation: progress-slide 1.2s var(--ease-glide) infinite;
+  }
+  @keyframes progress-slide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+
+  /* ── PageHeader rhythm ────────────────────────────────────────────────
+     The `<PageHeader>` primitive composes title + eyebrow + description +
+     breadcrumbs + actions on this 8px grid. */
+  .page-header {
+    @apply flex flex-col gap-3 pb-6 border-b border-zinc-800/40 mb-6;
+  }
+  .page-header-row {
+    @apply flex items-start justify-between gap-4 flex-wrap;
+  }
+  .page-header-actions {
+    @apply flex items-center gap-2 shrink-0;
+  }
+  .breadcrumb {
+    @apply flex items-center gap-1.5 text-xs text-muted;
+  }
+  .breadcrumb a:hover { @apply text-zinc-300; }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     Phase 7.6 — developer-view gating
+     ────────────────────────────────────────────────────────────────────────────
+     Elements marked `.dev-only` are hidden unless the operator has
+     turned on Settings → Display → Developer view. `main.rs` mirrors
+     the persisted preference onto `<body data-developer="0|1">` so
+     the rule below can be evaluated purely in CSS.
+     ════════════════════════════════════════════════════════════════════════════ */
+  body[data-developer="0"] .dev-only,
+  body:not([data-developer]) .dev-only { display: none !important; }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     ACCESSIBILITY — focus rings + reduced motion
+     ────────────────────────────────────────────────────────────────────────────
+     Two baselines every React/Next-quality UI ships:
+
+     1.  Visible focus on every keyboard-reachable element. The default
+         `:focus` outline browsers paint can be hard to see against the
+         dark theme — we lift it to a 2px ring in the brand colour and
+         disable on mouse interaction (`:focus:not(:focus-visible)`).
+     2.  Respect `prefers-reduced-motion`. Operators with vestibular
+         disorders or who simply disable motion at the OS level should
+         not see card lifts, slide-ins, pulsing dots, or 3D tilts.
+     ════════════════════════════════════════════════════════════════════════════ */
+  :focus-visible {
+    outline: 2px solid rgb(var(--token-brand));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  /* Hide the focus ring on mouse-only interactions; keyboard users keep it. */
+  :focus:not(:focus-visible) { outline: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+    .card-3d:hover,
+    .card-interactive:hover,
+    .hover-lift:hover,
+    .hover-scale:hover { transform: none !important; }
+    .float, .pulse-ring::after, .border-animated::before { animation: none !important; }
+    .badge-live::before, .status-badge-live::before { animation: none !important; }
+  }
+
+  /* Touch-target floor — anything tappable should be ≥ 40×40 on
+     coarse pointers. Apple HIG / Material Design baseline. */
+  @media (pointer: coarse) {
+    button, [role="button"], a.nav-item, .tab-item, .tab-item-active {
+      min-height: 40px;
+    }
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     SKELETON LOADERS — typed building blocks
+     ────────────────────────────────────────────────────────────────────────────
+     The `.skeleton` base above is the animated pulse rectangle. These
+     compose it into purpose-built shapes so Suspense fallbacks render
+     content-shaped boxes instead of a lone spinner — same trick
+     Next.js / Vercel / Linear use to prevent layout shift.
+     ════════════════════════════════════════════════════════════════════════════ */
+  .skeleton-text {
+    @apply skeleton h-3 rounded;
+  }
+  .skeleton-heading {
+    @apply skeleton h-5 rounded w-2/3;
+  }
+  .skeleton-circle {
+    @apply skeleton rounded-full;
+  }
+  .skeleton-card {
+    @apply card space-y-3;
+  }
+  .skeleton-row {
+    @apply flex items-center gap-3 py-2;
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     TOASTER — global queue (component renders <Toaster /> once at root)
+     ──────────────────────────────────────────────────────────────────────────── */
+  .toaster-stack {
+    @apply fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-2 pointer-events-none;
+    max-width: min(420px, calc(100vw - 2rem));
+  }
+  .toaster-item {
+    @apply pointer-events-auto rounded-xl border px-4 py-3 text-sm font-medium shadow-2xl backdrop-blur-xl flex items-start gap-3;
+    animation: slideInUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .toaster-item[data-leaving="true"] {
+    animation: slideOutDown 0.2s ease-in forwards;
+  }
+  .toaster-success { @apply bg-success-10 border-success-30 text-success; }
+  .toaster-error   { @apply bg-danger-10  border-danger-30  text-danger;  }
+  .toaster-warning { @apply bg-warn-10    border-warn-30    text-warn;    }
+  .toaster-info    { @apply bg-brand-10   border-brand-30   text-brand;   }
+  .toaster-close {
+    @apply ml-2 -mr-1 -my-1 rounded-md p-1 text-current opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40;
+  }
+  @keyframes slideOutDown {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(20px); }
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     NOTIFICATION PANEL — header bell dropdown
+     Named classes so Tailwind JIT always includes them (dynamic class
+     construction in Rust strings is invisible to the scanner).
+     ════════════════════════════════════════════════════════════════════════════ */
+  .notifications-popup {
+    animation: notif-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04) inset,
+      0 24px 64px -12px rgba(0,0,0,0.8),
+      0 8px 24px -4px rgba(0,0,0,0.5);
+  }
+  @keyframes notif-enter {
+    from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)     scale(1);    }
+  }
+
+  /* Severity rail (left colour bar) */
+  .notif-rail-paged    { background-color: #d946ef; }  /* fuchsia-500 */
+  .notif-rail-critical { background-color: #f43f5e; }  /* rose-500    */
+  .notif-rail-warning  { background-color: #f59e0b; }  /* amber-500   */
+  .notif-rail-info     { background-color: rgba(14,165,233,0.9); } /* sky-500 */
+  .notif-rail-default  { background-color: #52525b; }  /* zinc-600    */
+
+  /* Severity pills — expanded inline to avoid @apply forward-ref issues */
+  .notif-pill-paged,
+  .notif-pill-critical,
+  .notif-pill-warning,
+  .notif-pill-info,
+  .notif-pill-default,
+  .notif-status-pending,
+  .notif-status-delivered,
+  .notif-status-acknowledged,
+  .notif-status-snoozed,
+  .notif-status-escalated,
+  .notif-status-cancelled,
+  .notif-status-default {
+    @apply rounded border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-tight;
+  }
+  .notif-pill-paged      { border-color: rgba(217,70,239,0.35);  background-color: rgba(217,70,239,0.15);  color: rgba(245,208,254,0.95); }
+  .notif-pill-critical   { border-color: rgba(244,63,94,0.35);   background-color: rgba(244,63,94,0.15);   color: rgba(254,205,211,0.95); }
+  .notif-pill-warning    { border-color: rgba(245,158,11,0.30);  background-color: rgba(245,158,11,0.10);  color: rgba(253,230,138,0.90); }
+  .notif-pill-info       { border-color: rgba(14,165,233,0.30);  background-color: rgba(14,165,233,0.10);  color: rgba(186,230,253,0.90); }
+  .notif-pill-default    { border-color: rgba(82,82,91,0.50);    background-color: rgba(39,39,42,0.60);    color: #a1a1aa; }
+
+  /* Status pills */
+  .notif-status-pending      { border-color: rgba(217,119,6,0.30);   background-color: rgba(120,53,15,0.30);  color: rgba(253,230,138,0.85); }
+  .notif-status-delivered    { border-color: rgba(5,150,105,0.30);   background-color: rgba(6,78,59,0.25);    color: rgba(167,243,208,0.85); }
+  .notif-status-acknowledged { border-color: rgba(82,82,91,0.40);    background-color: rgba(24,24,27,0.50);   color: #71717a; }
+  .notif-status-snoozed      { border-color: rgba(99,102,241,0.30);  background-color: rgba(30,27,75,0.25);   color: rgba(199,210,254,0.85); }
+  .notif-status-escalated    { border-color: rgba(249,115,22,0.35);  background-color: rgba(67,20,7,0.25);    color: rgba(254,215,170,0.85); }
+  .notif-status-cancelled    { border-color: rgba(63,63,70,0.40);    background-color: rgba(9,9,11,0.40);     color: #52525b; }
+  .notif-status-default      { border-color: rgba(82,82,91,0.40);    background-color: rgba(24,24,27,0.40);   color: #a1a1aa; }
+
+  /* Icon badge containers */
+  .notif-icon-alert   { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(244,63,94,0.20); color: #fb7185; }
+  .notif-icon-alert-dim { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(244,63,94,0.10); color: rgba(251,113,133,0.60); }
+  .notif-icon-warning { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(245,158,11,0.20); color: #fbbf24; }
+  .notif-icon-warning-dim { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(245,158,11,0.10); color: rgba(251,191,36,0.60); }
+  .notif-icon-success { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(16,185,129,0.20); color: #34d399; }
+  .notif-icon-success-dim { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(16,185,129,0.10); color: rgba(52,211,153,0.60); }
+  .notif-icon-info    { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(59,130,246,0.20); color: #60a5fa; }
+  .notif-icon-info-dim { @apply w-8 h-8 rounded-lg flex items-center justify-center; background-color: rgba(59,130,246,0.10); color: rgba(96,165,250,0.60); }
+
+  /* Notification row item */
+  .notification-item {
+    @apply flex gap-0 border-b border-zinc-800/50 transition-colors duration-150;
+  }
+  .notification-item:hover { background-color: rgba(39,39,42,0.30); }
+  .notification-item:last-child { @apply border-b-0; }
+}

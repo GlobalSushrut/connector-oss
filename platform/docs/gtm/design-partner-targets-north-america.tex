@@ -1,0 +1,302 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\setcounter{secnumdepth}{0}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.15em,topsep=0.25em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\newcommand{\companyentry}[8]{%
+\subsection*{#1}
+\begin{itemize}
+\item \textbf{HQ / ICP}: #2 / #3
+\item \textbf{Why it matches}: #4
+\item \textbf{Public signal}: #5
+\item \textbf{Likely buyer}: #6
+\item \textbf{Difficulty}: #7
+\item \textbf{Why difficulty is at that level}: #8
+\end{itemize}
+}
+\begin{document}
+\small
+\begin{center}
+{\LARGE \textbf{Connector Design-Partner Target Universe}}\\[0.3em]
+{\large 100 North American Companies Matching ICP1, ICP2, and ICP3}\\[0.4em]
+{\normalsize USA and Canada only}
+\end{center}
+
+\section{How to read this report}
+This report is built for founder-led outbound and design-partner selection. It follows the ICP definitions in the internal workflow control deck:
+\begin{itemize}
+\item \textbf{ICP1}: companies already running internal AI workflows or agentic systems in production and actively fixing instability.
+\item \textbf{ICP2}: experimentation-heavy AI labs and platform companies building agents, evals, or workflow infrastructure where internal iteration speed and reliability are core.
+\item \textbf{ICP3}: regulated healthcare, fintech, and legal companies where internal AI workflows need traceability, policy control, and explainability.
+\end{itemize}
+The fit call is directional and based on public signals from company product pages, launch posts, case studies, YC or venture directories, and public positioning. It is meant for prospecting and prioritization, not certainty.
+
+\section{Difficulty legend}
+\begin{itemize}
+\item \textbf{Access}: how hard it is to get a serious design-partner conversation with the right buyer.
+\item \textbf{Onboarding}: how hard it is to get technically onboarded into a real workflow fast enough to prove value.
+\item \textbf{Low}: approachable team, narrower scope, simpler integration.
+\item \textbf{Medium}: credible target, but requires clear use case, buyer access, and workflow mapping.
+\item \textbf{High}: enterprise buyer motion, complex integrations, or sensitive systems.
+\item \textbf{Very High}: large incumbent, strong internal platform teams, or regulated implementation burden.
+\end{itemize}
+
+\section{Executive summary}
+\begin{itemize}
+\item \textbf{ICP1 total}: 50 companies.
+\item \textbf{ICP2 total}: 30 companies.
+\item \textbf{ICP3 total}: 20 companies.
+\item \textbf{Best early design-partner profile}: mid-market to growth-stage platform companies already shipping AI agents into customer support, internal work AI, or workflow automation, where the team already understands observability but still lacks runtime control.
+\item \textbf{Highest-probability early wedge}: support automation, contact center AI, enterprise work AI, and agent orchestration vendors with visible workflow complexity and public language around safeguards, evals, or governance.
+\end{itemize}
+
+\clearpage
+\section{ICP1: Internal Fix Loop --- 50 companies}
+
+\companyentry{Ada}{Toronto, Canada}{ICP1}{Ada is already in enterprise customer service automation with autonomous decisioning, which means real production workflow reliability is core to the product.}{Public product pages emphasize AI agents, autonomous decision making, adaptive reasoning, and multi-layer safeguards.}{VP Engineering, Head of AI, CTO, VP CX Technology}{Access: Medium; Onboarding: Medium-High}{The category fit is very direct, but proving value will require access to live support flows, escalation rules, and policy boundaries.}
+
+\companyentry{Glean}{Palo Alto, USA}{ICP1}{Glean is explicitly building enterprise agents that operate across business systems, so orchestration and execution control are central problems.}{Glean publicly markets building, deploying, orchestrating, and governing AI agents inside enterprise workflows.}{Head of AI Platform, VP Engineering, CTO}{Access: High; Onboarding: High}{Strong fit, but security, internal knowledge graph access, and cross-system execution make evaluation and rollout heavier.}
+
+\companyentry{Moveworks}{Mountain View, USA}{ICP1}{Moveworks already runs AI across internal employee workflows such as IT and HR, where bad actions and brittle execution are expensive.}{Public messaging describes a reasoning engine that understands, plans, executes, and adapts inside enterprise workflows.}{VP Product, Head of AI Platform, CTO}{Access: High; Onboarding: High}{Buyer quality is high, but the company already has serious platform depth and a complex integration environment.}
+
+\companyentry{Aisera}{Palo Alto, USA}{ICP1}{Aisera is a close fit because it automates multi-step workflows across IT, HR, finance, and support.}{Its public platform pages highlight AI workflows, agentic reasoning, orchestration, and hyperflow catalogs.}{VP Engineering, CIO, Head of Automation}{Access: High; Onboarding: High}{The fit is strong, but deployments usually span multiple systems and require enterprise security review.}
+
+\companyentry{Sierra}{San Francisco, USA}{ICP1}{Sierra is building customer experience agents with explicit decisioning and workflow logic, which is where runtime control matters.}{Sierra describes decisioning engines, next-best-action workflows, and support for engineering teams building agents.}{VP Engineering, CTO, Head of CX Platform}{Access: Medium-High; Onboarding: Medium-High}{Still design-partner plausible, but the company is well-capitalized and technically mature enough to expect a sharp wedge.}
+
+\companyentry{Decagon}{San Francisco, USA}{ICP1}{Decagon is one of the clearest fits because it already speaks the language of reliability, testing, observability, and iteration for AI agents.}{Public materials emphasize robust testing, observability, experimentation, and agent reliability as systems evolve.}{Head of AI Engineering, VP Product, CTO}{Access: Medium; Onboarding: Medium-High}{The conceptual fit is excellent, but the bar for technical novelty will be high because they already understand the problem deeply.}
+
+\companyentry{Coveo}{Quebec, Canada}{ICP1}{Coveo sits near agentic search, self-service, and agent workflows, where retrieval quality and action quality intersect.}{Public pages mention agentic AI, self-service, agent workflows, and sovereign AI partnerships for regulated buyers.}{VP Product, CTO, Head of AI Relevance}{Access: Medium-High; Onboarding: High}{The buyer case is real, but integrations into enterprise relevance and workflow layers will be non-trivial.}
+
+\companyentry{Forethought}{San Francisco, USA}{ICP1}{Forethought is a strong fit because workflow duplication, wrong answers, and fact validation are already visible pain points in the category.}{Public platform materials talk about multi-agent systems, verification of facts, fallback workflows, and support automation complexity.}{VP Support Technology, CTO, GM AI}{Access: Medium; Onboarding: Medium}{The fit is direct and pain is public, but the scope still requires access to live support routing and automation logic.}
+
+\companyentry{Netomi}{San Francisco, USA}{ICP1}{Netomi is already positioning around policy-aware agentic customer service, which is close to the runtime control wedge.}{Public messaging highlights agentic AI, policies, guardrails, proactive action, and customer experience automation.}{VP CX Operations, CTO, Head of AI Platform}{Access: Medium; Onboarding: Medium}{A credible target with real workflow execution, though a first pilot still needs a tightly bounded use case.}
+
+\companyentry{Cresta}{Palo Alto, USA}{ICP1}{Cresta blends human and AI agents in live contact center operations where workflow reliability is commercially meaningful.}{Public pages highlight workflow automation, quality management automation, and AI for customer conversations.}{VP Contact Center Technology, CTO, VP Operations}{Access: Medium; Onboarding: Medium-High}{Buyer pain is clear, but production contact center stacks tend to be integration-heavy and KPI sensitive.}
+
+\companyentry{Observe.AI}{San Francisco, USA}{ICP1}{Observe.AI is an especially good fit because it talks about predictable outcomes, mission-critical steps, and workflow enforcement in contact centers.}{Public platform copy says its agents capture intent accurately, enforce mission-critical steps, integrate broadly, and improve continuously.}{VP CX Operations, Head of AI Platform, CTO}{Access: Medium-High; Onboarding: High}{The fit is strong, but real proof will require deep access to live workflows and operational metrics.}
+
+\companyentry{Gorgias}{San Francisco, USA}{ICP1}{Gorgias runs ecommerce support and sales automation where bad workflow execution directly hits customer experience and revenue.}{Public product pages say the AI agent learns a brand, the customer, and the workflow, and automates interactions continuously.}{VP Support, VP Engineering, Head of Automation}{Access: Medium; Onboarding: Medium}{The scope is tangible and buyer pain is real, but success depends on linking into existing ecommerce and support logic.}
+
+\companyentry{Zendesk}{San Francisco, USA}{ICP1}{Zendesk is moving from basic automation toward self-improving AI agents, which makes execution control a natural next layer.}{Public materials describe AI agents, a resolution learning loop, and optimization before deployment.}{GM AI, VP Platform, VP Product}{Access: Very High; Onboarding: High}{Massive installed base and resources make this a strategic target, but not an easy first design partner.}
+
+\companyentry{ServiceNow}{Santa Clara, USA}{ICP1}{ServiceNow already owns enterprise workflow infrastructure, so agentic execution quality is a real and expensive concern.}{Public positioning around workflow automation and AI assistance shows the company is moving deeper into agentic work.}{SVP Platform, VP Workflow AI, CIO Office}{Access: Very High; Onboarding: Very High}{The fit is real, but the company is large, process-heavy, and likely to expect a very polished product story.}
+
+\companyentry{Salesforce}{San Francisco, USA}{ICP1}{Salesforce is pushing Agentforce into production CRM workflows, which are highly valuable and failure-sensitive.}{Public messaging focuses on AI agents operating across CRM processes and customer operations.}{SVP AI Platform, VP Product, CIO Office}{Access: Very High; Onboarding: High}{A marquee target, but the internal platform depth and buyer sophistication make early entry hard.}
+
+\companyentry{Freshworks}{San Mateo, USA}{ICP1}{Freshworks has AI deeply embedded into customer and employee service workflows, which creates runtime reliability needs.}{Its public AI positioning emphasizes agentic automation across support and service desks.}{VP Product, CTO, Head of AI}{Access: Medium-High; Onboarding: Medium}{Good category fit with less institutional complexity than the biggest incumbents.}
+
+\companyentry{Kore.ai}{Orlando, USA}{ICP1}{Kore.ai operates in enterprise virtual assistants and automation, where orchestration and reliability are everyday problems.}{Public positioning centers on enterprise AI agents and workflow execution across service functions.}{Head of Conversational AI, CTO, VP Product}{Access: Medium-High; Onboarding: High}{Fit is direct, but platform breadth and integration scope raise onboarding complexity.}
+
+\companyentry{Amelia}{New York, USA}{ICP1}{Amelia is in digital employees and enterprise automation, both of which need better runtime decision control.}{Public pages highlight enterprise AI agents across service workflows and automation-heavy use cases.}{SVP Automation, VP Engineering, CIO}{Access: Medium-High; Onboarding: High}{Large workflow footprint and enterprise deployment style increase implementation burden.}
+
+\companyentry{Talkdesk}{Palo Alto, USA}{ICP1}{Talkdesk sits in high-volume contact center workflows where bad execution hurts both cost and customer satisfaction.}{Public messaging emphasizes AI-driven contact center automation and virtual agents.}{VP Contact Center Technology, CTO}{Access: High; Onboarding: Medium-High}{Good fit, but competitive noise is high and production contact center integrations are not lightweight.}
+
+\companyentry{Kustomer}{New York, USA}{ICP1}{Kustomer operates customer service workflows where AI triage, routing, and action quality can be improved materially.}{Public messaging centers on AI-powered customer service workflows and automation.}{VP CX Engineering, Head of Support Systems}{Access: Medium; Onboarding: Medium}{The workflow surface is clear and bounded enough for a credible pilot if the right champion exists.}
+
+\companyentry{Intercom}{San Francisco, USA}{ICP1}{Intercom is a strong fit because Fin AI Agent is already built to sit inside workflows, triage logic, and handoff logic.}{Intercom docs explicitly describe using Fin AI Agent inside Workflows for customization and triage.}{VP Support Engineering, CTO, Head of AI Product}{Access: Medium; Onboarding: Medium}{The fit is obvious, but the bar is higher because they already understand workflow automation deeply.}
+
+\companyentry{Assembled}{San Francisco, USA}{ICP1}{Assembled is close to support operations and AI workforce management, where teams are actively tuning automation quality.}{Public positioning combines support operations software with AI features for modern teams.}{Head of Support Operations, VP Engineering}{Access: Medium; Onboarding: Medium}{A practical design-partner target because the workflow scope is concrete and operational pain is measurable.}
+
+\companyentry{Retool}{San Francisco, USA}{ICP1}{Retool is compelling because it sits in internal tools and operational workflows where agent behavior meets real systems quickly.}{Public positioning emphasizes building internal apps, workflows, and AI-powered operations surfaces.}{Head of Internal Tools, VP Engineering, CTO}{Access: Medium; Onboarding: High}{If the wedge lands, it can be strategic, but pilots will require serious integration into internal tools and permissions.}
+
+\companyentry{Workato}{Mountain View, USA}{ICP1}{Workato is already an orchestration layer for enterprise automation, making it naturally adjacent to execution control.}{Public materials emphasize AI agents and automation orchestration across enterprise systems.}{VP Automation, Enterprise Architect, CTO}{Access: High; Onboarding: High}{Great conceptual fit, but workflow breadth and incumbent platform depth raise the proof burden.}
+
+\companyentry{Zapier}{San Francisco, USA}{ICP1}{Zapier is a good fit because agentic automation is now a direct extension of its workflow platform.}{Public positioning now includes AI agents and workflow automation across thousands of apps.}{Head of AI Automation, CTO, VP Product}{Access: Medium; Onboarding: Medium}{Broad workflow access is useful, but the product is already close to the problem space.}
+
+\companyentry{UiPath}{New York, USA}{ICP1}{UiPath is one of the strongest conceptual fits because agentic automation sits directly on top of execution-heavy workflows.}{Public messaging focuses on agentic automation and orchestration across enterprise processes.}{VP Intelligent Automation, CIO, CTO}{Access: High; Onboarding: Very High}{The fit is strategic, but the platform is massive and onboarding into meaningful workflows will be demanding.}
+
+\companyentry{Pegasystems}{Cambridge, USA}{ICP1}{Pega is already deep in decisioning and enterprise workflow execution, so runtime AI control is a natural adjacency.}{Public positioning highlights enterprise process orchestration, decisioning, and AI-enhanced automation.}{VP Process Automation, CIO Office, CTO}{Access: High; Onboarding: Very High}{Buyer sophistication is high and implementation environments are complex.}
+
+\companyentry{Gong}{San Francisco, USA}{ICP1}{Gong is moving toward revenue AI that touches live go-to-market workflows, where broken execution can be expensive.}{Public positioning emphasizes revenue AI, action recommendations, and automation across sales operations.}{VP Revenue Systems, CTO, Head of AI Product}{Access: Medium-High; Onboarding: Medium}{The workflow value is real, but the pain must be tied to operational execution rather than analytics alone.}
+
+\companyentry{Clari}{Sunnyvale, USA}{ICP1}{Clari is a fit where AI recommendations and revenue workflows move from visibility toward action.}{Public messaging increasingly ties AI to execution and revenue process automation.}{VP Revenue Operations, CTO}{Access: Medium-High; Onboarding: Medium}{The company fits best if the pilot is framed around execution and not generic forecasting or insights.}
+
+\companyentry{Outreach}{Seattle, USA}{ICP1}{Outreach runs AI-assisted sales execution workflows where action quality and sequencing matter.}{Public product pages emphasize AI-driven prospecting and revenue execution.}{VP RevOps, CTO, Head of AI Product}{Access: Medium; Onboarding: Medium}{The fit is decent, but value must be shown at the workflow-control layer, not just productivity.}
+
+\companyentry{Salesloft}{Atlanta, USA}{ICP1}{Salesloft is similar to Outreach: AI-guided workflows with real execution steps inside sales operations.}{Public materials emphasize AI sales automation and guided execution.}{VP RevOps, CTO}{Access: Medium; Onboarding: Medium}{Reachable if framed as reliability and control in revenue workflows rather than generic AI.}
+
+\companyentry{HubSpot}{Cambridge, USA}{ICP1}{HubSpot is putting AI agents and automation into GTM and support workflows, which creates runtime control needs.}{Public product launches around Breeze and AI agents show growing workflow automation ambition.}{GM AI, VP Product, Head of Platform}{Access: High; Onboarding: Medium}{Large brand and broad surface area increase access difficulty, though onboarding can be narrowed to one flow.}
+
+\companyentry{Front}{San Francisco, USA}{ICP1}{Front lives in shared inbox and operations workflows where AI routing and actioning can fail quietly.}{Public positioning includes AI and workflow automation for customer operations teams.}{VP Operations Systems, Head of Support Technology}{Access: Medium; Onboarding: Medium}{The target is reachable and workflow scope is concrete enough for a bounded pilot.}
+
+\companyentry{Rippling}{San Francisco, USA}{ICP1}{Rippling owns cross-functional workflows across HR, IT, and finance where AI mistakes can have real operational impact.}{Public product direction increasingly combines automation, policy, and AI in employee operations.}{CTO, Head of Platform, CIO Office}{Access: High; Onboarding: High}{The use case is strong, but internal systems and permissions make onboarding meaningfully harder.}
+
+\companyentry{Paradox}{Scottsdale, USA}{ICP1}{Paradox automates recruiting workflows with conversational AI, a strong example of internal execution loops under active tuning.}{Public positioning centers on AI assistants automating hiring operations.}{VP Talent Technology, CTO}{Access: Medium; Onboarding: Medium}{Good fit with a bounded domain, though the wedge must be tied to workflow correctness not just automation.}
+
+\companyentry{Qualified}{San Francisco, USA}{ICP1}{Qualified uses AI in pipeline-generation workflows where wrong execution can hurt lead handling and conversion.}{Public messaging emphasizes AI SDR and pipeline automation.}{VP Growth Engineering, VP RevOps}{Access: Medium; Onboarding: Medium}{The workflow surface is clear, but the design-partner angle has to be specific about runtime control.}
+
+\companyentry{Gladly}{San Francisco, USA}{ICP1}{Gladly is in customer service operations where AI and workflow quality are directly monetizable.}{Public positioning highlights AI-driven service experience and automation.}{VP CX Technology, CTO}{Access: Medium; Onboarding: Medium}{Strong enough fit if the pilot is tied to one live service flow with measurable containment or resolution gains.}
+
+\companyentry{Symbl.ai}{Seattle, USA}{ICP1}{Symbl.ai is close to workflow-aware conversation intelligence and real-time operational assistance.}{Public positioning focuses on real-time conversation intelligence and workflow-oriented APIs.}{Head of AI Platform, VP Product}{Access: Medium; Onboarding: Medium-High}{Useful fit, but the wedge has to connect to execution control rather than raw conversation analytics.}
+
+\companyentry{Ema}{Mountain View, USA}{ICP1}{Ema is building general enterprise AI employees, which makes runtime decision control a foundational problem.}{Public positioning emphasizes universal AI employees operating across functions and systems.}{CTO, Head of AI Transformation, VP Engineering}{Access: Medium-High; Onboarding: High}{The promise is broad, so onboarding a meaningful pilot will require carefully narrowing the first workflow.}
+
+\companyentry{DevRev}{Palo Alto, USA}{ICP1}{DevRev is an AI-native support and product operations platform where workflow execution is central.}{Public positioning links conversational AI, support, and product workflows.}{VP Support Engineering, CTO}{Access: Medium; Onboarding: Medium-High}{Strong fit, but the company is building an AI-native stack and will expect clear technical differentiation.}
+
+\companyentry{Maven AGI}{Boston, USA}{ICP1}{Maven AGI is directly in enterprise support automation, which is one of the cleanest execution-control wedges.}{Public positioning focuses on agentic support automation for enterprise teams.}{VP CX Engineering, CTO}{Access: Medium; Onboarding: Medium}{Reasonably reachable and highly relevant, especially if the pilot focuses on a narrow support flow.}
+
+\companyentry{Meya}{Canada}{ICP1}{Meya is a programmable support automation platform, so workflow logic and runtime behavior are first-order concerns.}{Public positioning emphasizes customer service automation and flexible workflow logic.}{Head of Support Technology, CTO}{Access: Medium; Onboarding: Medium}{The fit is good and scope is controllable, but a clear pain point needs to be surfaced quickly.}
+
+\companyentry{Pypestream}{New York, USA}{ICP1}{Pypestream operates conversational automation in enterprise service workflows where bad execution has visible cost.}{Public positioning centers on enterprise customer engagement automation and workflow execution.}{VP Digital Service, Head of Automation}{Access: Medium-High; Onboarding: High}{Enterprise deployment style increases onboarding work even though the wedge is relevant.}
+
+\companyentry{LivePerson}{New York, USA}{ICP1}{LivePerson has long been in conversational AI and customer automation, making workflow reliability a real issue.}{Public positioning connects AI agents to conversational workflows at enterprise scale.}{SVP Conversational AI, CTO}{Access: High; Onboarding: High}{Large public-company motion makes access harder and implementation heavier.}
+
+\companyentry{Verint}{New York, USA}{ICP1}{Verint is a credible fit through customer engagement and AI-powered automation across large service operations.}{Public positioning highlights CX automation, AI bots, and workflow optimization.}{VP Contact Center Platform, CIO Office}{Access: High; Onboarding: High}{The company is large and enterprise-focused, so pilots will need strong executive sponsorship.}
+
+\companyentry{Fullview}{San Francisco, USA}{ICP1}{Fullview is closer to the edge of ICP1 but still fits because it automates support operations and user-facing service flows.}{Public positioning emphasizes AI support automation and faster resolution.}{Head of Support, VP Product}{Access: Medium-Low; Onboarding: Low-Medium}{Smaller and more approachable than incumbents, with a narrower workflow surface that could make for a faster pilot.}
+
+\companyentry{Regal.ai}{New York, USA}{ICP1}{Regal.ai runs customer lifecycle and contact-center workflows where agentic execution quality affects revenue and service performance.}{Public positioning emphasizes AI phone agents and orchestrated customer journeys.}{VP Contact Center, VP Growth Operations}{Access: Medium; Onboarding: Medium}{The workflows are high value and concrete, though integrations still matter.}
+
+\companyentry{Dialpad}{San Francisco, USA}{ICP1}{Dialpad sits in AI contact center and communications workflows where real-time decision quality matters.}{Public positioning includes AI agents, voice automation, and real-time assistance.}{VP CX Technology, Head of AI Product}{Access: Medium-High; Onboarding: Medium}{The fit is real, but buyers may initially anchor on productivity instead of execution control.}
+
+\companyentry{Five9}{San Ramon, USA}{ICP1}{Five9 is a strong category fit through customer experience automation and AI-driven contact-center workflows.}{Public positioning emphasizes AI, automation, and customer experience workflows.}{VP Contact Center Technology, CTO}{Access: High; Onboarding: High}{A strong target but not an easy first one due to enterprise scale and incumbent complexity.}
+
+\companyentry{Kognitos}{San Jose, USA}{ICP1}{Kognitos is close to the wedge because it turns natural language operating procedures into automation.}{Public positioning centers on AI-powered automation for enterprise operations.}{VP Automation, CIO, Head of Platform}{Access: Medium; Onboarding: Medium-High}{The conceptual fit is excellent, but pilots still require process mapping and operational data access.}
+
+\clearpage
+\section{ICP2: Experimentation Labs --- 30 companies}
+
+\companyentry{Anthropic}{San Francisco, USA}{ICP2}{Anthropic is a high-end ICP2 target because it is deeply involved in agentic behavior, model safety, evals, and deployment quality.}{Public launches around tool use, agents, and model safety show ongoing experimentation with runtime behavior.}{Head of Research Platform, Head of Applied AI, VP Engineering}{Access: Very High; Onboarding: High}{The fit is conceptually excellent, but access is difficult and the internal team is extremely sophisticated.}
+
+\companyentry{OpenAI}{San Francisco, USA}{ICP2}{OpenAI is an experimentation-heavy environment where agent reliability, tool execution, and evaluation are active frontier concerns.}{Public materials on agents, structured outputs, evals, and customer stories point to deep runtime behavior work.}{Head of Applied Research, Product Engineering Lead, Platform Lead}{Access: Very High; Onboarding: High}{A strategic dream target, but extremely hard to access and unlikely to move quickly on an external wedge.}
+
+\companyentry{Cohere}{Toronto, Canada}{ICP2}{Cohere is a strong Canadian ICP2 target because it is deeply enterprise-facing while still experimentation-heavy.}{Public positioning includes enterprise AI, retrieval, agents, and deployment tooling.}{VP Product, Head of Platform AI, CTO}{Access: High; Onboarding: Medium-High}{Reachable relative to frontier giants, but still technically advanced and partner selective.}
+
+\companyentry{Character.AI}{Menlo Park, USA}{ICP2}{Character.AI is experimentation-heavy by default because product quality depends on live agent behavior and iteration.}{Public product direction and company positioning center on rich AI characters and agent-like interactions at scale.}{Head of Product, Head of Platform, CTO}{Access: High; Onboarding: Medium}{The runtime behavior challenge is real, but the external design-partner angle may need careful framing.}
+
+\companyentry{Cognition}{San Francisco, USA}{ICP2}{Cognition is building autonomous software agents, which is one of the purest execution-control problem spaces.}{Public product messaging around Devin and software agents shows heavy live experimentation.}{Head of Agent Infrastructure, CTO, VP Engineering}{Access: High; Onboarding: Medium-High}{The fit is strong, but the buyer bar will be very technical and skeptical.}
+
+\companyentry{Adept}{San Francisco, USA}{ICP2}{Adept is a direct ICP2 match because it focuses on agents taking action in software environments.}{Public positioning centers on enterprise agents that use software tools and workflows.}{Head of Platform, CTO, VP Engineering}{Access: Medium-High; Onboarding: Medium-High}{The fit is excellent, but implementation likely touches sensitive action surfaces and tool permissions.}
+
+\companyentry{Perplexity}{San Francisco, USA}{ICP2}{Perplexity is moving from answer engine toward more agentic behavior, which creates new runtime quality constraints.}{Public product direction increasingly blends search, actions, and tool use.}{Head of Product, CTO, Head of Applied AI}{Access: High; Onboarding: Medium}{A high-profile target with strong fit, but less obvious as a first design partner than workflow-native startups.}
+
+\companyentry{Replit}{San Francisco, USA}{ICP2}{Replit is a strong ICP2 candidate because coding agents and execution loops are central to the product direction.}{Public product launches around agents and coding automation show active experimentation with execution quality.}{Head of AI, VP Engineering, CTO}{Access: Medium-High; Onboarding: Medium}{Reachable relative to frontier labs, with a real need for runtime reliability in agent execution.}
+
+\companyentry{Anysphere (Cursor)}{San Francisco, USA}{ICP2}{Cursor is operating in a fast-moving agentic coding environment where reliability and tool behavior change quickly.}{Public positioning around AI pair programming and agent-like coding assistance shows high iteration velocity.}{Head of Product, CTO, Head of Agent Systems}{Access: High; Onboarding: Medium}{The company is hot and in demand, but the technical fit is strong enough to justify targeted outreach.}
+
+\companyentry{Codeium (Windsurf)}{Mountain View, USA}{ICP2}{Windsurf is a strong ICP2 target because coding agents operate across files, tools, and developer workflows.}{Public product direction highlights agentic coding and workflow automation inside the IDE.}{Head of Product, VP Engineering, CTO}{Access: Medium-High; Onboarding: Medium}{The fit is real and onboarding can be bounded to one agent path if the right champion exists.}
+
+\companyentry{Augment Code}{USA}{ICP2}{Augment Code fits ICP2 because it lives in code generation, agent loops, and developer workflow experimentation.}{Public positioning emphasizes coding agents and AI-native software development assistance.}{VP Engineering, Head of Product, CTO}{Access: Medium; Onboarding: Medium}{Smaller and more focused than top frontier labs, making it more plausible for a real design-partner motion.}
+
+\companyentry{Poolside}{San Francisco, USA}{ICP2}{Poolside is a serious ICP2 candidate because it is building coding intelligence where evaluation and runtime confidence are central.}{Public positioning ties the company to software development agents and high-performance code generation.}{Head of Research Engineering, CTO}{Access: High; Onboarding: Medium}{The company is advanced, but still in a domain where execution-layer control is highly relevant.}
+
+\companyentry{Magic}{San Francisco, USA}{ICP2}{Magic fits because it is pushing autonomous coding systems and needs reliable execution against complex workflows.}{Public positioning emphasizes software engineering automation and advanced AI systems.}{Head of Engineering, CTO, Research Lead}{Access: High; Onboarding: Medium}{The target is strategically relevant but technically demanding.}
+
+\companyentry{LangChain}{San Francisco, USA}{ICP2}{LangChain is almost a textbook ICP2 candidate because the company lives in agents, orchestration, and workflow behavior.}{Public product lines around LangGraph, LangSmith, and agent frameworks show direct proximity to runtime instability.}{VP Product, CTO, Head of Platform}{Access: Medium; Onboarding: Low-Medium}{The company deeply understands the problem, which raises the bar but also means messaging can be precise.}
+
+\companyentry{LlamaIndex}{San Francisco, USA}{ICP2}{LlamaIndex is close to the core of agent data flows, orchestration, and experimentation.}{Public positioning focuses on agents, data frameworks, and production AI workflows.}{Head of Product, CTO, VP Engineering}{Access: Medium; Onboarding: Low-Medium}{A good target because the company is technical, relevant, and not as inaccessible as the biggest labs.}
+
+\companyentry{Braintrust}{San Francisco, USA}{ICP2}{Braintrust is a very good fit because it already lives in evals and quality workflows, but does not itself close the execution-control gap.}{Public positioning centers on AI evals, testing, and iteration loops.}{CTO, Head of Product, Head of AI Quality}{Access: Medium; Onboarding: Low}{Buyer education is easier because the team already thinks in quality and feedback loops.}
+
+\companyentry{Arize AI}{Berkeley, USA}{ICP2}{Arize is strongly aligned because it sits in observability and eval infrastructure where customers still need runtime enforcement elsewhere.}{Public positioning emphasizes observability, evals, and production iteration at scale.}{VP Product, CTO, Head of AI Platform}{Access: Medium; Onboarding: Low-Medium}{The conceptual bridge from observability to execution control is very clear, though differentiation must be sharp.}
+
+\companyentry{Galileo}{San Francisco, USA}{ICP2}{Galileo fits for the same reason as Arize: it sees the observability and eval layer but not the enforcement layer.}{Public messaging emphasizes end-to-end visibility and agent evaluation metrics.}{VP Product, CTO, Head of AI Systems}{Access: Medium; Onboarding: Low-Medium}{The team will quickly understand the category distinction if the wedge is explained well.}
+
+\companyentry{Maxim AI}{USA}{ICP2}{Maxim AI is close to the reliability problem because it tracks how agents reason and progress across multi-step tasks.}{Public positioning focuses on AI agent observability and evaluation across autonomous systems.}{Head of Product, CTO, VP Engineering}{Access: Medium; Onboarding: Low}{Good fit and easier conceptual onboarding because the pain is already in scope.}
+
+\companyentry{Patronus AI}{San Francisco, USA}{ICP2}{Patronus AI is a fit because it works on evaluation, safety, and trust in production AI systems.}{Public positioning emphasizes evaluation and trust for LLM applications and agents.}{Head of Product, CTO, Head of Safety Engineering}{Access: Medium; Onboarding: Low-Medium}{The fit is intellectually strong, though commercial urgency depends on their roadmap.}
+
+\companyentry{Confident AI}{San Francisco, USA}{ICP2}{Confident AI directly serves the LLM evaluation workflow, making it close to teams that know quality gaps firsthand.}{Public positioning emphasizes deterministic metrics, tailored validation, and pre/post deployment evals.}{CTO, Head of Product, Founder}{Access: Medium-Low; Onboarding: Low}{A smaller and more focused target with category fluency, making it a plausible design-partner candidate.}
+
+\companyentry{Weights \& Biases}{San Francisco, USA}{ICP2}{Weights \& Biases is relevant because it sits in experiment tracking and model iteration where production-agent behavior is a growing frontier.}{Public product direction includes support for AI development, experimentation, and monitoring workflows.}{VP Product, Head of MLOps, CTO}{Access: High; Onboarding: Medium}{Highly credible target, but broad product scope and existing internal sophistication raise the bar.}
+
+\companyentry{Vellum}{New York, USA}{ICP2}{Vellum is a strong ICP2 fit because it is workflow-first around prompts, evaluation, and deployment.}{Public positioning emphasizes prompt orchestration, evaluation, and enterprise AI automation.}{Founder, Head of Product, CTO}{Access: Medium-Low; Onboarding: Low}{A focused startup in the right part of the stack and likely more open to design-partner collaboration.}
+
+\companyentry{Lamini}{San Francisco, USA}{ICP2}{Lamini fits because enterprise model deployment and quality control are core to its value proposition.}{Public messaging focuses on enterprise AI deployment and customization at scale.}{CTO, VP Engineering, Head of Platform}{Access: Medium; Onboarding: Medium}{A fit if the wedge is framed as runtime reliability for applied systems rather than model training alone.}
+
+\companyentry{Hebbia}{New York, USA}{ICP2}{Hebbia is a fit because it uses agentic workflows for knowledge work where reliability and repeatability matter.}{Public positioning centers on AI agents for high-value professional work.}{VP Product, CTO, Head of Applied AI}{Access: Medium-High; Onboarding: Medium}{The buyer case is strong, but access and differentiation may be harder due to category heat.}
+
+\companyentry{Stack AI}{San Francisco, USA}{ICP2}{Stack AI is an experimentation-heavy workflow company where building and deploying AI workflows is the product itself.}{Public positioning emphasizes no-code AI workflows and enterprise automation.}{Founder, CTO, Head of Product}{Access: Medium-Low; Onboarding: Low}{A good design-partner shape because the workflow surface is direct and the team is likely still iterating fast.}
+
+\companyentry{Factory}{San Francisco, USA}{ICP2}{Factory fits because it is building software engineering AI systems where execution reliability is a real problem.}{Public product direction centers on agentic software development and developer workflow acceleration.}{CTO, Head of Engineering, Product Lead}{Access: Medium-High; Onboarding: Medium}{The fit is meaningful, but the technical bar will be high.}
+
+\companyentry{Gantry}{USA}{ICP2}{Gantry is relevant because it operates near model evaluation, production quality, and AI reliability workflows.}{Public positioning centers on improving and governing production AI systems.}{Founder, CTO, Head of ML Platform}{Access: Medium-Low; Onboarding: Low}{A good target for category conversation because the team likely understands quality and governance tradeoffs well.}
+
+\companyentry{All Hands AI}{San Francisco, USA}{ICP2}{All Hands AI fits because open agent systems and developer workflows expose real execution instability.}{Public positioning emphasizes agentic software development and open-ended execution.}{Founder, CTO, Head of Agent Systems}{Access: Medium-Low; Onboarding: Low-Medium}{Smaller and more experimentation-heavy, which helps access, though budgets may be smaller than enterprise targets.}
+
+\companyentry{Writer}{San Francisco, USA}{ICP2}{Writer is a strong fit because it sits between enterprise deployment, evaluation, governance, and workflow AI.}{Public positioning includes AI apps, agents, governance, and enterprise control.}{GM Platform, CTO, VP Product}{Access: Medium-High; Onboarding: Medium-High}{Strategically aligned, but already mature enough to expect clear proof and tight positioning.}
+
+\clearpage
+\section{ICP3: Regulated Systems --- 20 companies}
+
+\companyentry{Abridge}{Pittsburgh, USA}{ICP3}{Abridge is a prime ICP3 target because it automates clinical workflows where traceability and correctness matter deeply.}{Public positioning centers on ambient clinical documentation and health system deployments.}{CMIO, VP Engineering, CTO}{Access: High; Onboarding: Very High}{Healthcare security, EHR integration, HIPAA, and clinical change management make pilots heavy but valuable.}
+
+\companyentry{Ambience Healthcare}{San Francisco, USA}{ICP3}{Ambience Healthcare fits because it automates documentation and coding workflows in regulated clinical settings.}{Public positioning emphasizes clinical AI, documentation, and workflow efficiency for providers.}{CMIO, VP Product, CTO}{Access: High; Onboarding: Very High}{The buyer case is strong, but implementation touches clinical systems and compliance from day one.}
+
+\companyentry{Hippocratic AI}{Palo Alto, USA}{ICP3}{Hippocratic AI is directly in regulated healthcare agent behavior, where runtime safety and explainability are core.}{Public positioning emphasizes healthcare AI agents and safety-focused deployment.}{Chief Medical Officer, CTO, Head of Safety}{Access: High; Onboarding: Very High}{A strong category fit, but oversight and regulatory scrutiny make pilots complex.}
+
+\companyentry{Suki}{Redwood City, USA}{ICP3}{Suki automates clinician workflows and documentation, making execution quality and auditability highly relevant.}{Public product messaging focuses on AI assistants for clinicians and workflow efficiency.}{CMIO, VP Engineering, CTO}{Access: High; Onboarding: Very High}{Clinical integration and physician workflow sensitivity raise the difficulty materially.}
+
+\companyentry{Qventus}{Mountain View, USA}{ICP3}{Qventus fits because it uses AI to improve hospital operations and care workflows, which are high-stakes execution environments.}{Public positioning emphasizes healthcare operations automation and workflow optimization.}{COO, VP Digital Health, CTO}{Access: High; Onboarding: Very High}{Operational value is large, but hospital systems and process ownership make onboarding slow.}
+
+\companyentry{Commure}{Mountain View, USA}{ICP3}{Commure is compelling because it sits on top of healthcare operational infrastructure and AI workflows.}{Public positioning blends healthcare software infrastructure with AI-enabled operational workflows.}{CTO, VP Platform, CIO Office}{Access: High; Onboarding: Very High}{Strategic target with real fit, but technical and compliance scope are both heavy.}
+
+\companyentry{Infinitus Systems}{San Francisco, USA}{ICP3}{Infinitus is a strong fit because AI voice agents in healthcare payer-provider workflows need control, auditability, and safe execution.}{Public positioning emphasizes automated healthcare phone workflows and operational efficiency.}{VP Engineering, VP Operations, CTO}{Access: Medium-High; Onboarding: Very High}{The workflow value is high, but regulated telephony and healthcare process integration raise complexity.}
+
+\companyentry{Augmedix}{San Francisco, USA}{ICP3}{Augmedix fits because it automates clinical documentation and workflow tasks in a regulated care environment.}{Public positioning emphasizes ambient documentation and clinical workflow support.}{CMIO, CTO, VP Product}{Access: High; Onboarding: Very High}{Healthcare deployment complexity is unavoidable even if the use case is clear.}
+
+\companyentry{Sardine}{San Francisco, USA}{ICP3}{Sardine is a very good fintech ICP3 target because fraud and risk workflows need runtime enforcement, not just visibility.}{Public positioning centers on fraud, compliance, and risk decisioning automation.}{Head of Risk Platform, CTO, VP Engineering}{Access: Medium-High; Onboarding: High}{The fit is strong, but integration into sensitive risk controls and data flows raises the implementation bar.}
+
+\companyentry{Alloy}{New York, USA}{ICP3}{Alloy automates identity and risk decisions, which makes explainability and policy-safe execution crucial.}{Public positioning emphasizes identity decisioning, fraud prevention, and compliance workflows.}{Head of Risk Engineering, CTO, VP Product}{Access: Medium-High; Onboarding: High}{A good wedge exists, but buyer scrutiny will be high because risk actions touch regulated decisions.}
+
+\companyentry{Ocrolus}{New York, USA}{ICP3}{Ocrolus fits because it automates document-heavy underwriting and financial review workflows where execution errors matter.}{Public positioning focuses on document automation for lending and financial decision workflows.}{VP Engineering, Head of Risk Operations, CTO}{Access: Medium; Onboarding: High}{The use case is concrete, but onboarding still requires access to sensitive financial data and decision rules.}
+
+\companyentry{Trullion}{New York, USA}{ICP3}{Trullion is a fit because it automates accounting and audit workflows where traceability and correctness are core.}{Public positioning emphasizes accounting automation, audit support, and structured financial workflows.}{CTO, Head of Product, VP Finance Systems}{Access: Medium; Onboarding: Medium-High}{The workflow scope can be bounded, but financial-data sensitivity and process ownership increase complexity.}
+
+\companyentry{AppZen}{San Jose, USA}{ICP3}{AppZen is directly in finance audit and compliance automation, which is close to the wedge.}{Public positioning centers on finance AI for auditing, expense review, and compliance workflows.}{VP Finance Systems, CTO, Head of AI Platform}{Access: Medium-High; Onboarding: High}{The fit is good, but implementation touches financial controls and approval chains.}
+
+\companyentry{Ramp}{New York, USA}{ICP3}{Ramp is a valid ICP3 target because it runs AI and automation inside finance operations where mistakes affect spend and controls.}{Public product direction increasingly includes AI automation across finance workflows.}{Head of AI, CTO, VP Finance Product}{Access: High; Onboarding: High}{The company is highly sophisticated and fast-moving, but the workflow-control problem is real.}
+
+\companyentry{Harvey}{San Francisco, USA}{ICP3}{Harvey is one of the best legal ICP3 targets because it already runs workflow agents for law firms and corporate legal teams.}{Public positioning explicitly mentions workflow agents and legal task automation across compliance, contracts, and research.}{Head of Product, CTO, Head of Applied AI}{Access: High; Onboarding: High}{The fit is excellent, but legal buyers expect trust, rigor, and very specific proof.}
+
+\companyentry{Clio}{Vancouver, Canada}{ICP3}{Clio is a strong ICP3 target because legal practice workflows are structured, high-value, and regulation-sensitive.}{Public product direction increasingly includes AI capabilities for legal work and operations.}{CTO, VP Product, Head of AI}{Access: Medium-High; Onboarding: Medium-High}{Good category fit with reachable buyers, though workflow credibility matters a lot.}
+
+\companyentry{Spellbook}{Toronto, Canada}{ICP3}{Spellbook is a close match because contract review and drafting workflows require reliable structured behavior.}{Public positioning centers on AI for contract drafting and legal review inside existing legal workflows.}{Founder, CTO, VP Product}{Access: Medium; Onboarding: Medium}{A focused legal AI company with a bounded workflow surface and realistic design-partner shape.}
+
+\companyentry{Streamline AI}{San Francisco, USA}{ICP3}{Streamline AI is directly in legal intake, triage, and workflow automation, making execution control highly relevant.}{Public positioning emphasizes intelligent intake, triage, and legal workflow automation.}{Head of Legal Ops Product, CTO, Founder}{Access: Medium; Onboarding: High}{The buyer pain is clear, but implementation touches legal operations, approvals, and compliance boundaries.}
+
+\companyentry{Evisort}{San Mateo, USA}{ICP3}{Evisort fits because contract and legal workflow automation depend on repeatable, explainable execution.}{Public product direction centers on contract AI and workflow automation for legal teams.}{VP Product, CTO, Head of Legal AI}{Access: Medium; Onboarding: High}{The fit is real, though legal stakeholders will demand clear evidence of control and traceability.}
+
+\companyentry{EvenUp}{San Francisco, USA}{ICP3}{EvenUp is a fit because it automates parts of legal claims workflows where reliability and auditability matter.}{Public positioning emphasizes AI for injury law workflows and case preparation.}{CTO, VP Product, Head of Operations}{Access: Medium-High; Onboarding: High}{The domain is high value, but trust and workflow correctness requirements will be strict.}
+
+\clearpage
+\section{Highest-priority starting targets}
+If the goal is to maximize the chance of landing a real design partner quickly, these are the best first outreach targets from the full 100-company universe:
+\begin{itemize}
+\item Ada
+\item Decagon
+\item Forethought
+\item Observe.AI
+\item Gorgias
+\item Intercom
+\item Assembled
+\item Stack AI
+\item Vellum
+\item Confident AI
+\item Spellbook
+\item Streamline AI
+\item Sardine
+\item Alloy
+\item Infinitus Systems
+\end{itemize}
+These companies combine three useful properties: visible workflow automation, public evidence of agent or orchestration complexity, and a better chance of actually taking a design-partner conversation than the biggest incumbents.
+
+\section{Suggested next operating pass}
+The highest-leverage next step would be to turn this target universe into a narrower outreach file with:
+\begin{itemize}
+\item named likely buyer titles for each account,
+\item best entry wedge for the first message,
+\item one-line proof point to reference in outreach,
+\item and a short ranking of who to contact first this month.
+\end{itemize}
+That would convert this research document into an actual founder outbound asset.
+
+\end{document}

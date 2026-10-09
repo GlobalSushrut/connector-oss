@@ -1,0 +1,86 @@
+name: devguard
+version: "1.0.0"
+description: >
+  Governed execution plane for coding agents.
+  Controls what Claude Code, Cursor, Windsurf, Kiro, and any future coding agent
+  can see, touch, run, and prove.
+author: connector
+license: proprietary
+
+requires:
+  connector: ">=1.0.0"
+  modules:
+    - gateway           # LLM proxy (OpenAI-compatible)
+    - admission         # deny-before-execute gate
+    - guard_pipeline    # BLP + MAC firewall
+    - audit             # HMAC journal + receipts
+    - memory            # kernel + RAG
+    - context_manager   # token budgets
+    - tools             # MCP tool bridge
+    - agents            # agent registry
+    - billing           # cost tracking
+
+provides:
+  workflows: 16
+  internal_workflows: 7
+  templates: 5
+  capabilities:
+    - anthropic_api_compat        # POST /v1/messages for Claude Code
+    - file_visibility_guard       # path-based read/hidden/mask rules
+    - write_boundary_enforcement  # file-level write policy
+    - shell_execution_guard       # command allow/deny/approve
+    - secret_shielding            # pattern-based redaction + vault broker
+    - policy_yaml_config          # .connector/policy.yaml loader
+    - git_governance              # branch/commit/PR rules
+    - approval_checkpoints        # configurable HITL gates
+    - deterministic_context       # bounded context assembly
+    - verification_chain          # post-change compile/test/lint checks
+    - cost_governance             # per-role budgets + model routing
+    - multi_agent_separation      # role-scoped agent boundaries
+
+optional_deps:
+  - compliance      # evidence export, SOC2/HIPAA packs
+  - observability   # Prometheus metrics, Grafana dashboards
+  - sandbox         # container-based environment isolation
+  - cicd            # CI/CD pipeline integration
+
+supported_tools:
+  - name: claude_code
+    integration: ANTHROPIC_BASE_URL
+    protocol: anthropic_messages
+  - name: cursor
+    integration: openai_base_url_override
+    protocol: openai_chat_completions
+  - name: windsurf
+    integration: mcp_server
+    protocol: mcp + openai_chat_completions
+  - name: kiro
+    integration: anthropic_base_url
+    protocol: anthropic_messages
+  - name: generic
+    integration: env_var
+    protocol: openai_chat_completions | anthropic_messages
+
+entrypoints:
+  cli:
+    - "devguard init"
+    - "devguard connect cursor"
+    - "devguard connect windsurf"
+    - "devguard connect claude-code"
+    - "devguard cage status --verify"
+    - "devguard status"
+    - "devguard prove <session>"
+  api:
+    - "POST /v1/messages"
+    - "POST /v1/messages/count_tokens"
+    - "POST /api/v1/devguard/policy/load"
+    - "POST /api/v1/devguard/policy/validate"
+    - "POST /api/v1/devguard/sessions"
+  mcp:
+    - "connector_read_file"
+    - "connector_write_file"
+    - "connector_run_command"
+    - "connector_search_files"
+    - "connector_git"
+    - "connector_request_approval"
+    - "connector_verify_claim"

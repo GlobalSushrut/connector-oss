@@ -1,0 +1,34 @@
+name: connector-platform-beta-gate
+
+# Suite E — requires a running connector-platform process (see platform/scripts/ci_beta_gate.sh).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "platform/server/**"
+      - "platform/scripts/ci_beta_gate.sh"
+      - "platform/scripts/cage-e2e-smoke.sh"
+      - "platform/scripts/custom-domain-e2e-smoke.sh"
+      - ".github/workflows/connector-platform-beta-gate.yml"
+
+jobs:
+  enterprise-beta-gate:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/platform/server/.cargo-target
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: platform/server
+          cache-targets: platform/server/.cargo-target
+
+      - name: Run enterprise beta gate (live server + CONNECTOR_TEST_URL)
+        run: bash platform/scripts/ci_beta_gate.sh

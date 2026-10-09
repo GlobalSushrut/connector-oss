@@ -1,0 +1,38 @@
+[package]
+name = "devguard"
+version = "0.1.0"
+edition = "2021"
+description = "DevGuard — Military-grade governance for AI coding agents. Runs on top of Connector OS."
+publish = false
+
+[[bin]]
+name = "devguard"
+path = "src/main.rs"
+
+[dependencies]
+connector-plugin-handshake = { path = "../../platform/plugin-handshake" }
+
+# ── CLI ──
+clap = { version = "4", features = ["derive", "env"] }
+
+# ── HTTP client (talks to Connector OS via API only) ──
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# ── Async runtime ──
+tokio = { version = "1", features = ["full"] }
+
+# ── Serialization ──
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# ── Utilities ──
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+glob = "0.3"
+anyhow = "1"
+thiserror = "1"
+notify = "6"
+regex = "1"
+axum = "0.7"

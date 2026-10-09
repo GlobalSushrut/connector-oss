@@ -1,0 +1,17 @@
+[build]
+target = "./index.html"
+dist   = "dist"
+
+[[hooks]]
+stage = "pre_build"
+command = "npx"
+command_arguments = ["--yes", "tailwindcss@3.4.17", "-i", "./input.css", "-o", "./tailwind.out.css", "--minify"]
+
+[[hooks]]
+stage = "post_build"
+command = "sh"
+command_arguments = ["-c", "STAGE=$(ls -d dist/.stage 2>/dev/null || echo dist) && python3 ../dashboard/scripts/patch_wasm_init.py $STAGE/index.html playground && for f in $STAGE/*.js $STAGE/*.css $STAGE/*_bg.wasm; do [ -f \"$f\" ] && gzip -9 -f -k \"$f\"; done && echo 'trial post_build done'"]
+
+[serve]
+port = 1431
+open = false

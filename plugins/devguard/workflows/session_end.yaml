@@ -1,0 +1,84 @@
+name: session_end
+description: "End a governed session. Finalize audit, generate proof, cleanup."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - on_event: agent.disconnect
+  - api: "DELETE /api/v1/sessions/:id"
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  generate_proof:
+    type: boolean
+    required: false
+    default: true
+  export_audit:
+    type: boolean
+    required: false
+    default: false
+  export_format:
+    type: string
+    required: false
+    default: "json"
+    enum: [json, csv, pdf]
+
+steps:
+  - id: finalize_audit
+    action: connector.audit.finalize
+    params:
+      session_id: "{{ inputs.session_id }}"
+
+  - id: compute_cost
+    action: connector.billing.session_cost
+    params:
+      session_id: "{{ inputs.session_id }}"
+    depends_on: finalize_audit
+
+  - id: generate_proof
+    action: connector.proof.generate
+    condition: "{{ inputs.generate_proof }}"
+    params:
+      session_id: "{{ inputs.session_id }}"
+      include:
+        - audit_chain
+        - receipts
+        - policy_verdicts
+        - cost_summary
+    depends_on: finalize_audit
+
+  - id: export_audit
+    action: devguard.workflows.audit_export
+    condition: "{{ inputs.export_audit }}"
+    params:
+      session_id: "{{ inputs.session_id }}"
+      format: "{{ inputs.export_format }}"
+    depends_on: finalize_audit
+
+  - id: cleanup
+    action: connector.session.cleanup
+    params:
+      session_id: "{{ inputs.session_id }}"
+    depends_on: [finalize_audit, generate_proof, export_audit]
+
+  - id: print_summary
+    action: shell.print
+    params:
+      message: |
+        Session {{ inputs.session_id }} ended.
+        Actions: {{ steps.finalize_audit.action_count }}
+        Blocked: {{ steps.finalize_audit.blocked_count }}
+        Approvals: {{ steps.finalize_audit.approval_count }}
+        Cost: ${{ steps.compute_cost.total_usd }}
+        Proof: {{ steps.generate_proof.proof_path }}
+    depends_on: [compute_cost, generate_proof]
+
+outputs:
+  audit_summary:
+    action_count: "{{ steps.finalize_audit.action_count }}"
+    blocked_count: "{{ steps.finalize_audit.blocked_count }}"
+    approval_count: "{{ steps.finalize_audit.approval_count }}"
+  total_cost_usd: "{{ steps.compute_cost.total_usd }}"
+  proof_path: "{{ steps.generate_proof.proof_path }}"

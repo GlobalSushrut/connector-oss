@@ -1,0 +1,66 @@
+[package]
+name = "relay"
+version = "0.1.0"
+edition = "2021"
+description = "Relay — Zero-framework governed agent function runtime for ConnectorOS"
+
+[[bin]]
+name = "relay"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio          = { version = "1",  features = ["full"] }
+
+# HTTP server
+axum           = { version = "0.7", features = ["macros", "multipart"] }
+tower          = { version = "0.4" }
+tower-http     = { version = "0.5", features = ["compression-br", "cors", "timeout", "trace"] }
+
+# HTTP client (proxy forwarding + Connector bridge)
+reqwest        = { version = "0.12", features = ["json", "stream", "rustls-tls"], default-features = false }
+
+# Serialization
+serde          = { version = "1", features = ["derive"] }
+serde_json     = "1"
+serde_yaml     = "0.9"
+
+# Database
+sqlx           = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "json"] }
+
+# IDs + time
+uuid           = { version = "1", features = ["v4", "serde"] }
+chrono         = { version = "0.4", features = ["serde"] }
+
+# Crypto (HMAC audit chain)
+hmac           = "0.12"
+sha2           = "0.10"
+hex            = "0.4"
+base64         = "0.22"
+
+# Tracing + logging
+tracing              = "0.1"
+tracing-subscriber   = { version = "0.3", features = ["env-filter", "json"] }
+
+# Metrics
+metrics                    = "0.23"
+metrics-exporter-prometheus = "0.15"
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# Config / env
+dotenvy = "0.15"
+
+# Error handling
+anyhow    = "1"
+thiserror = "1"
+
+# URL parsing
+url = "2"
+
+[profile.release]
+opt-level     = 3
+lto           = true
+codegen-units = 1
+strip         = true

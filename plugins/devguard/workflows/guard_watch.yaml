@@ -1,0 +1,45 @@
+name: guard_watch
+description: "Live stream of governance decisions. Shows what is happening in real time."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl guard watch"
+
+inputs:
+  session_id:
+    type: string
+    required: false
+    description: "Filter to specific session. Omit for all active sessions."
+  filter:
+    type: string
+    required: false
+    enum: [all, blocked, approved, secrets, cost]
+    default: "all"
+  format:
+    type: string
+    required: false
+    default: "pretty"
+    enum: [pretty, json, compact]
+
+steps:
+  - id: subscribe
+    action: connector.audit.subscribe
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: "{{ inputs.filter }}"
+
+  - id: stream
+    action: stream.output
+    params:
+      source: "{{ steps.subscribe.stream }}"
+      format: "{{ inputs.format }}"
+      template: |
+        {{ timestamp }} [{{ verdict }}] {{ action }} {{ resource }}
+        {% if verdict == 'DENY' %}  Reason: {{ reason }}{% endif %}
+        {% if requires_approval %}  Awaiting: {{ required_approvers }}{% endif %}
+    depends_on: subscribe
+
+outputs:
+  stream: "{{ steps.subscribe.stream }}"

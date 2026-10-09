@@ -1,0 +1,97 @@
+name: policy_compile
+description: >
+  Internal: Compile .connector/policy.yaml into AAPI rules, guard configs,
+  and session parameters. Resolves !include directives, validates schema,
+  and produces the active rule set.
+version: "1.0.0"
+plugin: devguard
+internal: true
+
+# Compilation stages:
+#
+# 1. Parse YAML
+# 2. Resolve !include directives (roles/*.yaml)
+# 3. Validate against schema
+# 4. Compile role -> AAPI rules (allow/deny/conditional)
+# 5. Compile files -> FS Guard config (visibility + write boundary)
+# 6. Compile execution -> Exec Guard config (command rules + limits)
+# 7. Compile secrets -> Secret Broker config (patterns + vault)
+# 8. Compile git -> Git Broker config (branch + commit rules)
+# 9. Compile approvals -> Approval queue triggers
+# 10. Compile budget -> AAPI budget limits
+# 11. Compile audit -> Audit level + capture list
+# 12. Output compiled policy object
+
+schema_version: "1.0"
+
+required_fields:
+  - version
+  - defaults
+
+optional_sections:
+  - identity
+  - roles
+  - default_role
+  - files
+  - writes
+  - execution
+  - secrets
+  - context
+  - git
+  - approvals
+  - budget
+  - audit
+  - verification
+  - environment
+  - knowledge
+
+compilation_targets:
+  aapi_rules:
+    source: [roles, default_role, budget]
+    output: "List of AAPI allow/deny/conditional rules"
+
+  fs_guard_config:
+    source: [files, writes]
+    output: "FS Guard visibility + write boundary config"
+
+  exec_guard_config:
+    source: [execution]
+    output: "Exec Guard command rules + limits"
+    merge_with: "devguard.internal.command_patterns"
+
+  secret_broker_config:
+    source: [secrets]
+    output: "Secret detection patterns + vault config"
+    merge_with: "devguard.internal.secret_patterns"
+
+  git_broker_config:
+    source: [git]
+    output: "Git branch + commit + merge rules"
+
+  approval_triggers:
+    source: [approvals]
+    output: "Approval queue trigger conditions"
+
+  context_config:
+    source: [context, knowledge]
+    output: "Context assembly rules + knowledge injection"
+
+  audit_config:
+    source: [audit]
+    output: "Audit level + capture list + retention"
+
+  verification_config:
+    source: [verification]
+    output: "Post-change check list"
+
+  environment_config:
+    source: [environment]
+    output: "Sandbox/execution environment profile"
+
+defaults_enforcement:
+  # These are enforced unless explicitly overridden
+  deny_by_default: true
+  least_privilege: true
+  no_raw_secret_exposure: true
+  all_actions_receipted: true
+  roles_separated: true

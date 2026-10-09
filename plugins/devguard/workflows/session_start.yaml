@@ -1,0 +1,99 @@
+name: session_start
+description: "Create a governed agent session with role, policy, and budget."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - on_event: agent.connect
+  - api: "POST /api/v1/sessions"
+
+inputs:
+  role:
+    type: string
+    required: true
+  workspace:
+    type: string
+    required: false
+    default: "."
+  policy_path:
+    type: string
+    required: false
+    default: ".connector/policy.yaml"
+  budget_tokens:
+    type: integer
+    required: false
+    default: 500000
+  tool:
+    type: string
+    required: false
+    enum: [claude_code, cursor, windsurf, kiro, generic]
+
+steps:
+  - id: load_policy
+    action: devguard.workflows.policy_load
+    params:
+      path: "{{ inputs.policy_path }}"
+      role: "{{ inputs.role }}"
+
+  - id: register_agent
+    action: connector.agents.create
+    params:
+      role: "{{ inputs.role }}"
+      clearance: "{{ steps.load_policy.compiled_policy.clearance }}"
+      budget_tokens: "{{ inputs.budget_tokens }}"
+      workspace: "{{ inputs.workspace }}"
+    depends_on: load_policy
+
+  - id: init_context
+    action: connector.context.register
+    params:
+      agent_pid: "{{ steps.register_agent.agent_pid }}"
+      max_tokens: "{{ steps.load_policy.compiled_policy.context.max_tokens }}"
+    depends_on: register_agent
+
+  - id: inject_knowledge
+    action: devguard.internal.context_assemble
+    params:
+      agent_pid: "{{ steps.register_agent.agent_pid }}"
+      inject: "{{ steps.load_policy.compiled_policy.knowledge.always_inject }}"
+      workspace: "{{ inputs.workspace }}"
+    depends_on: init_context
+
+  - id: init_file_guard
+    action: devguard.internal.file_guard_init
+    params:
+      session_id: "{{ steps.register_agent.session_id }}"
+      rules: "{{ steps.load_policy.compiled_policy.files }}"
+      write_rules: "{{ steps.load_policy.compiled_policy.writes }}"
+    depends_on: load_policy
+
+  - id: init_exec_guard
+    action: devguard.internal.exec_guard_init
+    params:
+      session_id: "{{ steps.register_agent.session_id }}"
+      rules: "{{ steps.load_policy.compiled_policy.execution }}"
+    depends_on: load_policy
+
+  - id: init_secret_scan
+    action: devguard.internal.secret_scan_init
+    params:
+      session_id: "{{ steps.register_agent.session_id }}"
+      patterns: "{{ steps.load_policy.compiled_policy.secrets }}"
+    depends_on: load_policy
+
+  - id: audit_session_start
+    action: connector.audit.record
+    params:
+      action: "session.start"
+      agent_pid: "{{ steps.register_agent.agent_pid }}"
+      details:
+        role: "{{ inputs.role }}"
+        tool: "{{ inputs.tool }}"
+        workspace: "{{ inputs.workspace }}"
+        budget: "{{ inputs.budget_tokens }}"
+    depends_on: register_agent
+
+outputs:
+  session_id: "{{ steps.register_agent.session_id }}"
+  agent_pid: "{{ steps.register_agent.agent_pid }}"
+  session_token: "{{ steps.register_agent.session_token }}"

@@ -1,0 +1,603 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{fancybox}
+\usepackage{colortbl}
+
+% Define colors
+\definecolor{connectorgreen}{RGB}{0, 128, 128}
+\definecolor{connectoryellow}{RGB}{255, 193, 7}
+\definecolor{connectorred}{RGB}{220, 53, 69}
+\definecolor{connectorblue}{RGB}{0, 123, 255}
+\definecolor{lightgray}{RGB}{248, 249, 250}
+\definecolor{darkgray}{RGB}{52, 58, 64}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=connectorgreen,
+    urlcolor=connectorblue,
+    citecolor=darkgray
+}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{connectorgreen}{\textbf{Connector Demo Suite}}}
+\fancyhead[R]{\textcolor{darkgray}{Demos 1--6}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+% Section formatting
+\titleformat{\section}
+    {\Large\bfseries\color{connectorgreen}}
+    {Demo \thesection:}{0.5em}{}
+\titleformat{\subsection}
+    {\large\bfseries\color{darkgray}}
+    {\thesubsection}{0.5em}{}
+
+% Custom box
+\newcommand{\demobox}[2]{%
+    \begin{center}
+    \fcolorbox{connectorgreen}{lightgray}{%
+        \parbox{0.9\textwidth}{%
+            \vspace{0.5em}
+            \textbf{\textcolor{connectorgreen}{#1}}\\[0.5em]
+            #2
+            \vspace{0.5em}
+        }%
+    }
+    \end{center}
+}
+
+\newcommand{\wowmoment}[1]{%
+    \begin{center}
+    \fcolorbox{connectoryellow}{white}{%
+        \parbox{0.9\textwidth}{%
+            \vspace{0.3em}
+            \centering
+            \textbf{\textcolor{connectoryellow}{[$\star$] WOW Moment}}\\[0.3em]
+            #1
+            \vspace{0.3em}
+        }%
+    }
+    \end{center}
+}
+
+\newcommand{\killerline}[1]{%
+    \begin{center}
+    \fcolorbox{connectorred}{white}{%
+        \parbox{0.9\textwidth}{%
+            \vspace{0.3em}
+            \centering
+            \textbf{\textcolor{connectorred}{[!] KILLER MOMENT}}\\[0.3em]
+            #1
+            \vspace{0.3em}
+        }%
+    }
+    \end{center}
+}
+
+% Listings style
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{lightgray},
+    frame=single,
+    framerule=0pt,
+    breaklines=true,
+    showstringspaces=false
+}
+
+\begin{document}
+
+% Title Page
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+
+{\Huge\bfseries\textcolor{connectorgreen}{Connector}}\\[0.5cm]
+{\LARGE Demo Suite Documentation}\\[2cm]
+
+\begin{tikzpicture}
+    \draw[connectorgreen, line width=2pt] (0,0) -- (10,0);
+\end{tikzpicture}
+
+\vspace{1.5cm}
+
+{\Large\textbf{Six Demonstrations of Enterprise AI Governance}}\\[1cm]
+
+\begin{tabular}{cl}
+\toprule
+\textbf{Demo} & \textbf{Focus} \\
+\midrule
+1 & Enterprise Governance \\
+2 & Governed Coding Workflow \\
+3 & 7 Most Dangerous Attacks \\
+4 & Stable Thinking Engine \\
+5 & Selective Context + Identity-Aware \\
+6 & Deterministic Tool Execution \\
+\bottomrule
+\end{tabular}
+
+\vspace{2cm}
+
+\demobox{Narrative Arc}{%
+\textbf{Safe} (Demo 3) $\rightarrow$ \textbf{Stable} (Demo 4) \\
+$\rightarrow$ \textbf{Private} (Demo 5) $\rightarrow$ \textbf{Executable} (Demo 6)
+}
+
+\vfill
+
+{\large Version 1.0}\\
+{\large \today}
+
+\end{titlepage}
+
+% Table of Contents
+\tableofcontents
+\newpage
+
+% Introduction
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The Connector Demo Suite comprises six interconnected demonstrations that showcase the full capabilities of the Connector platform for enterprise AI governance. Each demo focuses on a specific aspect while building upon the narrative of safe, stable, private, and executable AI systems.
+
+\demobox{Demo Contract}{%
+Every demo follows strict integrity rules:
+\begin{itemize}[nosep]
+    \item No fake IDs
+    \item No fake receipts
+    \item No mocked journal chains
+    \item No silent fallback on missing auth
+    \item Stop immediately if health/receipts/runtime IDs are missing
+    \item Every claim marked: proven\_live, partial\_live, not\_proven\_live, or stub\_mode
+\end{itemize}
+}
+
+\newpage
+
+% Demo 1
+\section{Enterprise Governance}
+
+\subsection{Overview}
+\textbf{Thesis:} Live runtime proof of Connector's enterprise governance capabilities.
+
+The canonical enterprise demo is a \textbf{dual-proof demonstration} that shows both buyer-facing and operator-facing evidence. It proves where Connector sits, what remains unchanged, what Connector governs, and which product claims are proven live.
+
+\subsection{11-Slide Structure}
+
+\begin{enumerate}
+    \item \textbf{Live Runtime Contract} -- What the running node guarantees
+    \item \textbf{Buyer Boundary} -- Where Connector sits in the stack
+    \item \textbf{Claim Posture} -- Explicit proven/unproven claims
+    \item \textbf{Live Decision Path} -- End-to-end governed decision flow
+    \item \textbf{Boundary Enforcement} -- Policy-driven allow/deny
+    \item \textbf{Tool Governance} -- Blocked/allowed tools enforcement
+    \item \textbf{Operator Explain + Trace} -- Evidence retrieval commands
+    \item \textbf{Evidence + Proof} -- HMAC-chained audit trail
+    \item \textbf{Cost + Compliance} -- Token budgets, HIPAA tracking
+    \item \textbf{Failure + Recovery + HITL} -- Escalation and review queues
+    \item \textbf{Pilot Close} -- Summary and next steps
+\end{enumerate}
+
+\subsection{Key Claims Proven}
+
+\begin{itemize}
+    \item \textbf{Governance:} Policy engine with deny-overrides
+    \item \textbf{Audit:} HMAC-chained receipts with CID references
+    \item \textbf{Cost Control:} Token budgets with kill switches
+    \item \textbf{Compliance:} HIPAA/GDPR framework support
+    \item \textbf{Human-in-the-Loop:} Review queues for low-confidence decisions
+\end{itemize}
+
+\subsection{Operator Commands}
+
+\begin{lstlisting}
+# Bootstrap live state
+python demos/demo.py bootstrap
+
+# Run interactive slide deck
+python demos/demo.py
+
+# Run without waiting
+python demos/demo.py --no-wait
+
+# Check health
+connectorctl health
+\end{lstlisting}
+
+\newpage
+
+% Demo 2
+\section{Governed Coding Workflow}
+
+\subsection{Overview}
+\textbf{Thesis:} Claude Code + Connector gateway + DeepSeek in an agentic control plane narrative.
+
+This demo presents a calm, bounded, operator-led workflow instead of a freeform live-agent show. It demonstrates the proto Agent OS / control plane architecture that enterprise teams require.
+
+\subsection{Workflow Moments}
+
+\begin{enumerate}
+    \item \textbf{Preflight + Claude Code Shell Posture} -- Establish governed environment
+    \item \textbf{Safe Governed Success} -- Normal operation through Connector gateway
+    \item \textbf{Boundary Deny + Safe Alternative} -- Policy blocks with substitutes
+    \item \textbf{Conditional Review Path} -- Human-in-the-loop for edge cases
+    \item \textbf{Operator Proof Retrieval} -- Evidence commands and traces
+\end{enumerate}
+
+\subsection{Live vs Orchestrated}
+
+\begin{tabular}{lll}
+\toprule
+\textbf{Component} & \textbf{Type} & \textbf{Description} \\
+\midrule
+Health, Gateway & LIVE & Connector API endpoints \\
+CLS Compile & LIVE & Contract language compilation \\
+Agent + Memory & LIVE & Runtime lifecycle \\
+Governed Completions & LIVE & Firewall + guard pipeline \\
+Decision Recording & LIVE & Audit receipts \\
+Path Allow/Deny & ORCHESTRATED & Demo policy evaluation \\
+Safe Substitute & ORCHESTRATED & Scripted security narrative \\
+\bottomrule
+\end{tabular}
+
+\wowmoment{Controlled Beta Posture: The demo explicitly states its boundaries. Every claim is labeled as LIVE (Connector API) or ORCHESTRATED (runner logic).}
+
+\subsection{Usage}
+
+\begin{lstlisting}
+# Quick start via Makefile
+make demo2
+
+# Manual execution
+CONNECTOR_DEV_MODE=1 python demos/demo2/workflow_demo.py
+
+# With options
+python demos/demo2/workflow_demo.py --no-wait
+python demos/demo2/workflow_demo.py --raw-json
+\end{lstlisting}
+
+\newpage
+
+% Demo 3
+\section{7 Most Dangerous Attacks}
+
+\subsection{Overview}
+\textbf{Thesis:} ``Why you cannot run agents without Connector.''
+
+This attack-driven demo sends \textbf{real attack payloads} through a live Connector node and reports what the platform actually does---block, flag, allow, or error. Nothing is simulated.
+
+\subsection{The 7 Attacks}
+
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+\# & \textbf{Attack} & \textbf{Connector Defense} \\
+\midrule
+1 & Prompt Injection $\rightarrow$ Tool Hijack & AgentFirewall + SemanticInjectionDetector \\
+2 & Memory Poisoning & Firewall write scoring + HMAC chain + CID integrity \\
+3 & Tool Escalation & blocked\_tools list + PolicyEngine + MAC guard \\
+4 & Cost Explosion & Token budget + BudgetGate + kill switch \\
+5 & Hallucinated Action & Receipt chain---no receipt = no truth \\
+6 & PII Exfiltration & ContentGuard PII detector + HIPAA report \\
+7 & Instruction Drift & BehaviorAnalyzer + InstructionPlane validation \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{5 Layers of Raw Evidence}
+
+\begin{enumerate}
+    \item \textbf{Exact payload sent} --- The attack string that hits the gateway
+    \item \textbf{Raw HTTP response} --- Status code, body JSON, headers
+    \item \textbf{Raw firewall inspect} --- All 5 guard pipeline layers evaluated
+    \item \textbf{Raw journal entries} --- HMAC-chained audit trail
+    \item \textbf{Raw receipts / cost / compliance} --- API responses, not claims
+\end{enumerate}
+
+\killerline{Evidence, Not Logs: Every attack shows 5 layers of raw evidence. If the firewall flags but doesn't block, the demo says so plainly.}
+
+\subsection{Usage}
+
+\begin{lstlisting}
+# Quick start
+make demo3
+
+# Run all attacks
+CONNECTOR_DEV_MODE=1 python demos/demo3/attack_demo.py --no-wait
+
+# With raw JSON output
+python demos/demo3/attack_demo.py --raw-json
+\end{lstlisting}
+
+\newpage
+
+% Demo 4
+\section{Stable Thinking Engine}
+
+\subsection{Overview}
+\textbf{Thesis:} ``Connector turns AI from short-term guessing into long-term, stable, constraint-following reasoning.''
+
+Demo 3 proved security. Demo 4 proves \textbf{cognitive governance}: memory stability, instruction fidelity, reasoning consistency, and execution discipline.
+
+\subsection{The 5 WOW Moments}
+
+\wowmoment{WOW Moment 1 -- Memory Graph Stability: Same knowledge reused correctly after 30+ writes. Contradiction detected, not hidden.}
+
+\wowmoment{WOW Moment 2 -- Instruction Survives Noise: After 30+ inputs, rule still applied correctly. Vanilla LLM forgot it.}
+
+\wowmoment{WOW Moment 3 -- Reasoning Consistency: Step 1 and final answer align. Same query twice $\rightarrow$ same reasoning path.}
+
+\killerline{WOW Moment 4 -- Refusal to Hallucinate: System says ``Cannot conclude with current data.'' Vanilla LLM guesses.}
+
+\wowmoment{WOW Moment 5 -- Deterministic Behavior: System enforces constraints at 3 independent layers. Not probabilistic---structural.}
+
+\subsection{Comparison: Vanilla LLM vs Connector}
+
+\begin{tabular}{lcc}
+\toprule
+\textbf{Capability} & \textbf{Vanilla LLM} & \textbf{Connector} \\
+\midrule
+Long context & degrades & stable (30+ pkts) \\
+Instructions & drift at $\sim$15 msgs & anchored (CID) \\
+Reasoning & inconsistent & aligned (2$\times$ same) \\
+Hallucination & frequent & refused + cited \\
+Memory & flat chat history & structured graph \\
+Output & probabilistic & governed + proven \\
+Contradictions & silent overwrite & detected + flagged \\
+Evidence & none & HMAC-chained CIDs \\
+\bottomrule
+\end{tabular}
+
+\subsection{Usage}
+
+\begin{lstlisting}
+# Quick start
+make demo4
+
+# Run stability demo
+python demos/demo4/stable_thinking.py --no-wait
+\end{lstlisting}
+
+\newpage
+
+% Demo 5
+\section{Selective Context + Identity-Aware Execution}
+
+\subsection{Overview}
+\textbf{Thesis:} ``The LLM doesn't need to know everything. It just needs to know enough---and Connector ensures the rest stays protected.''
+
+This demo proves \textbf{precision without exposure}: the LLM reasons with minimal safe context while the system executes correctly for the specific user/entity.
+
+\subsection{Patient Scenario}
+
+\begin{center}
+\begin{tabular}{p{2.5cm}p{4cm}p{4cm}}
+\toprule
+\textbf{Patient} & \textbf{Internal State} & \textbf{LLM Sees} \\
+\midrule
+Maria Santos & Full PHI: SSN, email, cardiac history & ``Patient: cardiac risk, urgent'' \\
+John Carter & Full PHI: SSN, email, mild headache & ``Patient: routine, standard'' \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{7 Critical Moments}
+
+\begin{enumerate}
+    \item \textbf{Side-by-Side} --- Internal vs LLM view comparison
+    \item \textbf{RAW LLM Payload} --- Undeniable proof with cryptographic verification
+    \item \textbf{Same Query, Different Users} --- LLM sees similar, system executes different
+    \item \textbf{Controlled Failure} --- LLM suggests PII, Connector blocks
+    \item \textbf{Identity-Aware Execution} --- Killer moment: correct execution per patient
+    \item \textbf{Operator Policy Control} --- Runtime context-level changes
+    \item \textbf{Cryptographic Execution Proof} --- SHA-256 hashes, phi\_overlap: 0
+\end{enumerate}
+
+\killerline{Identity-Aware Execution: LLM never knew WHO---but the system knew WHAT and FOR WHOM. data\_exposed: [] --- VERIFIED: Nothing sensitive leaked.}
+
+\subsection{RAW LLM Payload Proof}
+
+\begin{lstlisting}
+Payload Analysis:
+  [X] "Maria"      -> NOT FOUND
+  [X] "Santos"     -> NOT FOUND  
+  [X] "123-45-6789" -> NOT FOUND
+  [X] "maria.santos@email.com" -> NOT FOUND
+  
+Payload hash: a3f7b2c8d9e1f5a2 (verified)
+\end{lstlisting}
+
+\subsection{Usage}
+
+\begin{lstlisting}
+# Quick start
+make demo5
+
+# Run privacy demo
+python demos/demo5/selective_context_demo.py --no-wait
+
+# Verify data minimization
+connectorctl prove agent <pid> --claim data_minimization --forensic
+\end{lstlisting}
+
+\newpage
+
+% Demo 6
+\section{Deterministic, Constrained Tool Execution}
+
+\subsection{Overview}
+\textbf{Thesis:} ``Today's AI suggests actions. Connector executes them---correctly, safely, and predictably.''
+
+This demo proves that Connector turns AI from a \textbf{suggestion engine} into a \textbf{controlled execution system}.
+
+\subsection{12 Capabilities Across 4 Phases}
+
+\textbf{Phase 1 --- Intent $\rightarrow$ Valid Action Mapping}
+\begin{enumerate}[nosep]
+    \item Structured Intent Parsing
+    \item Tool Schema Enforcement
+    \item Argument Validation
+\end{enumerate}
+
+\textbf{Phase 2 --- Execution Boundaries}
+\begin{enumerate}[nosep,resume]
+    \item Allowed Tools Only
+    \item Path / Scope Constraints
+    \item Parameter Constraints
+\end{enumerate}
+
+\textbf{Phase 3 --- Multi-Step Execution Discipline}
+\begin{enumerate}[nosep,resume]
+    \item Step Sequencing Control
+    \item Dependency Awareness
+    \item No Shortcut Execution
+\end{enumerate}
+
+\textbf{Phase 4 --- Determinism \& Stability}
+\begin{enumerate}[nosep,resume]
+    \item Same Input $\rightarrow$ Same Action Plan
+    \item Replayability
+    \item Receipt-Based Execution Proof
+\end{enumerate}
+
+\subsection{DevOps Scenario}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Service} & web-api-prod \\
+\textbf{Config} & /etc/services/web-api/config.yaml \\
+\textbf{Actions} & validate\_config, update\_config, restart\_service, check\_health \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\killerline{Determinism Test (KILLER MOMENT): Run same command twice---identical execution plan. Hash-verified determinism.}
+
+\subsection{Critical Moments}
+
+\begin{enumerate}
+    \item \textbf{Tool Call is Structured} --- Parsed intent $\rightarrow$ mapped tool with strict schema
+    \item \textbf{Dangerous Command Refused} --- ``Delete all logs'' $\rightarrow$ DENY with safe alternative
+    \item \textbf{Multi-step Workflow Enforced} --- validate $\rightarrow$ update $\rightarrow$ restart sequence
+    \item \textbf{No Shortcut Allowed} --- ``Restart without update'' $\rightarrow$ BLOCKED
+    \item \textbf{Determinism Test} --- Same input $\rightarrow$ same execution plan
+    \item \textbf{Replay + Proof} --- connectorctl prove --exec with step-by-step receipts
+\end{enumerate}
+
+\subsection{Comparison: Today's AI vs Connector}
+
+\begin{tabular}{lcc}
+\toprule
+\textbf{Capability} & \textbf{Today's AI} & \textbf{Connector} \\
+\midrule
+Tool calls & flexible but risky & strict + validated \\
+Execution & probabilistic & deterministic \\
+Workflow & optional & enforced \\
+Safety & prompt-based & system-level \\
+Replay & impossible & built-in \\
+Audit & weak & strong \\
+\bottomrule
+\end{tabular}
+
+\subsection{Usage}
+
+\begin{lstlisting}
+# Quick start
+make demo6
+
+# Run execution demo
+python demos/demo6/deterministic_execution_demo.py --no-wait
+
+# Prove execution
+connectorctl prove --exec <execution_id>
+\end{lstlisting}
+
+\newpage
+
+% Appendix: Script Reference
+\section*{Appendix: Script Reference}
+\addcontentsline{toc}{section}{Appendix: Script Reference}
+
+\subsection{Individual Demo Scripts}
+
+\begin{tabular}{lll}
+\toprule
+\textbf{Script} & \textbf{Purpose} & \textbf{Commands} \\
+\midrule
+run\_demo1.sh & Enterprise demo & bootstrap, preflight, run, export \\
+run\_demo2.sh & Coding workflow & bootstrap, preflight, run, stop \\
+run\_demo3.sh & Security attacks & bootstrap, preflight, run, stop \\
+run\_demo4.sh & Stability & bootstrap, preflight, run, structure \\
+run\_demo5.sh & Privacy & bootstrap, preflight, run, scenario \\
+run\_demo6.sh & Execution & bootstrap, preflight, run, scenario \\
+\bottomrule
+\end{tabular}
+
+\subsection{Master Script Commands}
+
+\begin{lstlisting}
+# List all demos
+./run_all_demos.sh list
+
+# Run specific demo
+./run_all_demos.sh run 3
+
+# Run all demos
+./run_all_demos.sh run
+
+# Export evidence
+./run_all_demos.sh export
+
+# Check status
+./run_all_demos.sh status
+
+# Stop all demo nodes
+./run_all_demos.sh stop
+
+# Show summary
+./run_all_demos.sh summary
+\end{lstlisting}
+
+\subsection{Environment Variables}
+
+\begin{tabular}{lll}
+\toprule
+\textbf{Variable} & \textbf{Required} & \textbf{Default} \\
+\midrule
+CONNECTOR\_URL & No & http://localhost:9091 \\
+CONNECTOR\_API\_KEY & No & dev-token (dev mode) \\
+DEEPSEEK\_API\_KEY & For LLM demos & --- \\
+CONNECTOR\_DEV\_MODE & No & 0 (disabled) \\
+DEMO*\_EXPORT\_DIR & No & ./evidence \\
+\bottomrule
+\end{tabular}
+
+\vfill
+\begin{center}
+\textcolor{connectorgreen}{\rule{0.5\textwidth}{0.5pt}}\\[1em]
+{\small Connector Platform --- Enterprise AI Governance}\\
+{\small \url{https://connector.dev}}
+\end{center}
+
+\end{document}

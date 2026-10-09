@@ -1,0 +1,168 @@
+\documentclass[11pt,a4paper,openany]{book}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[top=1.05in,bottom=1.05in,left=1.1in,right=1.1in]{geometry}
+\usepackage[dvipsnames,table]{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{array,tabularx,booktabs,longtable}
+\usepackage{caption}
+\usepackage[most]{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage[titles]{tocloft}
+\usepackage{titlesec}
+\usepackage[
+  colorlinks=true,
+  linkcolor=MidnightBlue,
+  urlcolor=MidnightBlue,
+  citecolor=MidnightBlue,
+  pdftitle={Connector -- Entry Strategy and Pilot Plan (2026)},
+  pdfauthor={GlobalSushrut, Inc.},
+  pdfsubject={Cofounder clarity business and go-to-market paper}
+]{hyperref}
+
+\setstretch{1.08}
+\captionsetup{labelfont=bf,skip=6pt,font=small}
+\setlist[itemize]{itemsep=4pt,topsep=4pt}
+\setlist[enumerate]{itemsep=4pt,topsep=4pt}
+
+\definecolor{CBlue}{RGB}{24,78,160}
+\definecolor{CGreen}{RGB}{0,130,90}
+\definecolor{CAmber}{RGB}{180,120,0}
+\definecolor{CRed}{RGB}{180,30,30}
+\definecolor{CSoft}{RGB}{246,248,252}
+
+\tcbset{
+  boxbase/.style={
+    breakable,
+    enhanced,
+    fonttitle=\bfseries\small,
+    top=5pt,
+    bottom=5pt,
+    left=7pt,
+    right=7pt,
+    arc=3pt,
+    boxrule=0.7pt
+  }
+}
+
+\newtcolorbox{conceptbox}[1]{
+  boxbase,
+  title={#1},
+  colback=CBlue!5,
+  colframe=CBlue!70,
+  coltitle=white,
+  attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=CBlue,arc=2pt,boxrule=0pt}
+}
+
+\newtcolorbox{insightbox}[1]{
+  boxbase,
+  title={#1},
+  colback=CGreen!6,
+  colframe=CGreen!60,
+  coltitle=white,
+  attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=CGreen,arc=2pt,boxrule=0pt}
+}
+
+\newtcolorbox{warnbox}[1]{
+  boxbase,
+  title={#1},
+  colback=CAmber!7,
+  colframe=CAmber!75,
+  coltitle=white,
+  attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=CAmber,arc=2pt,boxrule=0pt}
+}
+
+\newtcolorbox{dangerbox}[1]{
+  boxbase,
+  title={#1},
+  colback=CRed!5,
+  colframe=CRed!65,
+  coltitle=white,
+  attach boxed title to top left={yshift=-2mm,xshift=4mm},
+  boxed title style={colback=CRed,arc=2pt,boxrule=0pt}
+}
+
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{MidnightBlue}}
+  {\chaptertitlename\ \thechapter}{14pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{18pt}{14pt}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{MidnightBlue!85}}
+  {\thesection}{0.8em}{}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{MidnightBlue!70}}
+  {\thesubsection}{0.7em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\small\thepage}
+\fancyhead[LO]{\small\itshape\nouppercase{\rightmark}}
+\fancyhead[RE]{\small\itshape Connector -- Cofounder Clarity Paper}
+\fancyfoot[C]{\small\color{gray!70} GlobalSushrut, Inc. -- 2026}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\renewcommand{\cftchapfont}{\bfseries\color{MidnightBlue}}
+\renewcommand{\cftsecfont}{\color{MidnightBlue!80}}
+\setlength{\cftbeforechapskip}{5pt}
+
+\begin{document}
+
+\begin{titlepage}
+\pagecolor{MidnightBlue}
+\color{white}
+\vspace*{2.1cm}
+\begin{center}
+  {\fontsize{11}{13}\selectfont\scshape\color{white!70} Cofounder Clarity Paper}\\[1.2cm]
+  {\fontsize{34}{40}\selectfont\bfseries Connector}\\[0.25cm]
+  {\fontsize{20}{24}\selectfont\color{white!88} Entry Strategy \& Pilot Plan (2026)}\\[1.6cm]
+  {\Large\color{white!82} How we enter the market, what we sell first, and why customers pay}\\[2.2cm]
+  \begin{minipage}{0.82\textwidth}
+  \centering
+  \setlength{\fboxsep}{12pt}
+  \colorbox{white!10}{
+    \parbox{0.9\textwidth}{
+      \centering
+      \large
+      We are not taking the full system to market.\\[6pt]
+      We are entering through a narrow wedge where AI decisions need to be traceable and provable.\\[10pt]
+      \textbf{Connector = execution control layer for AI decisions.}
+    }
+  }
+  \end{minipage}\\[2.3cm]
+  {\large\color{white!78} GlobalSushrut, Inc.}\\[0.3cm]
+  {\normalsize\color{white!62} \today}
+\end{center}
+\vfill
+\noindent\color{white!35}\rule{\textwidth}{0.4pt}\\[3pt]
+{\footnotesize\color{white!55} This document is intentionally business-first and simple. It is designed to align a cofounding team around entry wedge, pilot design, and go-to-market execution.}
+\end{titlepage}
+\nopagecolor
+\color{black}
+
+\frontmatter
+\tableofcontents
+
+\mainmatter
+\input{chapters/01_opening}
+\input{chapters/02_problem}
+\input{chapters/03_wedge}
+\input{chapters/04_why_now}
+\input{chapters/05_customer_profile}
+\input{chapters/06_why_they_pay}
+\input{chapters/07_pilot_design}
+\input{chapters/08_go_to_market}
+\input{chapters/09_why_this_works}
+\input{chapters/10_collaboration_next_step}
+
+\end{document}

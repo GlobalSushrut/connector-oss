@@ -1,0 +1,74 @@
+name: connector-platform-kernel
+
+on:
+  pull_request:
+    paths:
+      - "platform/server/**"
+      - "platform/microvm/**"
+      - "platform/plugin-runtime/**"
+      - "platform/connector-vm-agent/**"
+      - "platform/scripts/connector-microvm-smoke.sh"
+      - "oss/connector/**"
+      - "oss/vac/**"
+      - "oss/aapi/**"
+      - "vendor/firecracker/**"
+      - "vendor/microvm/**"
+      - "scripts/package-connector-os.sh"
+      - "Makefile"
+      - "connector.yaml.example"
+      - ".github/workflows/connector-platform-kernel.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "platform/server/**"
+      - "platform/microvm/**"
+      - "platform/plugin-runtime/**"
+      - "platform/connector-vm-agent/**"
+      - "platform/scripts/connector-microvm-smoke.sh"
+      - "oss/connector/**"
+      - "oss/vac/**"
+      - "oss/aapi/**"
+      - "vendor/firecracker/**"
+      - "vendor/microvm/**"
+      - "scripts/package-connector-os.sh"
+      - "Makefile"
+      - "connector.yaml.example"
+      - ".github/workflows/connector-platform-kernel.yml"
+
+jobs:
+  cage-manifest-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: platform/server
+
+      - name: Cage manifest unit test (K3 contract)
+        working-directory: platform/server
+        run: cargo test kernel_host::tests::cage_manifest
+
+      - name: Phase 5.7 — operator env egress label parity (unit)
+        working-directory: platform/server
+        run: cargo test --bin connector-platform docker_egress
+
+      - name: Phase 5.3.8 — microVM smoke (vendor + crates)
+        run: bash platform/scripts/connector-microvm-smoke.sh
+
+      - name: CVR soft LAB acceptance
+        run: bash platform/scripts/cvr-soft-acceptance.sh
+
+      - name: Control-plane beta honesty markers (Books meta)
+        working-directory: platform/server
+        run: cargo test --test control_plane_beta_markers
+
+      - name: Guard — platform/server/target not owned by root (Phase 0.1)
+        run: bash scripts/audit-target-not-root-owned.sh
+
+      - name: Phase 1.7 — release package tarball (single artifact)
+        run: bash scripts/package-connector-os.sh

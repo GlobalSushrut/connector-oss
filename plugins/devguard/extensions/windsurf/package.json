@@ -1,0 +1,15 @@
+{
+  "name": "devguard-windsurf",
+  "displayName": "DevGuard (Windsurf)",
+  "description": "Shows live DevGuard role, budget, and approval badge",
+  "version": "0.0.1",
+  "publisher": "connector",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ]
+}

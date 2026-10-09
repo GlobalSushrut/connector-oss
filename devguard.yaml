@@ -1,0 +1,184 @@
+# DevGuard Configuration — Team RBAC
+# Docs: https://docs.connector.dev/devguard
+version: "2.0"
+workspace: my-company/my-project
+
+# ── Identity Provider ────────────────────────────────────────
+identity:
+  provider: github
+  org: my-company
+  require_auth: true
+  mfa_required: false
+
+# ── Roles ────────────────────────────────────────────────────
+roles:
+
+  intern:
+    clearance: 1
+    files:
+      read: ["src/**", "tests/**", "docs/**", "README.md"]
+      write: ["tests/**"]
+      hidden: ["infra/**", "deploy/**", ".env*", "secrets/**",
+               "src/auth/**", "src/billing/**", "database/migrations/**"]
+    execution:
+      allow: ["cargo test", "cargo check", "npm test", "npm run lint",
+              "git status", "git diff", "git log -n *"]
+      deny: ["*"]
+      require_approval: ["git push*"]
+    branches:
+      allow: ["feature/intern-*"]
+    secrets: none
+    network:
+      allow: ["pypi.org", "npmjs.com", "crates.io"]
+      deny: ["*"]
+    budget:
+      max_tokens_per_task: 50000
+      max_cost_usd_per_day: 2.00
+      model: cheap
+    approvals:
+      all_writes: { require: senior }
+
+  junior:
+    clearance: 2
+    extends: intern
+    files:
+      read: ["src/**", "tests/**", "docs/**", "*.toml", "*.json", "*.yaml", "*.md"]
+      write: ["src/**", "tests/**"]
+      hidden: [".env*", "secrets/**", "infra/prod/**", "database/migrations/**"]
+      read_only: ["infra/dev/**", "src/auth/**"]
+    execution:
+      allow: ["cargo build", "cargo test", "cargo check", "cargo clippy",
+              "npm test", "npm run build", "npm run lint", "pytest",
+              "git status", "git diff", "git add", "git commit", "git log*"]
+      deny: ["rm -rf*", "sudo*", "curl | bash", "eval*", "ssh*",
+             "docker*", "kubectl*", "terraform*"]
+      require_approval: ["git push*"]
+    branches:
+      allow: ["feature/*", "fix/*"]
+      deny: ["main", "release/*", "production"]
+    secrets: none
+    network:
+      allow: ["pypi.org", "npmjs.com", "crates.io", "github.com"]
+      deny: ["*"]
+    budget:
+      max_tokens_per_task: 200000
+      max_cost_usd_per_day: 5.00
+      model: standard
+
+  senior:
+    clearance: 4
+    files:
+      read: ["**"]
+      write: ["src/**", "tests/**", "docs/**", "database/migrations/**"]
+      hidden: [".env.production", "secrets/prod/**"]
+      read_only: ["infra/prod/**"]
+    execution:
+      allow: ["cargo*", "npm*", "pytest*", "make", "docker build*",
+              "docker compose*", "git*"]
+      deny: ["rm -rf /", "sudo rm*", "curl | bash", "eval*"]
+      require_approval: ["git push origin main", "docker push*"]
+    branches:
+      allow: ["feature/*", "fix/*", "refactor/*", "release/*"]
+      deny: ["production"]
+    secrets:
+      allowed_via_broker: ["dev_db_password", "staging_api_key"]
+      direct_access: none
+    network:
+      allow: ["pypi.org", "npmjs.com", "crates.io", "github.com",
+              "docker.io", "*.amazonaws.com"]
+      deny: ["*"]
+    budget:
+      max_tokens_per_task: 500000
+      max_cost_usd_per_day: 20.00
+      model: best
+
+  tech_lead:
+    clearance: 5
+    extends: senior
+    files:
+      read: ["**"]
+      write: ["**"]
+      no_delete: ["migrations/**", "LICENSE"]
+    execution:
+      allow: ["*"]
+      deny: ["rm -rf /", ":()({ :|:& };:"]
+      require_approval: ["kubectl apply*", "terraform apply*"]
+    branches:
+      allow: ["*"]
+    secrets:
+      allowed_via_broker: ["*"]
+      direct_access: none
+    budget:
+      max_tokens_per_task: 1000000
+      max_cost_usd_per_day: 50.00
+
+  reviewer:
+    clearance: 2
+    files:
+      read: ["**"]
+      write: []
+    execution:
+      allow: ["cargo check", "cargo clippy", "npm run lint", "pytest",
+              "git diff", "git log*", "git blame*", "git status"]
+      deny: ["*"]
+    secrets: none
+    budget:
+      max_tokens_per_task: 50000
+      model: cheap
+
+# ── Assignments ──────────────────────────────────────────────
+# Map identity + tool → role. Edit with your team members.
+assignments:
+  # Example:
+  # - identity: github:alice
+  #   role: tech_lead
+  #   tools: [claude_code, cursor, windsurf]
+  #
+  # - identity: github:bob
+  #   role: senior
+  #   tools: [claude_code]
+  #
+  # - identity: github:team/frontend
+  #   role: junior
+  #   tools: [cursor, windsurf]
+  #   overrides:
+  #     files:
+  #       write: ["src/frontend/**", "tests/frontend/**"]
+
+  - identity: "*"
+    role: intern
+    tools: ["*"]
+
+# ── Global ───────────────────────────────────────────────────
+files:
+  always_hidden: [".env*", "*.key", "*.pem", "*.p12", "secrets/**",
+                  ".git/config", "node_modules/**"]
+  always_read_only: ["LICENSE", ".github/CODEOWNERS"]
+
+secrets:
+  detect_and_redact: true
+  patterns: default
+  vault_backend: connector
+
+git:
+  no_force_push: true
+  max_diff_lines: 2000
+  protected_branches: ["main", "production", "release/*"]
+
+budget:
+  max_tokens_per_day: 5000000
+  max_cost_usd_per_day: 100.00
+  alert_at_percent: 80
+
+audit:
+  level: full
+  receipts: true
+  proof: true
+  retention_days: 90
+
+enforcement:
+  mode: hooks
+  deny_by_default: true
+  least_privilege: true
+  no_raw_secret_exposure: true
+  all_actions_receipted: true

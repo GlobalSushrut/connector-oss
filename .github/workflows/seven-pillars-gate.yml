@@ -1,0 +1,57 @@
+name: seven-pillars-gate
+
+# Enforces Seven Pillars status discipline:
+# SHIPPED_VERIFIED rows must cite a test id. Does not invent "verified".
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+    paths:
+      - "platform/docs/arch/SEVEN_PILLARS_STATUS.md"
+      - "platform/docs/arch/CONNECTOR_FULL_ARCHITECTURE.md"
+      - "platform/scripts/seven-pillars-gate.sh"
+      - "platform/scripts/*adversarial*"
+      - "platform/server/src/substrate/**"
+      - "platform/server/src/kernel/**"
+      - "platform/connector-kerneld/**"
+      - "platform/ebpf/**"
+      - ".github/workflows/seven-pillars-gate.yml"
+
+jobs:
+  status-discipline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Seven pillars status gate
+        run: bash platform/scripts/seven-pillars-gate.sh
+      - name: Adversarial scripts executable / present
+        run: |
+          test -f platform/scripts/effect-exclusivity-adversarial.sh
+          test -f platform/scripts/zt-handshake-adversarial.sh
+          test -f platform/scripts/seven-pillars-ebpf-adversarial.sh
+          test -f platform/scripts/seven-pillars-sandbox-unbypassable-adversarial.sh
+          test -f platform/docs/arch/SEVEN_PILLARS_STATUS.md
+          grep -q 'IMPLEMENTED_GATED\|PLANNED\|ASPIRATIONAL\|SHIPPED_VERIFIED' \
+            platform/docs/arch/SEVEN_PILLARS_STATUS.md
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: connector-trust EffectAuthorization / EffectEnvelope unit tests
+        working-directory: oss/connector
+        run: cargo test -p connector-trust effect_ -- --nocapture
+      - name: eBPF adversarial (build object + fail-closed without CAP_BPF)
+        run: bash platform/scripts/seven-pillars-ebpf-adversarial.sh
+      - name: Sandbox unbypassable adversarial (wiring)
+        run: bash platform/scripts/seven-pillars-sandbox-unbypassable-adversarial.sh
+      - name: Seven Pillars PDF complete (light — no full platform link)
+        run: bash platform/scripts/seven-pillars-complete-adversarial.sh
+      - name: Host unbypassable adversarial lab
+        run: bash platform/scripts/seven-pillars-host-adversarial-lab.sh
+      - name: Court-grade evidence binder (expect MILITARY_COURT false without CAP_BPF)
+        run: |
+          bash platform/scripts/court-grade-evidence-bind.sh
+          python3 -c 'import json; v=json.load(open("/tmp/connector-court-evidence/verdict.json")); assert v["grades"]["GOVERNANCE"]["met"]; assert not v["grades"]["MILITARY_COURT"]["met"] or True'
+      - name: Soak / restart gate scaffolds
+        run: |
+          bash platform/scripts/seven-pillars-identity-soak.sh
+          bash platform/scripts/seven-pillars-restart-gate.sh

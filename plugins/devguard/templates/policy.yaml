@@ -1,0 +1,115 @@
+# Connector DevGuard — Starter Policy
+# Copy to .connector/policy.yaml in your project root.
+# See: docs/DEVGUARD_ARCHITECTURE.md
+
+version: "1.0"
+workspace: my-project
+
+# --- Identity ---
+identity:
+  provider: local       # github | gitlab | okta | local
+  require_auth: false   # set true for team/enterprise
+
+# --- Roles ---
+# Define inline or use !include roles/builder.yaml
+roles:
+  builder:
+    files:
+      read: ["src/**", "tests/**", "docs/**", "*.toml", "*.json", "*.yaml", "*.md"]
+      write: ["src/**", "tests/**"]
+    execution:
+      allow: ["cargo build", "cargo test", "cargo check", "cargo clippy",
+              "npm test", "npm run build", "npm run lint",
+              "pytest", "make", "git status", "git diff", "git log -n *"]
+      deny: ["rm -rf*", "sudo*", "curl | bash", "eval*"]
+      require_approval: ["git push*"]
+    branches:
+      allow: ["feature/*", "fix/*", "refactor/*"]
+
+  reviewer:
+    files:
+      read: ["**"]
+      write: []
+    execution:
+      allow: ["cargo check", "cargo clippy", "npm run lint", "git diff", "git log*"]
+
+default_role: builder
+
+# --- File visibility ---
+files:
+  visible: ["src/**", "tests/**", "docs/**", "*.toml", "*.json", "*.yaml", "*.md"]
+  hidden: [".env*", "*.key", "*.pem", "*.p12", "secrets/**", ".git/config"]
+  read_only: ["infra/**", "database/migrations/**"]
+
+# --- Write boundaries ---
+writes:
+  allow: ["src/**", "tests/**", "docs/**"]
+  deny: ["*.lock", ".github/**"]
+  suggest_only: ["database/**"]
+  no_delete: ["migrations/**", "LICENSE", "README.md"]
+  max_files_per_change: 20
+  max_lines_per_file: 500
+
+# --- Shell execution ---
+execution:
+  allowed: ["cargo*", "npm test", "npm run*", "pytest", "make", "git status", "git diff"]
+  denied: ["rm -rf*", "sudo*", "chmod -R*", "curl | bash", "wget | sh", "eval*", "ssh*"]
+  require_approval: ["git push*", "npm publish", "cargo publish"]
+  limits:
+    max_runtime_seconds: 300
+    max_output_bytes: 1048576
+    deny_background: true
+
+# --- Secret shielding ---
+secrets:
+  detect_and_redact: true
+  patterns: default    # uses built-in pattern set
+
+# --- Context assembly ---
+context:
+  scope: ["src/**"]
+  max_tokens: 32000
+  exclude: ["node_modules/**", "dist/**", "target/**", ".git/**"]
+  # inject: [".connector/coding_standards.md"]  # uncomment and create file
+
+# --- Git governance ---
+git:
+  allowed_branches: ["feature/*", "fix/*", "refactor/*"]
+  denied_branches: ["main", "production"]
+  require_pr: false    # set true for team mode
+  no_force_push: true
+  max_diff_lines: 2000
+
+# --- Approvals ---
+approvals:
+  write_protected: { require: code_owner }
+  # deploy: { require: [tech_lead], quorum: 1 }
+
+# --- Budget ---
+budget:
+  max_tokens_per_day: 1000000
+  max_cost_usd: 10.00
+
+# --- Audit ---
+audit:
+  level: full          # full | summary | minimal
+  receipts: true
+  proof: true
+  retention_days: 30
+
+# --- Verification ---
+verification:
+  after_changes: [compiles]
+  # after_changes: [compiles, tests_pass, lint_clean]  # stricter
+
+# --- Environment ---
+environment:
+  default: local       # local | sandbox | dev
+  production: deny
+
+# --- Enforcement defaults ---
+defaults:
+  deny_by_default: true
+  least_privilege: true
+  no_raw_secret_exposure: true
+  all_actions_receipted: true

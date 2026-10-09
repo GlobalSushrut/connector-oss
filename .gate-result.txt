@@ -1,0 +1,1 @@
+-rwxrwxr-x 2 umesh umesh 1089368400 Aug 10 13:31 /home/umesh/Projects/connector-private/platform/server/.cargo-target-umesh/debug/connector-platform

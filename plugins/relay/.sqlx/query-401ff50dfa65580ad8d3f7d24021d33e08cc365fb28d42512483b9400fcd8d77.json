@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE relay_functions SET status = $1, updated_at = NOW() WHERE name = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "401ff50dfa65580ad8d3f7d24021d33e08cc365fb28d42512483b9400fcd8d77"
+}

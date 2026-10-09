@@ -1,0 +1,71 @@
+name: proof_generate
+description: "Generate cryptographic evidence bundle for a session."
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - manual
+  - cli: "connectorctl guard proof"
+  - on_event: session.end
+
+inputs:
+  session_id:
+    type: string
+    required: true
+  output_dir:
+    type: string
+    required: false
+    default: "./evidence"
+  include:
+    type: array
+    required: false
+    default: [audit_chain, receipts, policy_verdicts, cost_summary, diff_summary]
+
+steps:
+  - id: collect_audit
+    action: connector.audit.query
+    params:
+      session_id: "{{ inputs.session_id }}"
+      include_receipts: true
+
+  - id: collect_proofs
+    action: connector.proof.collect
+    params:
+      session_id: "{{ inputs.session_id }}"
+    depends_on: collect_audit
+
+  - id: collect_policy_verdicts
+    action: connector.audit.query
+    condition: "{{ 'policy_verdicts' in inputs.include }}"
+    params:
+      session_id: "{{ inputs.session_id }}"
+      filter: "verdict"
+
+  - id: collect_cost
+    action: connector.billing.session_cost
+    condition: "{{ 'cost_summary' in inputs.include }}"
+    params:
+      session_id: "{{ inputs.session_id }}"
+
+  - id: bundle
+    action: connector.proof.bundle
+    params:
+      session_id: "{{ inputs.session_id }}"
+      audit: "{{ steps.collect_audit.entries }}"
+      proofs: "{{ steps.collect_proofs.proof_chain }}"
+      verdicts: "{{ steps.collect_policy_verdicts.entries }}"
+      cost: "{{ steps.collect_cost }}"
+      output_dir: "{{ inputs.output_dir }}"
+    depends_on: [collect_audit, collect_proofs, collect_policy_verdicts, collect_cost]
+
+  - id: verify_bundle
+    action: connector.proof.verify
+    params:
+      bundle_path: "{{ steps.bundle.bundle_path }}"
+    depends_on: bundle
+
+outputs:
+  bundle_path: "{{ steps.bundle.bundle_path }}"
+  proof_id: "{{ steps.collect_proofs.proof_id }}"
+  chain_verified: "{{ steps.verify_bundle.verified }}"
+  entry_count: "{{ steps.collect_audit.entry_count }}"

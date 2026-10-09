@@ -1,0 +1,53 @@
+# Playground Fly build — whitelist sources only (no target/ dirs)
+*
+
+# platform crates
+!/platform
+/platform/*
+!/platform/server
+!/platform/server/**
+!/platform/supervisor
+!/platform/supervisor/**
+!/platform/cpkg
+!/platform/cpkg/**
+!/platform/plugin-manifest
+!/platform/plugin-manifest/**
+!/platform/plugin-runtime
+!/platform/plugin-runtime/**
+!/platform/microvm
+!/platform/microvm/**
+
+# optional dashboard UI
+!/platform/ui-leptos
+/platform/ui-leptos/*
+!/platform/ui-leptos/dashboard
+/platform/ui-leptos/dashboard/*
+!/platform/ui-leptos/dashboard/dist
+!/platform/ui-leptos/dashboard/dist/**
+
+# OSS path deps
+!/oss
+/oss/*
+!/oss/vac
+/oss/vac/*
+!/oss/vac/crates
+!/oss/vac/crates/**
+!/oss/connector
+/oss/connector/*
+!/oss/connector/crates
+!/oss/connector/crates/**
+!/oss/aapi
+/oss/aapi/*
+!/oss/aapi/crates
+!/oss/aapi/crates/**
+
+# AGOS
+!/agos-abi
+!/agos-abi/**
+!/agos-sdk
+!/agos-sdk/**
+
+**/target
+**/target-*
+**/.target*
+**/.target-*

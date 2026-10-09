@@ -1,0 +1,17 @@
+[build]
+target = "./index.html"
+dist   = "dist"
+
+[[hooks]]
+stage   = "pre_build"
+command = "sh"
+command_arguments = ["-c", "command -v tailwindcss >/dev/null && tailwindcss -i ./input.css -o ./tailwind.out.css --minify || npx --yes tailwindcss@3 -i ./input.css -o ./tailwind.out.css --minify"]
+
+[serve]
+port        = 1422
+open        = false
+ws_protocol = "ws"
+
+[[proxy]]
+rewrite = "/api"
+backend = "http://localhost:4100"

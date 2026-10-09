@@ -1,0 +1,311 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\setcounter{secnumdepth}{0}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.15em,topsep=0.25em}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\newcommand{\companyentry}[9]{%
+\subsection*{#1}
+\begin{itemize}
+\item \textbf{HQ / ICP}: #2
+\item \textbf{Pain}: #3
+\item \textbf{Budget}: #4
+\item \textbf{Likely buyer}: #5
+\item \textbf{Access}: #6
+\item \textbf{Onboarding}: #7
+\item \textbf{Collaboration fit}: #8
+\item \textbf{Why now}: #9
+\end{itemize}
+}
+\begin{document}
+\small
+\begin{center}
+{\LARGE \textbf{Connector Practical Design-Partner Target List v2}}\\[0.3em]
+{\large 100 North American Companies Filtered for Real Pilot Practicality}\\[0.4em]
+{\normalsize USA and Canada only}
+\end{center}
+
+\section{What changed from the broad list}
+This version is intentionally stricter than the original 100-company universe. It is optimized for current founder-led reality, not theoretical market size.
+\begin{itemize}
+\item \textbf{Kept}: companies with strong workflow pain, visible AI execution complexity, likely pilot budget, and a believable path to an early collaboration.
+\item \textbf{Removed or de-emphasized}: hyperscalers, frontier labs, very large incumbents, and companies likely to be too slow, too political, or too internally capable for an early design-partner motion.
+\item \textbf{Preferred}: growth-stage or focused enterprise startups with one clear workflow surface, one likely buyer, and a bounded pilot that can prove value quickly.
+\end{itemize}
+
+\section{Ground-reality filter}
+A company stays on this v2 list only if most of the following are true:
+\begin{itemize}
+\item The pain is already live in production or close to production.
+\item There is a plausible budget owner for a small paid pilot.
+\item The workflow can be bounded to one concrete use case.
+\item The buyer is likely an engineering, platform, operations, or product owner with enough urgency to try an early collaboration.
+\item The company is not so large or mature that it will default to building internally or burying the motion in procurement.
+\end{itemize}
+
+\section{Executive summary}
+\begin{itemize}
+\item \textbf{ICP1 total}: 50 companies.
+\item \textbf{ICP2 total}: 30 companies.
+\item \textbf{ICP3 total}: 20 companies.
+\item \textbf{Best immediate wedge}: support automation, enterprise work AI, contact center AI, AI workflow tooling, and regulated workflow automation with high audit pressure.
+\item \textbf{Best initial buyer shape}: VP Engineering, Head of AI, Head of Support Technology, Head of Risk Platform, Legal Ops leader, or healthcare operations / product leader.
+\end{itemize}
+
+\clearpage
+\section{ICP1: Internal Fix Loop --- 50 companies}
+
+\companyentry{Ada}{Toronto, Canada / ICP1}{Autonomous support workflows are core to the product, so runtime mistakes directly hurt containment, escalation load, and CSAT.}{Enterprise support automation already carries budget and ROI pressure.}{VP Engineering, Head of AI, VP CX Technology}{Medium}{Medium-High}{Growth-stage and category-native; technically credible but still realistic for collaboration.}{Good blend of pain, budget, and a bounded first pilot.}
+
+\companyentry{Decagon}{San Francisco, USA / ICP1}{The company openly talks about testing, observability, experimentation, and keeping agents reliable as they evolve.}{Support automation budgets are active and tied to efficiency and service quality.}{Head of AI Engineering, VP Product, CTO}{Medium}{Medium-High}{Strong conceptual fit and still young enough to try sharp external tooling.}{One of the clearest matches to the execution-control wedge.}
+
+\companyentry{Forethought}{San Francisco, USA / ICP1}{Public messaging highlights duplicated workflows, wrong answers, fallback logic, and fact verification.}{Support leaders already buy automation and quality-improvement tools.}{VP Support Technology, CTO}{Medium}{Medium}{Clear workflow pain with visible operational stakes.}{Very strong early design-partner shape.}
+
+\companyentry{Observe.AI}{San Francisco, USA / ICP1}{Contact center AI requires predictable outcomes, enforced steps, and reliable real-time behavior.}{CX and call-center budgets are real and often urgent.}{VP CX Operations, Head of AI Platform}{Medium-High}{High}{Pain is very real, though integrations into live call operations increase onboarding work.}{Good if the pilot is framed around one critical workflow.}
+
+\companyentry{Gorgias}{San Francisco, USA / ICP1}{The AI agent is expected to learn brand rules, customer context, and workflows, which creates direct execution risk.}{Ecommerce support and automation budgets are practical and ROI-oriented.}{VP Support, VP Engineering}{Medium}{Medium}{Fast-moving company with visible workflow automation use cases.}{Strong mix of accessibility and commercial urgency.}
+
+\companyentry{Intercom}{San Francisco, USA / ICP1}{Fin AI Agent already sits inside workflows, triage rules, and handoffs where brittle execution creates support pain.}{Support and platform budgets are already allocated around Fin and workflow automation.}{VP Support Engineering, Head of AI Product}{Medium}{Medium}{More mature than early startups, but still concrete and workflow-native.}{Useful if approached through one bounded workflow-control problem.}
+
+\companyentry{Assembled}{San Francisco, USA / ICP1}{Support operations teams actively tune staffing, routing, and automation quality, so runtime issues are very practical.}{Buyer teams already pay for support operations infrastructure.}{Head of Support Operations, VP Engineering}{Medium}{Medium}{Approachable compared with large incumbents and has a tight workflow surface.}{High practical value for a first design-partner motion.}
+
+\companyentry{Fullview}{San Francisco, USA / ICP1}{AI-assisted support resolution and workflow automation are close enough to the pain and narrow enough to pilot quickly.}{Smaller teams still spend on tools that reduce support load quickly.}{Head of Support, VP Product}{Medium-Low}{Low-Medium}{Smaller and more collaborative than major vendors.}{One of the easiest ICP1 pilot candidates.}
+
+\companyentry{Pylon}{San Francisco, USA / ICP1}{Pylon is AI-native B2B support, so workflow handling, account context, and busywork automation are central.}{Support and post-sales ops budgets are practical and near-term.}{VP Support, CTO, Head of Product}{Medium-Low}{Low-Medium}{Focused workflow scope and younger company profile increase openness.}{Excellent practical addition relative to bigger incumbents.}
+
+\companyentry{Open}{San Francisco, USA / ICP1}{Open explicitly positions around enterprise AI customer support where business rules and workflow logic are too complex for basic agents.}{The company sells into a budget line that already exists: enterprise support transformation.}{Founder, CTO, Head of Product}{Medium-Low}{Low-Medium}{Very strong early-collaboration profile because the product is still defining category shape.}{Good example of a company likely to feel the pain now rather than later.}
+
+\companyentry{Maven AGI}{Boston, USA / ICP1}{Agentic support automation is the product itself, which makes runtime control a first-order operational need.}{Enterprise support budgets are already attached to this motion.}{VP CX Engineering, CTO}{Medium}{Medium}{Focused enough to pilot, credible enough to pay.}{A clean wedge target.}
+
+\companyentry{DevRev}{Palo Alto, USA / ICP1}{Support, product, and conversational workflows meet in one system, creating real execution complexity.}{The company sells AI-native service operations, so there is likely budget and internal urgency.}{VP Support Engineering, CTO}{Medium}{Medium-High}{Still startup-like enough to collaborate, but technical depth is real.}{Practical if the pitch is specific and execution-layer focused.}
+
+\companyentry{Netomi}{San Francisco, USA / ICP1}{Policy-aware customer service AI is already close to runtime control pain.}{Customer experience automation already has budget and measurable ROI.}{VP CX Operations, CTO}{Medium}{Medium}{A credible, focused category player with real operational pain.}{Good practical fit.}
+
+\companyentry{Cresta}{Palo Alto, USA / ICP1}{Human and AI agents share live contact-center workflows where quality failures are visible and expensive.}{Contact-center budgets are large and operationally driven.}{VP Contact Center Technology, CTO}{Medium}{Medium-High}{Pain is real, though live ops integration is heavier than simpler support products.}{Worth keeping because budget is strong and workflow stakes are obvious.}
+
+\companyentry{Sierra}{San Francisco, USA / ICP1}{Decisioning, next-best-action workflows, and engineering-owned agent behavior create exactly the right runtime-control problem.}{Enterprise CX budgets are real, though buyer sophistication is high.}{VP Engineering, CTO, Head of CX Platform}{Medium-High}{Medium-High}{A sharper fit than general AI companies, but still not the easiest first target.}{Keep as a higher-value but slightly harder account.}
+
+\companyentry{Meya}{Canada / ICP1}{Programmable support automation means workflow logic and runtime behavior are central, not incidental.}{Support tooling budgets are real and bounded.}{Head of Support Technology, CTO}{Medium}{Medium}{More focused and likely more open than the largest category players.}{Good practical replacement for less reachable incumbents.}
+
+\companyentry{Regal.ai}{New York, USA / ICP1}{AI phone agents and customer journeys create concrete execution and workflow-state problems.}{Revenue and contact-center budgets exist and are performance-driven.}{VP Contact Center, VP Growth Operations}{Medium}{Medium}{Focused workflow domain with obvious business value.}{Good fit where the wedge is framed as reliable execution, not just automation.}
+
+\companyentry{Front}{San Francisco, USA / ICP1}{Shared inbox and customer operations workflows create quiet routing and action failures that teams actively try to fix.}{Operations and support budgets are practical and owned by clear teams.}{VP Operations Systems, Head of Support Technology}{Medium}{Medium}{Concrete workflow surface and less enterprise drag than huge incumbents.}{Practical and reachable.}
+
+\companyentry{Kustomer}{New York, USA / ICP1}{AI triage, routing, and customer-service workflow automation sit right inside the execution problem.}{Customer-service budgets already exist and are tied to resolution and efficiency.}{VP CX Engineering, Head of Support Systems}{Medium}{Medium}{Focused enough for a bounded pilot.}{Good if the outreach is workflow-specific.}
+
+\companyentry{Gladly}{San Francisco, USA / ICP1}{Service workflows and agent automation are core to Gladly's product direction.}{Support technology budgets are real and measurable.}{VP CX Technology, CTO}{Medium}{Medium}{Reachable with a clear use case and operational metric.}{Still practical despite moderate scale.}
+
+\companyentry{Qualified}{San Francisco, USA / ICP1}{AI SDR and pipeline automation move from assistance into execution, where mistakes can directly lose revenue.}{Revenue-ops and GTM AI budgets are increasingly available.}{VP Growth Engineering, VP RevOps}{Medium}{Medium}{Smaller and more focused than the biggest revenue-AI companies.}{Good practical fit if pitched around execution risk in revenue flows.}
+
+\companyentry{Paradox}{Scottsdale, USA / ICP1}{Recruiting workflows with conversational AI are live, repetitive, and operationally sensitive.}{Talent technology budgets exist and buyers feel pain quickly.}{VP Talent Technology, CTO}{Medium}{Medium}{The workflow domain is narrow enough for a fast pilot.}{Useful because onboarding can be tightly scoped.}
+
+\companyentry{Beam AI}{Toronto, Canada / ICP1}{Beam markets enterprise agents that automate critical execution from SOPs, which is very close to your wedge.}{Enterprise workflow-automation budgets are explicit in the category.}{VP Engineering, CTO, Head of Product}{Medium}{Medium}{Still in a collaboration-friendly company band.}{A practical replacement for more inaccessible workflow giants.}
+
+\companyentry{Kognitos}{San Jose, USA / ICP1}{Turning operating procedures into AI automation makes runtime control a direct problem.}{Automation budgets exist in operations and shared-services teams.}{VP Automation, CIO, Head of Platform}{Medium}{Medium-High}{Good conceptual fit and less impossible than hyperscale workflow vendors.}{Worth keeping as a practical enterprise-automation target.}
+
+\companyentry{Retool}{San Francisco, USA / ICP1}{Internal tools and operational workflows push AI close to real systems, permissions, and actions.}{Internal-tools and ops-platform budgets are real in growth companies.}{Head of Internal Tools, VP Engineering}{Medium}{High}{Still practical if the first pilot is one workflow, not broad platform control.}{Keep because the workflow surface is real and bounded.}
+
+\companyentry{Zapier}{San Francisco, USA / ICP1}{AI agents are now an extension of Zapier's workflow layer, making execution quality matter.}{Automation budgets are common and product-led adoption can coexist with paid pilots.}{Head of AI Automation, VP Product}{Medium}{Medium}{Larger than ideal but still more approachable than the biggest enterprise incumbents.}{Useful as a mid-probability account.}
+
+\companyentry{Freshworks}{San Mateo, USA / ICP1}{AI is embedded in support and service workflows where reliability and handoff quality matter.}{Support and employee-service budgets are already established.}{VP Product, CTO, Head of AI}{Medium-High}{Medium}{A bit larger, but still more practical than Zendesk or ServiceNow.}{Good to keep as a credible medium-difficulty target.}
+
+\companyentry{Dialpad}{San Francisco, USA / ICP1}{Voice, contact-center, and real-time AI workflows are execution sensitive by default.}{CX and communications budgets are clear and already owned.}{VP CX Technology, Head of AI Product}{Medium-High}{Medium}{Pain is real and measurable, though the wedge must be runtime-specific.}{Practical enough to keep.}
+
+\companyentry{Symbl.ai}{Seattle, USA / ICP1}{Conversation intelligence tied to workflow actions creates a path into execution control.}{Platform and product teams pay for workflow-aware AI layers.}{Head of AI Platform, VP Product}{Medium}{Medium-High}{Smaller and more focused than many incumbents.}{A reasonable practical target if the use case is narrow.}
+
+\companyentry{Aisera}{Palo Alto, USA / ICP1}{Cross-functional AI workflows across IT, HR, finance, and support create real runtime failure modes.}{Enterprise automation budgets are large and visible.}{VP Engineering, CIO, Head of Automation}{High}{High}{More enterprise-heavy, but pain and budget are undeniably real.}{Keep as a higher-budget target, not a first-wave easy target.}
+
+\companyentry{Moveworks}{Mountain View, USA / ICP1}{Internal employee workflows are exactly where execution mistakes create operational pain.}{Large IT and employee-support budgets are available.}{Head of AI Platform, CTO}{High}{High}{Harder access, but still more grounded than pure frontier labs.}{Keep because pain and budget are both strong.}
+
+\companyentry{Glean}{Palo Alto, USA / ICP1}{Cross-system enterprise agents make orchestration and execution quality central issues.}{Work AI budgets are active in enterprises adopting internal agents.}{Head of AI Platform, VP Engineering}{High}{High}{Not easy, but still closer to the problem than many broad AI companies.}{Keep as a high-value harder account.}
+
+\companyentry{Coveo}{Quebec, Canada / ICP1}{Agentic self-service and agent workflows create a direct intersection of retrieval quality and runtime action quality.}{Enterprise search and service budgets are real and owned.}{VP Product, CTO}{Medium-High}{High}{A bit heavier on onboarding, but strong business value and clear buyer ownership.}{Useful in Canada and for regulated-service motions.}
+
+\companyentry{Workato}{Mountain View, USA / ICP1}{AI agents layered onto enterprise automation make execution control a natural adjacent need.}{Automation budgets are clear and usually owned by platform or business-systems teams.}{VP Automation, Enterprise Architect}{High}{High}{Less ideal than smaller startups, but still practical enough for the list.}{Keep as a strategic but not first-wave target.}
+
+\companyentry{Rippling}{San Francisco, USA / ICP1}{Cross-functional ops across IT, HR, and finance make action quality and policy-safe execution materially important.}{Operations software budgets are real and valuable.}{CTO, Head of Platform}{High}{High}{Access is harder, but the pain is very concrete.}{A harder but still grounded account.}
+
+\companyentry{HubSpot}{Cambridge, USA / ICP1}{AI agents in support and GTM workflows create a real execution layer need.}{GTM and support AI budgets are available.}{GM AI, VP Product}{High}{Medium}{Bigger and more mature, but still more practical than the largest enterprise stack vendors.}{Keep as medium-probability, not top-priority.}
+
+\companyentry{Gong}{San Francisco, USA / ICP1}{Revenue AI is moving from visibility into guided action, where sequence and execution quality matter.}{Revenue operations budgets are active and pain is measurable.}{VP Revenue Systems, Head of AI Product}{Medium-High}{Medium}{The wedge needs sharper framing but the buyer pain exists.}{Good if approached through one execution failure pattern.}
+
+\companyentry{Clari}{Sunnyvale, USA / ICP1}{Revenue workflows increasingly include AI-guided actions, and wrong execution can be expensive.}{Revenue-tech budgets are real and owner-led.}{VP Revenue Operations, CTO}{Medium-High}{Medium}{More practical than giant incumbents, though not as strong as support-focused companies.}{Keep as a secondary GTM-workflow target.}
+
+\companyentry{Outreach}{Seattle, USA / ICP1}{Sales execution workflows increasingly rely on AI recommendations and automation.}{Revenue-tech budgets already exist and are owned by RevOps.}{VP RevOps, CTO}{Medium}{Medium}{Reachable enough and operationally measurable.}{A practical secondary target.}
+
+\companyentry{Salesloft}{Atlanta, USA / ICP1}{AI-guided sales workflows have clear sequence, state, and execution-quality problems.}{Revenue-tech budgets are real and often tied to productivity goals.}{VP RevOps, CTO}{Medium}{Medium}{Not the strongest wedge, but still practical.}{Keep as a secondary account.}
+
+\companyentry{Talkdesk}{Palo Alto, USA / ICP1}{Contact-center AI creates direct cost and service-quality pain when execution fails.}{CX budgets are large and operational.}{VP Contact Center Technology, CTO}{High}{Medium-High}{More enterprise-heavy, but the pain is concrete and monetizable.}{Harder than smaller support players but still relevant.}
+
+\companyentry{Pypestream}{New York, USA / ICP1}{Enterprise customer engagement automation creates visible workflow execution and containment issues.}{Digital-service and support budgets are usually defined.}{VP Digital Service, Head of Automation}{Medium-High}{High}{Practical but more enterprise-heavy.}{Keep as a later-wave target.}
+
+\companyentry{Kore.ai}{Orlando, USA / ICP1}{Enterprise AI agents across service functions create continuous runtime tuning needs.}{Large assistant and automation budgets already exist in the category.}{Head of Conversational AI, VP Product}{Medium-High}{High}{Heavier onboarding than smaller startups, but still category-relevant.}{Useful as a strategic target, not a fast first pilot.}
+
+\companyentry{Amelia}{New York, USA / ICP1}{Digital employee workflows and service automation create a direct runtime-control problem.}{Enterprise automation buyers already spend here.}{SVP Automation, VP Engineering}{Medium-High}{High}{Some enterprise drag, but less disqualified than hyperscale names.}{A practical but harder account.}
+
+\companyentry{Ema}{Mountain View, USA / ICP1}{Universal AI employees operating across functions create broad execution and policy pain.}{Enterprise transformation budgets exist for this class of product.}{CTO, Head of AI Transformation}{Medium-High}{High}{The promise is broad, so the first pilot must be narrow.}{Keep because the problem is real and the company is still shaping the category.}
+
+\companyentry{Capacity}{St. Louis, USA / ICP1}{Customer and employee support automation puts AI directly into workflow handling.}{Support and service budgets are real and easy to justify with efficiency gains.}{VP Product, CTO}{Medium-Low}{Medium}{Focused enough to be realistic and collaborative.}{A better practical target than very large service incumbents.}
+
+\companyentry{Uniphore}{Palo Alto, USA / ICP1}{Conversation automation, agent assist, and workflow execution in service environments create real runtime issues.}{CX automation budgets are large and existing.}{VP Product, CTO}{Medium-High}{Medium-High}{Bigger than ideal but still in the pain zone.}{Keep as a stronger-value backup account.}
+
+\companyentry{SupportLogic}{San Jose, USA / ICP1}{Support operations teams use AI to spot service risk and workflow issues, creating a natural bridge to execution control.}{Support leaders already fund tooling that reduces churn, escalations, and handling cost.}{VP Support Ops, CTO}{Medium-Low}{Low-Medium}{Smaller and focused; easier to work with than large platform vendors.}{Very practical for early collaboration.}
+
+\companyentry{UnitQ}{San Francisco, USA / ICP1}{Customer feedback intelligence and workflow correction tie directly into teams trying to fix broken service flows.}{Customer quality and support budgets already exist.}{VP Product, Head of Customer Operations}{Medium-Low}{Low-Medium}{Focused product and likely openness to category-adjacent collaboration.}{Practical add because buyer pain is live and specific.}
+
+\companyentry{Regie.ai}{San Francisco, USA / ICP1}{Revenue workflow automation and AI sequencing create execution-quality issues in GTM operations.}{Revenue productivity budgets are already present in growth companies.}{VP RevOps, CTO}{Medium}{Medium}{Smaller and easier to reach than major GTM platforms.}{A practical GTM-workflow target.}
+
+\clearpage
+\section{ICP2: Experimentation Labs --- 30 companies}
+
+\companyentry{LangChain}{San Francisco, USA / ICP2}{Agents, orchestration, and workflow behavior are the product, so instability is visible and constant.}{AI infrastructure budgets are real and product-led in this category.}{VP Product, CTO, Head of Platform}{Medium}{Low-Medium}{The team understands the problem deeply and still moves fast.}{One of the best practical ICP2 targets.}
+
+\companyentry{LlamaIndex}{San Francisco, USA / ICP2}{Agent data flows, orchestration, and production workflows are all core to the company.}{Product and platform budgets exist around deployment and agent tooling.}{Head of Product, CTO}{Medium}{Low-Medium}{Highly relevant and still collaboration-friendly.}{Very practical ICP2 fit.}
+
+\companyentry{Braintrust}{San Francisco, USA / ICP2}{The company already lives in evals and quality loops, so the jump to execution control is easy to understand.}{AI quality budgets are active in teams moving agents toward production.}{CTO, Head of Product}{Medium}{Low}{Category education cost is low and pain is familiar.}{Excellent practical fit.}
+
+\companyentry{Arize AI}{Berkeley, USA / ICP2}{Observability and eval infrastructure customers often still lack a runtime enforcement layer.}{Budgets already exist for AI quality and production monitoring.}{VP Product, CTO}{Medium}{Low-Medium}{Strong conceptual bridge and realistic buyer path.}{Good wedge after observability.}
+
+\companyentry{Galileo}{San Francisco, USA / ICP2}{The company sees end-to-end visibility and agent evaluation gaps, but does not itself close execution.}{AI quality budgets are already real in their customer base.}{VP Product, CTO}{Medium}{Low-Medium}{Focused category and easier design-partner logic than frontier labs.}{Practical and adjacent.}
+
+\companyentry{Maxim AI}{USA / ICP2}{Tracking how agents reason across multi-step tasks is already near the runtime-control problem.}{AI quality and evaluation budgets are practical in this market.}{Head of Product, CTO}{Medium}{Low}{Smaller and focused enough to collaborate.}{Very practical ICP2 target.}
+
+\companyentry{Patronus AI}{San Francisco, USA / ICP2}{Evaluation, safety, and trust are all precursors to runtime enforcement.}{Teams already budget for trust and quality as agents reach production.}{Head of Product, CTO}{Medium}{Low-Medium}{Focused and category-aware.}{Good practical target.}
+
+\companyentry{Confident AI}{San Francisco, USA / ICP2}{The company is built around tailored validation and pre/post deployment evals, which is directly adjacent.}{Smaller AI quality startups tend to buy sharper workflow tooling faster.}{Founder, CTO}{Medium-Low}{Low}{High openness to category-shaping collaboration.}{Very practical.}
+
+\companyentry{Vellum}{New York, USA / ICP2}{Prompt orchestration, evaluation, and enterprise workflow AI are all close to the pain you sell.}{Budgets are tied to making production AI actually work.}{Founder, Head of Product}{Medium-Low}{Low}{Focused workflow scope and startup-stage openness.}{One of the best practical ICP2 targets.}
+
+\companyentry{Stack AI}{San Francisco, USA / ICP2}{Building and deploying AI workflows is the product, so runtime instability is impossible to ignore.}{Workflow budgets are already near the product and engineering team.}{Founder, CTO}{Medium-Low}{Low}{Fast-moving and collaboration-friendly.}{Excellent practical fit.}
+
+\companyentry{Replit}{San Francisco, USA / ICP2}{Coding agents and execution loops create real reliability pain in day-to-day product behavior.}{AI product budgets are active and customer-facing reliability matters.}{Head of AI, VP Engineering}{Medium-High}{Medium}{More reachable than frontier labs and the problem is very real.}{Useful higher-value ICP2 target.}
+
+\companyentry{Anysphere (Cursor)}{San Francisco, USA / ICP2}{Agentic coding inside real developer workflows creates state, tool, and execution problems quickly.}{Coding-agent budgets and usage growth make reliability a practical concern.}{Head of Product, CTO}{High}{Medium}{Hot company, but still smaller than hyperscaler-scale targets.}{Worth keeping, though not first-wave easiest.}
+
+\companyentry{Codeium (Windsurf)}{Mountain View, USA / ICP2}{Agents operate across files, tools, and terminal workflows, which makes runtime control directly relevant.}{AI developer-tool budgets are active and growing.}{Head of Product, VP Engineering}{Medium-High}{Medium}{Still practical enough for a focused collaboration story.}{Good ICP2 target.}
+
+\companyentry{Augment Code}{USA / ICP2}{Code-generation agents create execution-quality issues in real developer workflows.}{Developer AI budgets are practical in growth-stage teams.}{VP Engineering, Head of Product}{Medium}{Medium}{Smaller and more collaboration-friendly than top frontier names.}{Practical addition.}
+
+\companyentry{Factory}{San Francisco, USA / ICP2}{Agentic software engineering requires better reliability when moving from experimentation to repeatable execution.}{Platform and engineering budgets are active around productivity and quality.}{CTO, Head of Engineering}{Medium-High}{Medium}{Good fit with a technical but still startup-shaped buyer motion.}{Practical if pitched tightly.}
+
+\companyentry{E2B}{San Francisco, USA / ICP2}{Agent execution environments are exactly where runtime control and safe actioning become concrete.}{Engineering teams already pay for infrastructure that lets agents act safely.}{Founder, CTO}{Medium-Low}{Low-Medium}{Focused infrastructure company with high category awareness.}{Strong practical fit.}
+
+\companyentry{Letta}{San Francisco, USA / ICP2}{Persistent memory and agent behavior create stateful runtime problems that are hard to debug.}{Smaller infrastructure teams often buy pointed workflow tooling quickly.}{Founder, CTO}{Medium-Low}{Low}{Good early-collaboration shape and sharp category fit.}{Practical and relevant.}
+
+\companyentry{Vapi}{San Francisco, USA / ICP2}{Voice agents with real tool execution and call flows have immediate runtime instability risks.}{Voice-AI budgets are active and usage-linked.}{VP Engineering, CTO}{Medium}{Medium}{Clear workflow surface and strong pain.}{Practical if framed through one failing voice flow.}
+
+\companyentry{Lamini}{San Francisco, USA / ICP2}{Enterprise model deployment becomes more valuable when applied systems execute reliably, not just score well offline.}{AI platform budgets exist and are tied to shipping production systems.}{CTO, VP Engineering}{Medium}{Medium}{Not as direct as eval players, but still practical.}{Keep as a secondary ICP2 target.}
+
+\companyentry{Weights \& Biases}{San Francisco, USA / ICP2}{Experiment tracking and monitoring sit right next to the execution-quality problem.}{AI engineering budgets are already allocated here.}{VP Product, Head of MLOps}{Medium-High}{Medium}{A bit more mature, but still category-relevant.}{Practical enough to keep.}
+
+\companyentry{Hebbia}{New York, USA / ICP2}{Knowledge-work agents for high-value professional tasks need reliable execution and repeatability.}{Professional-workflow budgets are real and premium.}{VP Product, CTO}{Medium-High}{Medium}{Access is harder, but buyer value is high.}{A strong but not easiest account.}
+
+\companyentry{Respan}{San Francisco, USA / ICP2}{Respan positions around tracing agent behavior, surfacing issues, and fixing what breaks faster, which is very close to your wedge.}{Teams already buying observability and eval layers are natural pilot buyers.}{Founder, CTO}{Medium-Low}{Low}{Highly relevant and category-aware.}{Excellent practical replacement for frontier-lab targets.}
+
+\companyentry{Baseten}{San Francisco, USA / ICP2}{Serving production AI systems creates real pressure around safe, reliable execution.}{Platform budgets are active and deployment-focused.}{CTO, VP Engineering}{Medium}{Medium}{Not as direct as agent-eval startups, but still practical.}{A useful platform-layer target.}
+
+\companyentry{BentoML}{San Francisco, USA / ICP2}{Production model and application serving creates adjacency to runtime behavior and operational control.}{Engineering budgets already exist for deployment and reliability.}{Founder, CTO}{Medium-Low}{Medium}{Smaller and more open than larger platform incumbents.}{Practical if framed as execution reliability for AI apps.}
+
+\companyentry{Modal}{New York, USA / ICP2}{Teams building AI workflows on Modal eventually face runtime quality and orchestration pain above raw compute.}{Developer-infrastructure budgets are real in AI-heavy companies.}{CTO, VP Engineering}{Medium}{Medium}{Not a perfect fit, but a realistic adjacent target.}{Practical secondary ICP2 account.}
+
+\companyentry{Predibase}{San Francisco, USA / ICP2}{Enterprise AI deployment and customization create downstream workflow reliability problems.}{Platform budgets exist and enterprise teams already pay here.}{CTO, Head of Product}{Medium}{Medium}{More deployment-centric, but still relevant enough.}{Useful as a secondary target.}
+
+\companyentry{Comet}{New York, USA / ICP2}{Experiment management and monitoring sit close to production reliability and evaluation loops.}{ML and AI budgets are already allocated.}{VP Product, CTO}{Medium}{Medium}{Mature enough to have budgets, still focused enough to understand the pitch.}{Practical enough for the list.}
+
+\companyentry{Gantry}{San Francisco, USA / ICP2}{Production AI quality and governance are already central to Gantry's problem space.}{Customers already pay to improve production model behavior.}{Founder, CTO}{Medium-Low}{Low}{Smaller and focused, with a strong category bridge.}{Good practical ICP2 account.}
+
+\companyentry{Tavus}{San Francisco, USA / ICP2}{Generative video and interactive AI products create workflow reliability and decision-quality problems as products become more agentic.}{Applied AI product budgets are active and experimentation-heavy.}{Head of Product, CTO}{Medium}{Medium}{A less direct but still practical experimentation target.}{Keep as a lower-priority but credible ICP2 name.}
+
+\companyentry{CrewAI}{New York, USA / ICP2}{Multi-agent orchestration is exactly the kind of workflow surface where execution control becomes necessary.}{Agent-building teams already spend on orchestration and workflow tooling.}{Founder, CTO}{Medium-Low}{Low}{Very aligned to the problem and likely open to collaboration.}{One of the stronger practical ICP2 additions.}
+
+\clearpage
+\section{ICP3: Regulated Systems --- 20 companies}
+
+\companyentry{Plenful}{San Francisco, USA / ICP3}{Prior auth and pharmacy operations are regulated, repetitive, and workflow-heavy, making runtime control highly relevant.}{Healthcare operations teams already buy tools that cut manual work and increase capacity.}{VP Operations, CTO, Head of Product}{Medium}{High}{Growth-stage and focused, with very clear workflow scope.}{One of the best practical ICP3 targets.}
+
+\companyentry{Novoflow}{USA / ICP3}{Novoflow explicitly automates medical operations across EHR-connected workflows, which creates real execution and audit pain.}{Clinic operations budgets are concrete and often tied to staffing shortages.}{Founder, CTO, Head of Operations}{Medium-Low}{High}{Very startup-like and likely open to sharp workflow pilots.}{Excellent practical ICP3 addition.}
+
+\companyentry{Notable}{San Mateo, USA / ICP3}{AI agents for healthcare operations and revenue workflows create meaningful control and compliance requirements.}{Operational healthcare budgets exist for automation that reduces denials and manual work.}{VP Product, CTO, COO}{Medium-High}{High}{Larger than the smallest startups, but the pain and budget are very real.}{Strong practical healthcare target.}
+
+\companyentry{Abridge}{Pittsburgh, USA / ICP3}{Clinical documentation automation runs in one of the most sensitive workflow environments possible.}{Health-system budgets are large where documentation and clinician time are core pain points.}{CMIO, VP Engineering, CTO}{High}{Very High}{Harder access, but the pain and budget are undeniable.}{Keep as a high-value regulated account.}
+
+\companyentry{Ambience Healthcare}{San Francisco, USA / ICP3}{Clinical AI workflows need correctness, traceability, and safe operation inside regulated care settings.}{Healthcare buyers already spend where clinician workflow value is obvious.}{CMIO, VP Product, CTO}{High}{Very High}{Complex, but still highly relevant and commercially serious.}{Keep as a premium ICP3 target.}
+
+\companyentry{Suki}{Redwood City, USA / ICP3}{Clinician workflow automation creates real reliability and explainability requirements.}{Clinical productivity budgets are practical and measurable.}{CMIO, CTO, VP Product}{High}{Very High}{Harder than startup ops tools, but still grounded in real workflow pain.}{Worth keeping as a higher-value healthcare account.}
+
+\companyentry{Infinitus Systems}{San Francisco, USA / ICP3}{Automated payer-provider phone workflows require safe execution, auditability, and clean handoffs.}{Healthcare ops budgets are increasingly willing to pay for automation here.}{VP Engineering, VP Operations}{Medium-High}{Very High}{The workflow pain is sharp and the pilot can be bounded.}{One of the strongest practical regulated targets.}
+
+\companyentry{AKASA}{South San Francisco, USA / ICP3}{Revenue-cycle automation in healthcare has high cost, tight workflows, and clear operational ownership.}{RCM budgets are large and ROI can be measured.}{VP Revenue Cycle Product, CTO}{Medium-High}{High}{Strong category pain with clearer operational buyers than frontier healthcare AI.}{Very practical ICP3 fit.}
+
+\companyentry{CodaMetrix}{Boston, USA / ICP3}{Medical coding automation is regulated, workflow-bound, and accuracy-sensitive.}{Revenue-cycle and coding budgets are concrete.}{VP Product, CTO, Revenue Cycle Leader}{Medium-High}{High}{Operational scope is clear enough for a focused pilot.}{Good regulated workflow target.}
+
+\companyentry{SmarterDx}{New York, USA / ICP3}{Hospital revenue optimization workflows need explainable, correct, and auditable AI-assisted execution.}{Health-system finance and operations budgets are real.}{VP Product, CTO, Revenue Integrity Leader}{Medium}{High}{Focused workflow and visible financial value improve practicality.}{Strong practical healthcare-finance target.}
+
+\companyentry{Sardine}{San Francisco, USA / ICP3}{Fraud and risk workflows need enforcement, not just visibility, especially under growth pressure.}{Risk and fraud budgets are immediate and tied to loss prevention.}{Head of Risk Platform, CTO}{Medium-High}{High}{Strong pain, strong budget, still a startup-like enough company shape.}{One of the best fintech ICP3 targets.}
+
+\companyentry{Alloy}{New York, USA / ICP3}{Identity, fraud, and compliance decisions require explainability and policy-safe workflow execution.}{Fintech risk and compliance budgets are durable and urgent.}{Head of Risk Engineering, CTO}{Medium-High}{High}{Still practical despite enterprise sensitivity because the buyer problem is so clear.}{Top fintech ICP3 candidate.}
+
+\companyentry{Unit21}{San Francisco, USA / ICP3}{Unit21 now explicitly positions around agentic fraud and AML operations with regulator-ready auditability.}{Risk operations budgets are direct and tied to financial loss and compliance exposure.}{Head of Risk Ops, CTO}{Medium}{High}{Category fit is sharp and the company is still collaboration-plausible.}{Excellent practical replacement for less grounded fintech names.}
+
+\companyentry{Persona}{San Francisco, USA / ICP3}{Identity workflows are highly regulated and action-sensitive, making policy-safe execution materially important.}{Identity, fraud, and trust budgets already exist in fintech and marketplaces.}{Head of Identity Product, CTO}{Medium}{High}{Clear workflow owner and measurable business value.}{Good practical regulated target.}
+
+\companyentry{Oscilar}{Palo Alto, USA / ICP3}{Risk decisioning and fraud workflows are execution-centric and policy-sensitive by default.}{Risk platform budgets are practical where fraud and underwriting speed both matter.}{Head of Risk Platform, CTO}{Medium-Low}{Medium-High}{Smaller and more collaborative than larger incumbents.}{Very practical fintech ICP3 target.}
+
+\companyentry{Ocrolus}{New York, USA / ICP3}{Document-heavy underwriting workflows create a strong need for reliable structured execution and auditability.}{Lending ops and underwriting budgets are real and measurable.}{VP Engineering, Head of Risk Operations}{Medium}{High}{Concrete workflow scope and clear buyer.}{Practical ICP3 account.}
+
+\companyentry{Trullion}{New York, USA / ICP3}{Accounting and audit workflows are structured, high-stakes, and explainability-sensitive.}{Finance systems and audit budgets are practical and already allocated.}{CTO, Head of Product, VP Finance Systems}{Medium}{Medium-High}{The workflow is bounded and buyer ownership is clear.}{One of the more practical finance-regulation targets.}
+
+\companyentry{Spellbook}{Toronto, Canada / ICP3}{Contract review and drafting require reliable, structured AI behavior inside legal workflows.}{Legal teams already pay to reduce routine contract work.}{Founder, CTO, VP Product}{Medium}{Medium}{Focused product, clear pain, and likely openness to collaboration.}{One of the best legal ICP3 targets.}
+
+\companyentry{Streamline AI}{San Francisco, USA / ICP3}{Legal intake and triage are workflow-heavy and directly tied to approvals and compliance.}{Legal ops budgets exist where intake speed and control matter.}{Head of Legal Ops Product, CTO}{Medium}{High}{A startup-like company with a narrow workflow surface.}{Very practical regulated legal target.}
+
+\companyentry{Ontra}{San Francisco, USA / ICP3}{Private-markets contract workflows are repetitive, high-value, and trust-sensitive.}{Legal and deal operations budgets are real and tied to throughput.}{VP Product, CTO, Head of Legal AI}{Medium}{Medium-High}{Focused legal workflow company with clear buyer ownership.}{A more practical legal target than broader premium legal-AI players.}
+
+\clearpage
+\section{Practical first 20 to contact}
+These are the strongest accounts if the goal is highest pain plus strongest chance of a real pilot:
+\begin{itemize}
+\item Ada
+\item Decagon
+\item Forethought
+\item Pylon
+\item Open
+\item Assembled
+\item Fullview
+\item Observe.AI
+\item Gorgias
+\item Maven AGI
+\item LangChain
+\item LlamaIndex
+\item Braintrust
+\item Vellum
+\item Stack AI
+\item Confident AI
+\item Plenful
+\item Novoflow
+\item Sardine
+\item Spellbook
+\end{itemize}
+
+\section{Who was implicitly removed or de-emphasized}
+Compared with the broader v1 universe, this practical list intentionally avoids relying on frontier labs and giant incumbents as the core prospect pool. Names like OpenAI, Anthropic, Salesforce, ServiceNow, Zendesk, UiPath, and Pegasystems may still be strategically interesting, but they are not where early design-partner probability is highest for the current stage.
+
+\section{Best next operating pass}
+The highest-leverage next step is to turn the top 20 into an outreach operating file with:
+\begin{itemize}
+\item named buyer titles per company,
+\item why the buyer should care now,
+\item one custom outreach hook,
+\item one proposed pilot use case,
+\item and a priority rank from 1 to 20.
+\end{itemize}
+That would turn this from a target list into a real founder outbound plan.
+
+\end{document}

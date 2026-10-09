@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO engram_namespaces\n            (path, team, retention_days, entropy_alert, entropy_halt,\n             hipaa, auto_consolidate, stale_days)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n        RETURNING id, path, team, retention_days, entropy_alert, entropy_halt,\n                  hipaa, auto_consolidate, stale_days, created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "team",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "retention_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "entropy_alert",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "entropy_halt",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "hipaa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "auto_consolidate",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "stale_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Float8",
+        "Float8",
+        "Bool",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "aee6bf3913403849aad112451e92499e8ce5c0950a5bca4923dbbb3a7292d6c3"
+}

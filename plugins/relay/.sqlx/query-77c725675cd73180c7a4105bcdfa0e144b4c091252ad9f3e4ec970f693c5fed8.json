@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE relay_functions\n        SET uri          = COALESCE($1, uri),\n            description  = COALESCE($2, description),\n            policy_json  = COALESCE($3, policy_json),\n            instructions = COALESCE($4, instructions),\n            updated_at   = NOW()\n        WHERE name = $5\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "77c725675cd73180c7a4105bcdfa0e144b4c091252ad9f3e4ec970f693c5fed8"
+}

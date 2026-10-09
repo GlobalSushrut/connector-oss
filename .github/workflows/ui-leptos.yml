@@ -1,0 +1,297 @@
+# Leptos dashboard CI — Definition of Done §15.12
+# (companion gate for `LEPTOS_UI_IMPLEMENTATION_PLAN.md`).
+#
+# The plan ships two distinct wasm bundles built from the same crate:
+#
+#   - `default` / `--features=self-deploy`             → tarball install
+#   - `--no-default-features --features=playground`    → try.cnktros.com
+#
+# A `--features=dev-bypass` flavour layers on top of either profile for
+# local development; production builds must never enable it. The matrix
+# below covers all four combinations.
+#
+# Triggers: every PR that touches `platform/ui-leptos/**` and every push
+# to `main` / `master`. Path-scoped so unrelated PRs don't pay the wasm
+# install + build cost.
+name: ui-leptos
+
+on:
+  pull_request:
+    paths:
+      - "platform/ui-leptos/**"
+      - ".github/workflows/ui-leptos.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "platform/ui-leptos/**"
+      - ".github/workflows/ui-leptos.yml"
+
+defaults:
+  run:
+    shell: bash
+    working-directory: platform/ui-leptos/dashboard
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  # -------------------------------------------------------------------
+  # 1. cargo check + clippy across the 4-cell feature matrix.
+  # -------------------------------------------------------------------
+  check:
+    name: cargo check (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: "default (self-deploy)"
+            features: ""
+            no_default: false
+          - label: "playground"
+            features: "playground"
+            no_default: true
+          - label: "self-deploy + dev-bypass"
+            features: "self-deploy dev-bypass"
+            no_default: true
+          - label: "playground + dev-bypass"
+            features: "playground dev-bypass"
+            no_default: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable + wasm32)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy
+
+      - name: Cache cargo registry / build target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            platform/ui-leptos/dashboard/target
+          key: ui-leptos-${{ runner.os }}-${{ matrix.label }}-${{ hashFiles('platform/ui-leptos/dashboard/Cargo.lock', 'platform/ui-leptos/dashboard/Cargo.toml') }}
+          restore-keys: |
+            ui-leptos-${{ runner.os }}-${{ matrix.label }}-
+            ui-leptos-${{ runner.os }}-
+
+      - name: cargo check
+        run: |
+          set -e
+          ARGS="--target wasm32-unknown-unknown"
+          if [ "${{ matrix.no_default }}" = "true" ]; then
+            ARGS="$ARGS --no-default-features"
+          fi
+          if [ -n "${{ matrix.features }}" ]; then
+            ARGS="$ARGS --features '${{ matrix.features }}'"
+          fi
+          eval cargo check $ARGS
+
+      - name: cargo clippy
+        run: |
+          set -e
+          ARGS="--target wasm32-unknown-unknown --all-targets"
+          if [ "${{ matrix.no_default }}" = "true" ]; then
+            ARGS="$ARGS --no-default-features"
+          fi
+          if [ -n "${{ matrix.features }}" ]; then
+            ARGS="$ARGS --features '${{ matrix.features }}'"
+          fi
+          eval cargo clippy $ARGS -- -D warnings
+
+  # -------------------------------------------------------------------
+  # 2. End-to-end bundle build for the two shipping profiles, with the
+  #    static-content guards listed in `LEPTOS_UI_IMPLEMENTATION_PLAN.md`
+  #    §11.3 / §12 (the "playground bundle must not contain
+  #    self-deploy feature gates" rule).
+  # -------------------------------------------------------------------
+  bundle:
+    name: trunk bundle (${{ matrix.profile }})
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: self-deploy
+            trunk_flags: "--release"
+            dist_dir: "dist"
+          - profile: playground
+            trunk_flags: "--release --no-default-features --features=playground"
+            dist_dir: "dist"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable + wasm32)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo registry / build target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            platform/ui-leptos/dashboard/target
+          key: ui-leptos-bundle-${{ runner.os }}-${{ matrix.profile }}-${{ hashFiles('platform/ui-leptos/dashboard/Cargo.lock', 'platform/ui-leptos/dashboard/Cargo.toml') }}
+          restore-keys: |
+            ui-leptos-bundle-${{ runner.os }}-${{ matrix.profile }}-
+            ui-leptos-bundle-${{ runner.os }}-
+
+      - name: Install trunk + wasm-bindgen-cli
+        run: |
+          set -e
+          cargo install --locked trunk
+          cargo install --locked wasm-bindgen-cli
+
+      - name: trunk build (${{ matrix.profile }})
+        run: |
+          set -e
+          # Clean any prior dist so the guards below operate on the
+          # bytes this job emitted, not a cached artifact.
+          rm -rf ${{ matrix.dist_dir }}
+          trunk build ${{ matrix.trunk_flags }}
+
+      - name: Bundle-content audit — no dev-bypass leakage
+        # Both shipping profiles must NOT compile in `dev_bypass`. The
+        # `cargo check` job already enforces feature flags but a typo
+        # in the entry point could still drag `dev_bypass` symbols
+        # into the wasm artifact. Catch that here by grepping the
+        # generated `_bg.wasm` for the symbol.
+        run: |
+          set -e
+          WASM_FILE=$(find ${{ matrix.dist_dir }} -name '*_bg.wasm' | head -1)
+          if [ -z "$WASM_FILE" ]; then
+            echo "::error::could not locate _bg.wasm under ${{ matrix.dist_dir }}/"
+            exit 1
+          fi
+          if strings "$WASM_FILE" | grep -F 'dev_bypass' >/dev/null; then
+            echo "::error::dev_bypass symbol present in shipping bundle ($WASM_FILE)"
+            exit 1
+          fi
+          echo "OK: $WASM_FILE has no dev_bypass leakage"
+
+      - name: Bundle-content audit — no raw /api/v1/ as body copy
+        # `LEPTOS_UI_AUDIT_AND_FIX_REPORT.md` §16.4 + DoD §15.10:
+        # raw `/api/v1/...` references in body copy are hidden by
+        # default and only become visible when Settings → Developer
+        # view is enabled (Phase 7.6 — implemented via `.dev-only`
+        # class + `body[data-developer]` selector).
+        #
+        # This guard fires on any un-gated `/api/v1/` reference in
+        # operator-facing pages/components. Filtered out:
+        #
+        #   - lines explicitly opting in with `dev-only`
+        #   - comments (`// ...`)
+        #   - `const ... = "/api/v1/...";` URL constants
+        #   - `set_href` / `api::*` URL builders, not body copy
+        #
+        # Allow-listed exceptions (intentionally operator-visible):
+        #
+        #   - `setup_wizards/first_run.rs` preflight `<li>` rows
+        #     showing whether `/api/v1/healthz` and
+        #     `/api/v1/deployment/info` returned 200 OK. These exist
+        #     specifically so the operator can read the bootstrap
+        #     check; suppressing them defeats the wizard's purpose.
+        if: matrix.profile == 'self-deploy'
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -e
+          rg --no-heading --line-number '/api/v1/' \
+               platform/ui-leptos/dashboard/src/pages \
+               platform/ui-leptos/dashboard/src/components \
+            | grep -v 'dev-only' \
+            | grep -v -E '^[^:]+:[0-9]+:\s*//' \
+            | grep -v -E 'const\s+[A-Z_]+' \
+            | grep -v 'set_href' \
+            | grep -v 'api::' \
+            | grep -v 'setup_wizards/first_run.rs:19[89]' \
+            >/tmp/raw-api.txt || true
+          grep -E '(>".*\/api\/v1\/|\{format!\(".*\/api\/v1\/)' /tmp/raw-api.txt >/tmp/raw-api-vp.txt || true
+          if [ -s /tmp/raw-api-vp.txt ]; then
+            echo "::error::raw /api/v1/ path appears as body copy — wrap parent element in \`dev-only\` (see DoD §15.10 / audit §16.4)"
+            cat /tmp/raw-api-vp.txt
+            exit 1
+          fi
+          echo "OK: no raw /api/v1/ body copy outside Developer-view gating"
+
+      - name: Bundle-content audit — playground bundle has no self-deploy gate
+        # Plan §12 risk register: a `--features=playground` build must
+        # not ship admin-only Settings screens by accident. We check
+        # the wasm for the human-readable settings header that only
+        # the self-deploy profile renders ("Networking, identity,
+        # backup, telemetry, license, domains" — see
+        # `pages/settings.rs` Settings → System card).
+        if: matrix.profile == 'playground'
+        run: |
+          set -e
+          WASM_FILE=$(find ${{ matrix.dist_dir }} -name '*_bg.wasm' | head -1)
+          BANNED=$(strings "$WASM_FILE" | grep -F 'Networking, identity, backup, telemetry, license, domains' || true)
+          if [ -n "$BANNED" ]; then
+            echo "::error::Self-deploy-only Settings → System card leaked into playground bundle"
+            exit 1
+          fi
+          echo "OK: playground bundle is free of admin-only Settings copy"
+
+      - name: Upload dist as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-${{ matrix.profile }}-${{ github.sha }}
+          path: platform/ui-leptos/dashboard/dist/
+          retention-days: 7
+
+  # -------------------------------------------------------------------
+  # 3. Source-tree hygiene — checks that don't need the wasm toolchain.
+  # -------------------------------------------------------------------
+  hygiene:
+    name: source hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No "Phase 3" / "Phase 3.11" labels in operator copy
+        # DoD §15 acceptance criterion — implementation plan §1.3
+        # acceptance gate.
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -e
+          if rg -n -i '"Phase 3' platform/ui-leptos/dashboard/src/pages \
+            | grep -v '// ' >/tmp/phase3.txt; then
+            if [ -s /tmp/phase3.txt ]; then
+              echo "::error::Found 'Phase 3' label in operator-facing copy"
+              cat /tmp/phase3.txt
+              exit 1
+            fi
+          fi
+          echo "OK: no 'Phase 3' labels"
+
+      - name: No hardcoded pkg-basic-tool-agent in sidebar copy
+        # P2-19 — the audit's anti-pattern guard.
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -e
+          if rg -n 'pkg-basic-tool-agent' platform/ui-leptos/dashboard/src/components | \
+            grep -v '// ' >/tmp/sidebar-hardcode.txt; then
+            if [ -s /tmp/sidebar-hardcode.txt ]; then
+              echo "::error::pkg-basic-tool-agent hardcoded in shared components — see P2-19"
+              cat /tmp/sidebar-hardcode.txt
+              exit 1
+            fi
+          fi
+          echo "OK: no pkg-basic-tool-agent hardcodes in shared components"
+
+      - name: data-dev / data-developer attribute not committed to index.html
+        # P0-2 — dev-bypass must never ride in via static HTML.
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -e
+          if rg -n 'data-dev=' platform/ui-leptos/dashboard/index.html; then
+            echo "::error::index.html ships with data-dev attribute — see P0-2"
+            exit 1
+          fi
+          echo "OK: no data-dev= in index.html"

@@ -1,0 +1,46 @@
+# Connector OS — Node Configuration
+# Copy to connector.toml and fill in your values.
+# Full reference: https://docs.cnktros.com/configuration
+
+# ── Identity ──────────────────────────────────────────────────────────────────
+[node]
+name        = "my-connector-node"      # Human-readable name shown in dashboard
+instance_id = ""                       # Leave blank — auto-generated on first boot
+
+# ── License ───────────────────────────────────────────────────────────────────
+[license]
+# Your pilot API key — issued by admin after approval.
+# Format: cpk_pilot_<random>
+# Obtain at: https://portal.cnktros.com/app/api-keys
+key = "cpk_pilot_REPLACE_ME"
+
+# License server (managed by Connector team — do not change)
+server_url = "https://portal.cnktros.com"
+
+# ── Network ───────────────────────────────────────────────────────────────────
+[server]
+host = "0.0.0.0"
+port = 9090
+tls  = false   # Set true and provide cert/key paths for production TLS
+
+# ── Storage ───────────────────────────────────────────────────────────────────
+[storage]
+data_dir = "/var/lib/connector"   # State, logs, agent memory
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+[logging]
+level  = "info"    # trace | debug | info | warn | error
+format = "json"    # json | pretty
+
+# ── Agent runtime ─────────────────────────────────────────────────────────────
+[runtime]
+max_agents     = 50
+session_ttl_s  = 3600
+isolation      = "process"   # process | thread | none
+
+# ── LLM routing (optional) ────────────────────────────────────────────────────
+# Leave blank to use your clients' own keys via protocol headers.
+[llm]
+provider = ""          # openai | anthropic | ollama | ""
+model    = ""          # e.g. gpt-4o, claude-3-5-sonnet, llama3
+api_key  = ""          # or set CONNECTOR_LLM_API_KEY env var

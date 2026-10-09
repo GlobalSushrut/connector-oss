@@ -1,0 +1,85 @@
+\chapter{How Connector Works (Semi-Technical)}
+
+This chapter explains the system without requiring a reader to open the architecture PDF.
+
+\section{The mental model}
+
+\begin{enumerate}
+  \item \textbf{Bring the node up} --- install one tarball, run \texttt{connector-platform} (often via \texttt{connectorctl start}).
+  \item \textbf{Discover workloads} --- dashboard and API list plugins, workflows, and health.
+  \item \textbf{Route traffic through governance} --- agents and tools hit Connector boundaries (proxy, cage, witness layer).
+  \item \textbf{Evidence flows up} --- traces, receipts, and exports bubble to operators and auditors.
+\end{enumerate}
+
+\section{Two planes (simple)}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{0.92\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Hosted control plane (account)} & Signup, billing, license keys, profile---customer portal. \\
+\midrule
+\textbf{Self-hosted node (runtime)} & \texttt{connector-platform} on customer infra: API, embedded dashboard, plugins, workflows. Data stays on-prem unless they choose otherwise. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\noindent\textbf{Key message for buyers:} self-hosted runtime, optional hosted entitlement---no cloud lock-in for execution.
+
+\section{What runs on the node}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{0.95\textwidth}{@{}>{\bfseries}p{0.26\textwidth} p{0.14\textwidth} X@{}}
+\toprule
+\textbf{Workload type} & \textbf{Examples} & \textbf{What it is} \\
+\midrule
+First-party plugins & DevGuard, TraceTramp, WitnessCtl, LedgerLens & Packaged capabilities maintained by Connector; install/enable on the node. \\
+\midrule
+Custom workflows (CLS) & Support refund bot, internal approval flow & Customer-authored logic compiled/run under kernel governance. \\
+\midrule
+AGOS / \texttt{.cpkg} plugins & Slack notifier, Jira bridge (ecosystem) & Third-party or reference plugins with manifest + handshake contract. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Request and evidence flow}
+
+\begin{insightbox}{Directionality}
+\textbf{Requests flow down} (operator or agent $\rightarrow$ policy $\rightarrow$ execution).
+
+\textbf{Evidence flows up} (receipts, traces, cost $\rightarrow$ dashboard $\rightarrow$ export).
+\end{insightbox}
+
+Typical path for a governed API call:
+
+\begin{enumerate}
+  \item Agent or app sends request (directly or via TraceTramp proxy).
+  \item Connector evaluates policy, budget, and tool rules \textbf{before} side effects commit.
+  \item Allowed actions execute; blocked actions return a clear denial with reason.
+  \item WitnessCtl (and related stores) capture receipts aligned with trace metadata.
+  \item Operator exports HTML/PDF/JSON for review, SOC 2, or customer escalation.
+\end{enumerate}
+
+\section{Operator surfaces}
+
+\begin{itemize}
+  \item \textbf{Dashboard} (embedded in \texttt{connector-platform}) --- Service map, plugins, compliance, agents.
+  \item \textbf{\texttt{connectorctl}} --- Bootstrap, health, plugin install, workflow lifecycle, hub commands.
+  \item \textbf{HTTP API} --- \texttt{/api/v1/*} for automation and integration.
+\end{itemize}
+
+\section{Cage-internal DNS (why plugins feel like ``apps'')}
+
+Enabled plugins can register under an internal TLD (default \texttt{.cnktros}) so operators reach management planes predictably, e.g.\ \texttt{tracetramp.cnktros}, without memorizing ad-hoc ports. Product story: \textbf{one node, discoverable apps}.
+
+\section{What ``healthy node'' means in a demo}
+
+\begin{enumerate}
+  \item \texttt{connectorctl doctor} or dashboard shows green health.
+  \item At least one plugin or workflow enabled.
+  \item A sample agent call produces a visible trace \textbf{and} an exportable receipt.
+  \item (Optional) A policy violation is blocked live---not replayed from logs.
+\end{enumerate}
+
+That four-step demo is the minimum credible ``how it works'' for a semi-technical buyer.

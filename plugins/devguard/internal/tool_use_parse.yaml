@@ -1,0 +1,66 @@
+name: tool_use_parse
+description: >
+  Internal: Parse tool_use blocks from Claude Code messages.
+  Routes each tool call through appropriate guard workflow.
+version: "1.0.0"
+plugin: devguard
+internal: true
+
+# Claude Code tool_use types:
+#   - Read (read file content)
+#   - Write (write/edit file)
+#   - Bash (execute shell command)
+#   - Search (search for files/symbols)
+#   - ListDir (list directory)
+#   - Glob (glob pattern match)
+#
+# Each tool_use block: {type: "tool_use", id, name, input}
+
+tool_routing:
+  Read:
+    guard: devguard.workflows.file_guard
+    params_map:
+      operation: "read"
+      path: "{{ tool_use.input.path }}"
+
+  Write:
+    guard: devguard.workflows.file_guard
+    params_map:
+      operation: "write"
+      path: "{{ tool_use.input.path }}"
+      content: "{{ tool_use.input.content }}"
+
+  Edit:
+    guard: devguard.workflows.file_guard
+    params_map:
+      operation: "write"
+      path: "{{ tool_use.input.path }}"
+      content: "{{ tool_use.input.new_string }}"
+
+  Bash:
+    guard: devguard.workflows.exec_guard
+    params_map:
+      command: "{{ tool_use.input.command }}"
+
+  Search:
+    guard: devguard.workflows.file_guard
+    params_map:
+      operation: "search"
+      path: "{{ tool_use.input.path | default('.') }}"
+
+  ListDir:
+    guard: devguard.workflows.file_guard
+    params_map:
+      operation: "read"
+      path: "{{ tool_use.input.path }}"
+
+  Glob:
+    guard: devguard.workflows.file_guard
+    params_map:
+      operation: "search"
+      path: "{{ tool_use.input.pattern }}"
+
+# Git commands detected in Bash tool_use
+git_detection:
+  pattern: "^git\\s+"
+  redirect_to: devguard.workflows.git_guard

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE relay_functions\n            SET health_status    = $1,\n                health_latency_ms = $2,\n                last_health_at   = NOW()\n            WHERE id = $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5c3b5676194163381db11d031271f461f90b5626fb69f7964ab90a1309a64673"
+}

@@ -1,0 +1,79 @@
+name: file_guard
+description: >
+  Enforce file visibility and write boundary rules on agent operations.
+  Runs on every file read/write/delete/rename attempt.
+version: "1.0.0"
+plugin: devguard
+
+triggers:
+  - on_event: file.access
+  - on_event: tool_use.file_edit
+  - on_event: tool_use.read_file
+  - on_event: mcp.connector_read_file
+  - on_event: mcp.connector_write_file
+
+inputs:
+  operation:
+    type: string
+    required: true
+    enum: [read, write, delete, rename, search]
+  path:
+    type: string
+    required: true
+  session_id:
+    type: string
+    required: true
+  content:
+    type: string
+    required: false
+    description: "File content (for write operations or context injection)"
+
+steps:
+  - id: normalize_path
+    action: fs.normalize
+    params:
+      path: "{{ inputs.path }}"
+      workspace: "{{ session.workspace }}"
+
+  - id: check_visibility
+    action: devguard.internal.file_guard_check
+    params:
+      operation: "{{ inputs.operation }}"
+      path: "{{ steps.normalize_path.relative_path }}"
+      role: "{{ session.role }}"
+    depends_on: normalize_path
+
+  - id: redact_secrets
+    action: devguard.workflows.secret_scan
+    condition: "{{ steps.check_visibility.allowed and inputs.content }}"
+    params:
+      content: "{{ inputs.content }}"
+      session_id: "{{ inputs.session_id }}"
+    depends_on: check_visibility
+
+  - id: audit_access
+    action: connector.audit.record
+    params:
+      action: "file.{{ inputs.operation }}"
+      resource: "{{ steps.normalize_path.relative_path }}"
+      verdict: "{{ steps.check_visibility.verdict }}"
+      details:
+        role: "{{ session.role }}"
+        reason: "{{ steps.check_visibility.reason }}"
+        secrets_redacted: "{{ steps.redact_secrets.redacted_count }}"
+    depends_on: [check_visibility, redact_secrets]
+
+  - id: enforce
+    action: devguard.internal.enforce_verdict
+    params:
+      verdict: "{{ steps.check_visibility.verdict }}"
+      reason: "{{ steps.check_visibility.reason }}"
+      requires_approval: "{{ steps.check_visibility.requires_approval }}"
+      session_id: "{{ inputs.session_id }}"
+    depends_on: check_visibility
+
+outputs:
+  allowed: "{{ steps.check_visibility.allowed }}"
+  verdict: "{{ steps.check_visibility.verdict }}"
+  reason: "{{ steps.check_visibility.reason }}"
+  sanitized_content: "{{ steps.redact_secrets.sanitized_content }}"

@@ -1,0 +1,286 @@
+\chapter{Developer Experience}
+
+\section{The Glue Philosophy}
+
+Every powerful platform risks becoming inaccessible through its own complexity.
+Connector solves this with \textbf{Glue} — a unified developer surface that
+exposes the full power of the kernel, execution engines, and protocol stack
+through a simple, human-readable grammar.
+
+Glue is not a wrapper or an SDK. It is a \emph{language}: a set of verbs,
+nouns, selectors, and time flags that compose into commands with consistent,
+parseable output contracts. The same grammar works in the CLI, the REST API,
+and the Rust library — so operators, developers, and automated pipelines all
+speak the same language.
+
+\begin{conceptbox}{Three design principles of Glue}
+\begin{enumerate}[noitemsep]
+  \item \textbf{Verbs first} — Commands read like instructions: \texttt{start agent}, \texttt{list agents}, \texttt{prove agent} — not \texttt{agent-start} or \texttt{agent.start()}.
+  \item \textbf{Hide complexity, not power} — One verb can orchestrate many kernel operations. The complexity is hidden, but not removed — it is accessible through flags.
+  \item \textbf{Instant value} — Every command produces useful output immediately, even with no flags. No ceremony, no configuration required to get started.
+\end{enumerate}
+\end{conceptbox}
+
+\section{The Glue Grammar}
+
+Glue commands follow a consistent four-part structure:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  part/.style={rectangle, rounded corners=3pt, draw=#1!70, fill=#1!10,
+               text width=2.6cm, align=center, minimum height=1.1cm,
+               font=\small\bfseries, inner sep=5pt},
+  opt/.style={rectangle, rounded corners=3pt, draw=#1!40, fill=#1!5,
+              text width=2.6cm, align=center, minimum height=1.1cm,
+              font=\small\bfseries, inner sep=5pt, dashed},
+  lbl/.style={font=\footnotesize\itshape, text=gray, align=center},
+  node distance=0.6cm
+]
+\node[part=CKernel] (v) {\texttt{<verb>}};
+\node[part=CExec, right=of v]   (n) {\texttt{<noun>}};
+\node[part=CProto, right=of n]  (s) {\texttt{[selector]}};
+\node[opt=CDX,   right=of s]    (f) {\texttt{[flags]}};
+
+\node[lbl, below=0.25cm of v] {action};
+\node[lbl, below=0.25cm of n] {resource type};
+\node[lbl, below=0.25cm of s] {identity / id};
+\node[lbl, below=0.25cm of f] {time, output, mode};
+
+\node[above=0.3cm of v, font=\footnotesize, text=MidnightBlue]
+  {\texttt{connectorctl}};
+
+\end{tikzpicture}
+\caption{Glue command grammar structure}
+\label{fig:glue-grammar}
+\end{figure}
+
+\subsection{Verbs}
+
+Glue provides 12 primary verbs that cover the full agent lifecycle:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!5}{white}
+\begin{tabular}{@{}llp{7cm}@{}}
+\toprule
+\textbf{Verb} & \textbf{Category} & \textbf{What it does} \\
+\midrule
+\texttt{start}   & Lifecycle   & Start an agent, service, or node \\
+\texttt{stop}    & Lifecycle   & Stop an agent or service gracefully \\
+\texttt{restart} & Lifecycle   & Stop then start, preserving checkpoints \\
+\texttt{list}    & Query       & List agents, sessions, memory, contracts \\
+\texttt{show}    & Query       & Show summary state for one resource \\
+\texttt{inspect} & Query       & Deep inspection — forensic mode available \\
+\texttt{trace}   & Diagnostics & Decision trace with time-window filter \\
+\texttt{prove}   & Evidence    & Generate cryptographic proof for an agent \\
+\texttt{explain} & Evidence    & Decision-first explanation (\textit{why} an agent acted) \\
+\texttt{deploy}  & Operations  & Deploy an agent manifest or contract \\
+\texttt{backup}  & Maintenance & Checkpoint memory to an archive \\
+\texttt{restore} & Maintenance & Restore from a backup or checkpoint \\
+\bottomrule
+\end{tabular}
+\caption{Glue's 12 primary verbs}
+\end{table}
+
+\subsection{Nouns}
+
+Ten primary nouns represent the resources Glue operates on:
+\texttt{agent}, \texttt{session}, \texttt{memory}, \texttt{contract},
+\texttt{tool}, \texttt{port}, \texttt{node}, \texttt{cluster},
+\texttt{key}, \texttt{user}.
+
+\subsection{Time Flags}
+
+Time flags enable point-in-time and range queries against the immutable
+MemPacket history — a direct expression of the kernel's content-addressed store:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Flag} & \textbf{Format} & \textbf{Example} \\
+\midrule
+\texttt{--at}      & ISO 8601 or Unix timestamp & \texttt{--at 2026-03-22T14:00:00Z} \\
+\texttt{--since}   & ISO 8601 or relative       & \texttt{--since 1h} \\
+\texttt{--last}    & Duration shorthand         & \texttt{--last 15m} \\
+\texttt{--before}  & Timestamp or event name    & \texttt{--before incident-001} \\
+\texttt{--snapshot}& Checkpoint CID             & \texttt{--snapshot cls1-sha256-…} \\
+\bottomrule
+\end{tabular}
+\caption{Glue time flags — enable time-travel queries against the kernel's history}
+\end{table}
+
+\subsection{Output Flags}
+
+Output format is controlled by a single flag. Every command produces consistent,
+parseable output in all modes:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}lp{10cm}@{}}
+\toprule
+\textbf{Flag} & \textbf{Output format} \\
+\midrule
+(default)      & Compact human-readable table \\
+\texttt{--summary}   & One-line status line \\
+\texttt{--ops}       & Operations-focused: costs, budgets, throughput \\
+\texttt{--forensic}  & Full audit trail with CIDs and signatures \\
+\texttt{--narrative} & Prose explanation for human readers \\
+\texttt{--json}      & Machine-readable JSON for automation \\
+\bottomrule
+\end{tabular}
+\caption{Glue output format flags — same command, different audiences}
+\end{table}
+
+\section{connectorctl: The CLI}
+
+\texttt{connectorctl} is the primary operator interface for Connector nodes.
+It is a single compiled binary that implements the full Glue grammar.
+
+\begin{lstlisting}[language=bash, caption=connectorctl example session]
+# Check node health
+connectorctl health
+
+# List all running agents
+connectorctl list agents
+
+# Show a specific agent
+connectorctl show agent medical-assistant-1
+
+# Trace decisions in the last 15 minutes
+connectorctl trace agent medical-assistant-1 --last 15m
+
+# Generate a cryptographic proof
+connectorctl prove agent medical-assistant-1 --json
+
+# Explain the last decision made by an agent
+connectorctl explain medical-assistant-1
+
+# Deploy an agent from a manifest
+connectorctl deploy agent ./manifests/triage-agent.toml
+
+# Inspect with full forensic detail
+connectorctl inspect agent medical-assistant-1 --forensic
+\end{lstlisting}
+
+\subsection{Standardised Output Contracts}
+
+Every \texttt{connectorctl} command produces output conforming to a stable
+contract. Operators can pipe output to \texttt{jq}, monitoring systems, or
+alerting pipelines without special-casing each command:
+
+\begin{lstlisting}[language=bash]
+# Human-readable table (default)
+connectorctl list agents
+  ID                      STATUS    UPTIME    COST TODAY
+  medical-assistant-1     running   2h 15m    $0.42
+  data-pipeline-2         running   5h 42m    $1.18
+  audit-agent-3           paused    ---       $0.07
+
+# JSON output for automation
+connectorctl list agents --json
+{
+  "agents": [...],
+  "metadata": { "request_id": "req-abc", "duration_ms": 12 }
+}
+\end{lstlisting}
+
+\section{The REST API Surface}
+
+Every Glue verb is available over HTTP at \texttt{http://localhost:9091/api/v1/}.
+The URL structure mirrors the CLI grammar: \texttt{verb/noun} → endpoint path.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!5}{white}
+\begin{tabular}{@{}llp{6cm}@{}}
+\toprule
+\textbf{Method} & \textbf{Path} & \textbf{Action} \\
+\midrule
+GET  & \texttt{/agents}                & List all agents \\
+POST & \texttt{/agents}                & Register a new agent \\
+GET  & \texttt{/agents/:pid}           & Show agent state \\
+POST & \texttt{/agents/:pid/start}     & Start agent \\
+POST & \texttt{/agents/:pid/chat}      & Invoke agent (LLM gateway) \\
+POST & \texttt{/agents/:pid/decisions} & Record a governance decision \\
+GET  & \texttt{/agents/:pid/audit/receipts} & Audit receipt chain \\
+GET  & \texttt{/agents/:pid/cost}      & Token cost summary \\
+GET  & \texttt{/agents/:pid/books}     & Trust score and integrity report \\
+GET  & \texttt{/disputes/:id/report}   & Compliance report for a decision \\
+GET  & \texttt{/disputes/:id/defense-package} & Full defense package \\
+POST & \texttt{/proofs}                & Generate cryptographic proof \\
+GET  & \texttt{/actionlog/regulation-report/:reg} & HIPAA/SOC2/GDPR report \\
+GET  & \texttt{/health/live}           & Liveness probe \\
+GET  & \texttt{/health/ready}          & Readiness probe \\
+\bottomrule
+\end{tabular}
+\caption{Core REST API endpoints — the full Glue surface over HTTP}
+\end{table}
+
+All responses follow a consistent envelope:
+
+\begin{lstlisting}[language=bash]
+{
+  "ok": true,
+  "data": { ... },
+  "error": null,
+  "metadata": { "request_id": "req-xyz", "duration_ms": 8 }
+}
+\end{lstlisting}
+
+\section{Configuration Hierarchy}
+
+Glue configuration resolves through four layers, with later layers overriding
+earlier ones. This means sensible defaults work out of the box, and individual
+commands can always be overridden without changing global config:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  layer/.style={rectangle, rounded corners=3pt, draw=#1!70, fill=#1!8,
+                text width=10cm, align=left, minimum height=0.9cm,
+                font=\footnotesize, inner sep=7pt},
+  node distance=0.4cm
+]
+\node[layer=CInfra]  (d1) {\textbf{1. Built-in defaults}\enspace — zero-config local development};
+\node[layer=CKernel, below=of d1] (d2)
+  {\textbf{2. Config file}\enspace \texttt{\textasciitilde/.connector/config.toml} or \texttt{/etc/connector/config.toml}};
+\node[layer=CExec, below=of d2] (d3)
+  {\textbf{3. Environment variables}\enspace \texttt{CONNECTOR\_API\_URL}, \texttt{CONNECTOR\_API\_KEY}, \texttt{CONNECTOR\_DEV\_MODE}, \ldots};
+\node[layer=CDX, below=of d3] (d4)
+  {\textbf{4. CLI flags}\enspace \texttt{--api-url}, \texttt{--api-key}, \texttt{--output}, \ldots (highest priority)};
+
+\node[right=0.3cm of d4, font=\tiny\itshape, text=CDX] {highest};
+\node[right=0.3cm of d1, font=\tiny\itshape, text=CInfra] {lowest};
+
+\end{tikzpicture}
+\caption{Configuration resolution order — later layers override earlier ones}
+\label{fig:config-hierarchy}
+\end{figure}
+
+\section{Structured Error Model}
+
+Glue errors are always structured and actionable. Every error carries a
+machine-readable code, a human-readable message, and an operator hint:
+
+\begin{lstlisting}[language=bash]
+{
+  "ok": false,
+  "error": {
+    "code":    "AGENT_NOT_FOUND",
+    "message": "Agent 'medical-assistant-1' not found",
+    "hint":    "Run 'connectorctl list agents' to see available agents",
+    "see_also": ["https://docs.connector.dev/agents/lifecycle"]
+  }
+}
+\end{lstlisting}
+
+Error codes are namespaced (\texttt{AGENT\_*}, \texttt{SESSION\_*},
+\texttt{BUDGET\_*}, \texttt{AUTH\_*}) so automated systems can pattern-match
+without parsing message text.
+
