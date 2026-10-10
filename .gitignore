@@ -108,3 +108,8 @@ platform/lab/microvm-assets/rootfs.ext4
 
 # Seven-backend deployment secrets and local image digests
 platform/deploy/seven-backends/linux/images.env
+
+# Local plans and checklists stay off the public tree
+**/*PLAN*.md
+**/*CHECKLIST*.md
+**/*REMAINING*.md
