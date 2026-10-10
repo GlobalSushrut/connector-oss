@@ -98,7 +98,7 @@ echo ""
 
 # ── Docker mode ───────────────────────────────────────────────────────────────
 if [ "$DOCKER_MODE" = true ]; then
-    error "Docker Compose install path was removed with platform/deploy/docker-compose.yml (Phase 0.7). Use bare-metal install below, or connectorctl / microVM per CONNECTOR_OS_ROADMAP.md; optional lab: lab/README.md."
+    error "Docker Compose install path was removed with platform/deploy/docker-compose.yml (Phase 0.7). Use bare-metal install below, or connectorctl / microVM per CONNECTOR_OS_ROADMAP.md."
 fi
 
 # ── Bare-metal installation ───────────────────────────────────────────────────
