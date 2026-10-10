@@ -1,7 +1,0 @@
-# Allow all files for build
-.git
-.env
-*.log
-target/
-.cargo-target/
-.gitignore

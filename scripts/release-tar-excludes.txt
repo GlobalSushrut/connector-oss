@@ -1,7 +1,0 @@
-# Paths relative to repo root — pass to `tar` / `rsync` when producing connector-os release
-# archives (Phase 0.7.7 / §2D.6). Lines starting with # and blank lines are ignored.
-#
-ppt
-platform/gtm-presentation
-platform/docs/landing-page/web
-platform/docs/connector-youtube-deck
