@@ -149,6 +149,9 @@ cp -f "$OUT_DIR/$VERSIONED" "$OUT_DIR/$STABLE"
   sha256sum "$STABLE" > "${STABLE}.sha256"
 )
 
+# Read the listing once. Piping tar into grep -q trips pipefail: grep exits
+# at the first hit and tar dies with SIGPIPE, which looks like a missing file.
+members="$(tar -tzf "$OUT_DIR/$STABLE")"
 for n in \
   "$PKG_ROOT/bin/connector-platform" \
   "$PKG_ROOT/bin/connectorctl" \
@@ -159,8 +162,10 @@ for n in \
   "$PKG_ROOT/MANIFEST.json" \
   "$PKG_ROOT/README.txt"
 do
-  if ! tar -tzf "$OUT_DIR/$STABLE" | grep -qx "$n"; then
+  if ! grep -qxF -- "$n" <<<"$members"; then
     echo "package: tarball missing member: $n" >&2
+    echo "package: archive listing:" >&2
+    printf '%s\n' "$members" | head -40 >&2
     exit 1
   fi
 done
