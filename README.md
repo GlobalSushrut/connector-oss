@@ -57,24 +57,36 @@ infrastructure than you need.
 
 ## Install
 
-Linux x86_64, no compiler. Every push to `main` replaces this tarball, so the download is the latest commit.
+Linux x86_64. No compiler. Each push to `main` replaces the installer, the Debian package, and the Docker image.
+
+### On a computer
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | bash
-connector-platform
+curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | sudo bash
 ```
 
-Open <http://127.0.0.1:9091/>.
+This installs `connector-platform` and `connectorctl`, writes `/etc/connector/connector.yaml`, and starts the `connector-platform` service.
 
-The same file is always current:
+Or install the package:
 
-<https://github.com/GlobalSushrut/connector-oss/releases/download/prebuilt/connector-os-linux-x86_64.tar.gz>
+```bash
+curl -fLO https://github.com/GlobalSushrut/connector-oss/releases/download/prebuilt/connector-os_amd64.deb
+sudo apt install ./connector-os_amd64.deb
+```
 
-The binary is built on Ubuntu 22.04, so the machine needs glibc 2.35 or newer.
+Open <http://127.0.0.1:9091/>. The machine needs glibc 2.35 or newer (Ubuntu 22.04 or newer).
+
+### Docker, including a cloud VM
+
+```bash
+docker compose -f platform/deploy/docker-compose.yml up -d
+```
+
+The image is `ghcr.io/globalsushrut/connector-oss:prebuilt`. Map port 9091 and open that address.
 
 ## Quick start
 
-This path compiles from source. Use [Install](#install) when you want the prebuilt tarball.
+This path compiles from source. Use [Install](#install) for the service, the Debian package, or Docker.
 
 ```bash
 git clone https://github.com/GlobalSushrut/connector-oss.git

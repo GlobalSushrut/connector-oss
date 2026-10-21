@@ -1,0 +1,30 @@
+# Runtime image. The workflow copies the already built binaries into this context.
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system connector \
+    && useradd --system --gid connector --home-dir /var/lib/connector --shell /usr/sbin/nologin connector \
+    && mkdir -p /var/lib/connector /etc/connector \
+    && chown -R connector:connector /var/lib/connector
+
+COPY connector-platform /usr/local/bin/connector-platform
+COPY connectorctl /usr/local/bin/connectorctl
+COPY connector.yaml /etc/connector/connector.yaml
+
+ENV CONNECTOR_HOST=0.0.0.0 \
+    CONNECTOR_PORT=9091 \
+    CONNECTOR_DATA_DIR=/var/lib/connector \
+    CONNECTOR_CONFIG_FILE=/etc/connector/connector.yaml \
+    CONNECTOR_PRESET=local \
+    RUST_LOG=info
+
+USER connector
+WORKDIR /var/lib/connector
+EXPOSE 9091
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:9091/healthz || exit 1
+
+ENTRYPOINT ["/usr/local/bin/connector-platform"]

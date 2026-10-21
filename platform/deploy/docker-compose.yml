@@ -1,0 +1,14 @@
+# One Connector node. Same file on a laptop or a cloud VM.
+#   docker compose -f platform/deploy/docker-compose.yml up -d
+# Then open http://127.0.0.1:9091/  (or the VM address).
+services:
+  connector:
+    image: ghcr.io/globalsushrut/connector-oss:prebuilt
+    ports:
+      - "9091:9091"
+    volumes:
+      - connector-data:/var/lib/connector
+    restart: unless-stopped
+
+volumes:
+  connector-data:

@@ -14,6 +14,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   package:
@@ -76,6 +77,43 @@ jobs:
           CARGO_TERM_COLOR: always
         run: bash platform/release/package.sh
 
+      - name: Debian package and image context
+        run: bash platform/release/build-distributions.sh
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image name
+        run: echo "IMAGE=ghcr.io/$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')/connector-oss" >> "$GITHUB_ENV"
+
+      - name: Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: dist/image
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:prebuilt
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Make the image public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method PATCH -H "Accept: application/vnd.github+json" \
+            "/users/${GITHUB_REPOSITORY_OWNER}/packages/container/connector-oss" \
+            -f visibility=public \
+            || gh api --method PATCH -H "Accept: application/vnd.github+json" \
+            "/user/packages/container/connector-oss" \
+            -f visibility=public \
+            || echo "image visibility was not changed; set the package public in GitHub if docker pull asks for a login"
+
       - name: Publish latest release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -87,12 +125,26 @@ jobs:
             echo
             echo "This release is replaced on every push to \`main\`."
             echo
+            echo 'Linux PC:'
+            echo
             echo '```bash'
-            echo 'curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | bash'
-            echo 'connector-platform'
+            echo 'curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | sudo bash'
             echo '```'
             echo
-            echo "Download: https://github.com/GlobalSushrut/connector-oss/releases/download/prebuilt/connector-os-linux-x86_64.tar.gz"
+            echo 'Or install the Debian package:'
+            echo
+            echo '```bash'
+            echo 'curl -fLO https://github.com/GlobalSushrut/connector-oss/releases/download/prebuilt/connector-os_amd64.deb'
+            echo 'sudo apt install ./connector-os_amd64.deb'
+            echo '```'
+            echo
+            echo 'Docker, on a computer or a cloud VM:'
+            echo
+            echo '```bash'
+            echo 'docker compose -f platform/deploy/docker-compose.yml up -d'
+            echo '```'
+            echo
+            echo "Image: ghcr.io/globalsushrut/connector-oss:prebuilt"
             echo "Commit: ${short}"
           } > /tmp/prebuilt-notes.md
           if gh release view prebuilt >/dev/null 2>&1; then
@@ -100,8 +152,10 @@ jobs:
           else
             gh release create prebuilt --target "$GITHUB_SHA" --title "Prebuilt (${short})" --notes-file /tmp/prebuilt-notes.md \
               dist/connector-os-linux-x86_64.tar.gz \
-              dist/connector-os-linux-x86_64.tar.gz.sha256
+              dist/connector-os-linux-x86_64.tar.gz.sha256 \
+              dist/connector-os_amd64.deb
           fi
           gh release upload prebuilt --clobber \
             dist/connector-os-linux-x86_64.tar.gz \
-            dist/connector-os-linux-x86_64.tar.gz.sha256
+            dist/connector-os-linux-x86_64.tar.gz.sha256 \
+            dist/connector-os_amd64.deb

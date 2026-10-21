@@ -1,26 +1,29 @@
 #!/usr/bin/env bash
 # Install the latest prebuilt Connector node from GitHub. No compiler.
 #
-#   curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | bash
-#   curl -fsSL .../install.sh | bash -s -- --system
+#   curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | sudo bash
+#   curl -fsSL .../install.sh | bash -s -- --user
 #
-# Default: ~/.connector and ~/.local/bin
-# --system: /usr/local/bin (uses sudo when needed)
+# Default (root): /usr/bin, systemd service, config in /etc/connector
+# --user: ~/.connector and ~/.local/bin, no service
 #
 # Each push to main replaces the GitHub release tagged "prebuilt".
 set -euo pipefail
 
 REPO="${CONNECTOR_GITHUB_REPO:-GlobalSushrut/connector-oss}"
 TAG="${CONNECTOR_RELEASE_TAG:-prebuilt}"
-SYSTEM=0
+USER_MODE=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --system) SYSTEM=1; shift ;;
+    --user) USER_MODE=1; shift ;;
+    --system) USER_MODE=0; shift ;;
     --repo) REPO="$2"; shift 2 ;;
     --tag) TAG="$2"; shift 2 ;;
     -h|--help)
-      echo "usage: install.sh [--system] [--repo owner/name] [--tag prebuilt]"
+      echo "usage: install.sh [--user] [--repo owner/name] [--tag prebuilt]"
+      echo "  default, as root: install the systemd service"
+      echo "  --user: install only for the current account"
       exit 0
       ;;
     *) echo "install: unknown argument: $1" >&2; exit 2 ;;
@@ -122,19 +125,64 @@ install_tree() {
   chmod 755 "$bin_dir/connector-platform" "$bin_dir/connectorctl"
 }
 
-if [[ "$(id -u)" -eq 0 ]]; then
-  SYSTEM=1
-fi
-
-if [[ "$SYSTEM" == "1" ]]; then
-  if [[ "$(id -u)" -ne 0 ]]; then
-    echo "install: --system needs root. Run:" >&2
-    echo "  curl -fsSL https://raw.githubusercontent.com/${REPO}/main/platform/release/install.sh | sudo bash -s -- --system" >&2
-    exit 1
+install_system() {
+  if ! getent passwd connector >/dev/null; then
+    useradd --system --home-dir /var/lib/connector --create-home \
+      --shell /usr/sbin/nologin --user-group connector
   fi
-  install_tree /usr/local/bin /var/lib/connector /var/lib/connector/ui /etc/connector/connector.yaml
-  echo "install: system binaries are on PATH (/usr/local/bin)"
-else
+  mkdir -p /usr/bin /var/lib/connector /var/log/connector /etc/connector /usr/share/connector
+  install -m755 "$ROOT_DIR/bin/connector-platform" /usr/bin/connector-platform
+  install -m755 "$ROOT_DIR/bin/connectorctl" /usr/bin/connectorctl
+  if [[ -d "$ROOT_DIR/ui" ]]; then
+    rm -rf /usr/share/connector/ui
+    mkdir -p /usr/share/connector/ui
+    cp -a "$ROOT_DIR/ui/." /usr/share/connector/ui/
+  fi
+  if [[ ! -f /etc/connector/connector.yaml ]]; then
+    install -m640 "$ROOT_DIR/etc/connector.yaml.example" /etc/connector/connector.yaml
+    chown root:connector /etc/connector/connector.yaml
+  fi
+  unit_dir=/lib/systemd/system
+  if [[ ! -d "$unit_dir" ]]; then
+    unit_dir=/usr/lib/systemd/system
+    mkdir -p "$unit_dir"
+  fi
+  cat > "$unit_dir/connector-platform.service" <<'EOF'
+[Unit]
+Description=Connector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=connector
+Group=connector
+WorkingDirectory=/var/lib/connector
+ExecStart=/usr/bin/connector-platform
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=120
+Environment=CONNECTOR_DATA_DIR=/var/lib/connector
+Environment=CONNECTOR_CONFIG_FILE=/etc/connector/connector.yaml
+Environment=CONNECTOR_UI_DIR=/usr/share/connector/ui
+Environment=RUST_LOG=info
+NoNewPrivileges=yes
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/connector
+ReadWritePaths=/var/log/connector
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  chown -R connector:connector /var/lib/connector /var/log/connector
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload
+    systemctl enable --now connector-platform.service
+  fi
+}
+
+if [[ "$USER_MODE" == "1" ]]; then
   install_tree "${HOME}/.local/bin" "${HOME}/.connector" "${HOME}/.connector/ui" "${HOME}/.connector/connector.yaml"
   echo "install: user binaries are in ${HOME}/.local/bin"
   case ":$PATH:" in
@@ -144,8 +192,18 @@ else
       echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
       ;;
   esac
+  echo "install: start with: connector-platform"
+elif [[ "$(id -u)" -ne 0 ]]; then
+  echo "install: Connector installs as a system service. Run:" >&2
+  echo "  curl -fsSL https://raw.githubusercontent.com/${REPO}/main/platform/release/install.sh | sudo bash" >&2
+  exit 1
+else
+  install_system
+  echo "install: service connector-platform is enabled"
+  echo "install: status:  systemctl status connector-platform"
+  echo "install: command: connectorctl"
+  echo "install: config:  /etc/connector/connector.yaml"
 fi
 
 echo "install: commit ${COMMIT}"
-echo "install: start with:  connector-platform"
-echo "install: dashboard:   http://127.0.0.1:9091/"
+echo "install: open http://127.0.0.1:9091/"
