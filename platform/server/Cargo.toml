@@ -2,7 +2,8 @@
 name = "connector-platform"
 version = "0.1.0"
 edition = "2021"
-description = "Connector Platform — Self-hosted AI governance server (commercial)"
+description = "Connector Platform — self-hosted AI governance server"
+license = "Apache-2.0"
 publish = false
 
 [features]

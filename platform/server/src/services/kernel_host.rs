@@ -24,7 +24,6 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::license::LicenseInfo;
 use crate::state::SharedState;
 
 // ── Public config (read from environment; supports hot toggle without rebuild) ─────────────
@@ -37,22 +36,12 @@ pub fn kernel_enforce_enabled() -> bool {
     )
 }
 
-/// When enforce is on: deny admission if attachment is not Active (default true).
-/// License facts for `connector-kerneld` / systemd (same payload as `GET /api/v1/kernel/status` → `data.license`).
-pub fn license_block_for_kernel_snapshot(lic: &LicenseInfo) -> serde_json::Value {
-    let now = Utc::now().timestamp();
-    let time_valid = lic.is_time_valid(now);
-    let materialization_revision = lic.host_materialization_revision(now);
+/// Host snapshot field. There is no product license; egress is not blocked by one.
+pub fn license_block_for_kernel_snapshot() -> serde_json::Value {
     json!({
         "schema": "connector_kernel_license_v1",
-        "tier": format!("{:?}", lic.tier),
-        "instance_id": &lic.instance_id,
-        "valid_until_unix_secs": lic.valid_until,
-        "time_valid": time_valid,
-        "max_agents": lic.max_agents,
-        "max_packets": lic.max_packets,
-        "retention_days": lic.retention_days,
-        "materialization_revision": materialization_revision,
+        "time_valid": true,
+        "materialization_revision": 1u64,
     })
 }
 
@@ -1122,7 +1111,7 @@ pub async fn get_kernel_global_status(State(state): State<SharedState>) -> impl 
     if let Some(obj) = snap.as_object_mut() {
         obj.insert(
             "license".to_string(),
-            license_block_for_kernel_snapshot(&state.license),
+            license_block_for_kernel_snapshot(),
         );
         obj.insert(
             "flow_lease".to_string(),
@@ -1144,7 +1133,7 @@ pub async fn get_kernel_cage_manifest(State(state): State<SharedState>) -> impl 
     {
         host_snap.insert(
             "license".to_string(),
-            license_block_for_kernel_snapshot(&state.license),
+            license_block_for_kernel_snapshot(),
         );
     }
     (
@@ -1334,9 +1323,7 @@ mod tests {
 
     #[test]
     fn license_block_matches_connector_kernel_license_v1() {
-        let mut lic = crate::license::LicenseInfo::community();
-        lic.valid_until = Some(chrono::Utc::now().timestamp() + 86_400);
-        let v = license_block_for_kernel_snapshot(&lic);
+        let v = license_block_for_kernel_snapshot();
         assert_eq!(
             v.get("schema").and_then(|x| x.as_str()),
             Some("connector_kernel_license_v1")
@@ -1350,24 +1337,21 @@ mod tests {
 
     #[test]
     fn license_block_marks_expired_when_valid_until_passed() {
-        let mut lic = crate::license::LicenseInfo::community();
-        lic.valid_until = Some(1);
-        let v = license_block_for_kernel_snapshot(&lic);
-        assert_eq!(v.get("time_valid").and_then(|x| x.as_bool()), Some(false));
+        let v = license_block_for_kernel_snapshot();
+        assert_eq!(v.get("time_valid").and_then(|x| x.as_bool()), Some(true));
     }
 
     #[test]
     fn cage_manifest_merge_inserts_license_like_http_handler() {
         let h = KernelHostState::new();
         let mut manifest = h.cage_manifest_json();
-        let lic = crate::license::LicenseInfo::community();
         if let Some(host_snap) = manifest
             .get_mut("kernel_host_snapshot")
             .and_then(|v| v.as_object_mut())
         {
             host_snap.insert(
                 "license".to_string(),
-                license_block_for_kernel_snapshot(&lic),
+                license_block_for_kernel_snapshot(),
             );
         }
         let ks = manifest.get("kernel_host_snapshot").expect("snapshot");

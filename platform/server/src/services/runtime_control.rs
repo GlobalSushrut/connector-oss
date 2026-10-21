@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::{self, PlatformRole},
     binary_id,
-    license::LicenseInfo,
     state::SharedState,
 };
 
@@ -1162,15 +1161,7 @@ pub async fn activate_node(
             }
             pilot.pilot_id
         }
-        RuntimeMode::Production => match LicenseInfo::try_validate_key(&access_key) {
-            Ok(validated) => validated.instance_id,
-            Err(_) => {
-                return Json(serde_json::json!({
-                    "ok": false,
-                    "error": "Invalid or unsigned production license key",
-                }));
-            }
-        },
+        RuntimeMode::Production => access_key.clone(),
     };
 
     let admitted = match crate::substrate::pate::require_proceed(

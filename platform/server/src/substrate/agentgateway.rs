@@ -1,5 +1,8 @@
-//! Fail-closed agentgateway decision. The binary is not installed.
-//! A missing task, a non-Proceed verdict, or a missing process all deny forwarding.
+//! Fail-closed agentgateway decision.
+//! Forwarding is allowed only while the pinned process is supervised and the
+//! task is an unobserved PATE Proceed on the live generation. The adapter does
+//! not mint Proceed. A missing task, a non-Proceed verdict, a stale generation,
+//! or a dead process all deny.
 
 use axum::extract::State;
 use axum::Json;
@@ -31,13 +34,50 @@ pub fn pinned_digest_verified(reference: &str) -> bool {
     hex.len() == 64 && hex.chars().all(|c| c.is_ascii_hexdigit()) && reference.contains('/')
 }
 
-/// Live supervision is absent. A pinned digest does not make the process ready.
+/// True only when a live process is running the pinned image.
+/// The pin file alone is not supervision.
 pub fn process_ready() -> bool {
+    let reference = pinned_reference();
+    pinned_digest_verified(reference) && pinned_process_running(reference)
+}
+
+/// The adapter does not mint a forward. `ext_auth` decides each request.
+fn adapter_forwards() -> bool {
     false
 }
 
-fn adapter_forwards() -> bool {
-    false
+fn pinned_process_running(reference: &str) -> bool {
+    docker_ancestor_running(reference)
+}
+
+fn docker_ancestor_running(reference: &str) -> bool {
+    let Ok(output) = std::process::Command::new("docker")
+        .args([
+            "ps",
+            "--filter",
+            &format!("ancestor={reference}"),
+            "--format",
+            "{{.ID}}",
+        ])
+        .output()
+    else {
+        return false;
+    };
+    output.status.success()
+        && output
+            .stdout
+            .split(|b| *b == b'\n')
+            .any(|line| !line.is_empty())
+}
+
+/// Stored PATE verdicts are serde snake_case (`proceed`). Observation closes the task.
+fn open_proceed_may_forward(
+    supervised: bool,
+    verdict: &str,
+    observed: bool,
+    generation_live: bool,
+) -> bool {
+    supervised && verdict.eq_ignore_ascii_case("proceed") && !observed && generation_live
 }
 
 /// A tool catalog is not an effect admission.
@@ -188,7 +228,7 @@ fn connector_side_checks() -> Vec<Value> {
             "fail_closed_adapter",
             !adapter_forwards(),
             "holds",
-            "ext-auth forward stays false, including after PATE Proceed. The adapter does not mint Proceed.",
+            "The adapter does not mint Proceed. A request forwards only when the pinned process is supervised and the task is an unobserved Proceed on the live generation.",
         ),
         check(
             "mcp_discovery_does_not_admit",
@@ -256,21 +296,35 @@ pub fn acceptance() -> Value {
     let mut checks = vec![
         check(
             "version_and_digest",
-            false,
-            if digest_pinned { "pinned" } else { "absent" },
-            "The registry index digest is pinned. The process has not been installed from it.",
+            ready,
+            if ready {
+                "running_pin"
+            } else if digest_pinned {
+                "pinned"
+            } else {
+                "absent"
+            },
+            if ready {
+                "A live process is running the pinned image."
+            } else {
+                "The registry index digest is pinned. No live process matched that image."
+            },
         ),
         check(
             "supervised_process",
-            false,
-            "absent",
-            "No supervised process is running.",
+            ready,
+            if ready { "running" } else { "absent" },
+            if ready {
+                "The pinned agentgateway process is supervised."
+            } else {
+                "No supervised process is running."
+            },
         ),
         check(
             "dead_process_not_ready",
             false,
-            "holds",
-            "ready stays false while the process is absent. A live kill was not performed.",
+            if ready { "running" } else { "absent" },
+            "A live kill was not performed. Ready follows the live process, not the pin file.",
         ),
     ];
     checks.extend(connector_side_checks());
@@ -278,8 +332,8 @@ pub fn acceptance() -> Value {
     json!({
         "schema": "connector.agentgateway_acceptance.v1",
         "passed": passed,
-        "status": "TARGET",
-        "installed": false,
+        "status": if ready { "partial" } else { "TARGET" },
+        "installed": ready,
         "ready": ready,
         "seven_backend": false,
         "pinned_reference": reference,
@@ -291,17 +345,18 @@ pub fn acceptance() -> Value {
 
 pub fn status() -> Value {
     let acceptance = acceptance();
+    let ready = acceptance.get("ready").and_then(|v| v.as_bool()).unwrap_or(false);
     json!({
         "schema": "connector.agentgateway_status.v1",
-        "installed": false,
-        "ready": false,
-        "status": "TARGET",
+        "installed": ready,
+        "ready": ready,
+        "status": if ready { "partial" } else { "TARGET" },
         "seven_backend": false,
         "production_eligible": false,
         "inventory_complete": true,
         "pinned_reference": acceptance["pinned_reference"],
         "acceptance_passed": false,
-        "honesty": "The HTTP effect inventory is mediated. A registry digest is pinned. agentgateway is not installed. This row is not one of the seven backends. Forwarding stays denied.",
+        "honesty": "Forwarding is per request. It is allowed only while this pinned process is supervised and the task is an unobserved PATE Proceed on the live generation. This row is not one of the seven backends. The acceptance suite has not passed.",
     })
 }
 
@@ -315,7 +370,7 @@ pub struct ExtAuthBody {
     pub pate_task_id: Option<String>,
 }
 
-/// POST /api/v1/runtime/agentgateway/ext-auth — deny forwarding.
+/// POST /api/v1/runtime/agentgateway/ext-auth — forward an unobserved Proceed, or deny.
 pub async fn post_ext_auth(
     State(state): State<SharedState>,
     Json(body): Json<ExtAuthBody>,
@@ -324,49 +379,94 @@ pub async fn post_ext_auth(
 }
 
 pub fn ext_auth(state: &PlatformState, task_id: Option<&str>) -> Value {
+    let supervised = process_ready();
     let Some(task_id) = task_id.map(str::trim).filter(|id| !id.is_empty()) else {
         return json!({
             "allow": false,
-            "forward": adapter_forwards(),
-            "installed": false,
+            "forward": false,
+            "installed": supervised,
             "reason": "pate_task_required",
         });
     };
-    let record = state.engine_store.lock().ok().and_then(|store| {
-        store
-            .folder_get(crate::substrate::pate::ATU_FOLDER, task_id)
-            .ok()
-            .flatten()
-    });
-    let Some(record) = record else {
+    let Ok(store) = state.engine_store.lock() else {
         return json!({
             "allow": false,
-            "forward": adapter_forwards(),
-            "installed": false,
+            "forward": false,
+            "installed": supervised,
+            "reason": "store_unavailable",
+        });
+    };
+    let Some(record) = store
+        .folder_get(crate::substrate::pate::ATU_FOLDER, task_id)
+        .ok()
+        .flatten()
+    else {
+        return json!({
+            "allow": false,
+            "forward": false,
+            "installed": supervised,
             "reason": "pate_task_absent",
         });
     };
-    let verdict = record.get("verdict").and_then(|value| value.as_str()).unwrap_or("absent");
+    let verdict = record
+        .get("verdict")
+        .and_then(|value| value.as_str())
+        .unwrap_or("absent")
+        .to_string();
     let observed = record
         .pointer("/spine/observed")
         .and_then(|value| value.as_bool())
         .unwrap_or(false);
-    if verdict != "Proceed" || observed {
+    let agent_pid = record
+        .get("agent_pid")
+        .and_then(|value| value.as_str())
+        .unwrap_or("")
+        .to_string();
+    let recorded_generation = record
+        .pointer("/spine/generation_id")
+        .and_then(|value| value.as_str())
+        .map(|value| value.to_string())
+        .or_else(|| {
+            record
+                .get("broker_epoch")
+                .and_then(|value| value.as_u64())
+                .map(|epoch| epoch.to_string())
+        });
+    let live = store
+        .folder_get(
+            crate::substrate::llm_context_broker::FOLDER,
+            &format!("gen:{agent_pid}"),
+        )
+        .ok()
+        .flatten()
+        .and_then(|value| value.get("generation").and_then(|generation| generation.as_u64()))
+        .unwrap_or(0);
+    let generation_live = recorded_generation
+        .as_deref()
+        .is_some_and(|generation| generation_is_live(generation, live));
+    if !open_proceed_may_forward(supervised, &verdict, observed, generation_live) {
+        let reason = if !supervised {
+            "agentgateway_not_supervised"
+        } else if !generation_live {
+            "stale_generation"
+        } else {
+            "pate_not_open_proceed"
+        };
         return json!({
             "allow": false,
-            "forward": adapter_forwards(),
-            "installed": false,
-            "reason": "pate_not_open_proceed",
+            "forward": false,
+            "installed": supervised,
+            "reason": reason,
             "verdict": verdict,
         });
     }
     json!({
-        "allow": false,
-        "forward": adapter_forwards(),
-        "installed": false,
+        "allow": true,
+        "forward": true,
+        "installed": true,
         "pate": "proceed",
-        "reason": "agentgateway_not_installed",
-        "honesty": "PATE Proceed does not let agentgateway forward. The process is not installed.",
+        "reason": "open_proceed",
+        "honesty": "The pinned process is supervised. This unobserved Proceed is on the live generation. The adapter did not mint the verdict.",
     })
 }
 
@@ -377,8 +477,9 @@ mod tests {
     #[test]
     fn status_is_not_a_seventh_backend() {
         let body = status();
-        assert_eq!(body["installed"], false);
-        assert_eq!(body["ready"], false);
+        let ready = process_ready();
+        assert_eq!(body["installed"], ready);
+        assert_eq!(body["ready"], ready);
         assert_eq!(body["seven_backend"], false);
         assert_eq!(body["inventory_complete"], true);
         assert_eq!(body["acceptance_passed"], false);
@@ -392,15 +493,15 @@ mod tests {
     #[test]
     fn acceptance_suite_stays_unpassed_after_the_pin() {
         let body = acceptance();
+        let ready = process_ready();
         assert_eq!(body["passed"], false);
-        assert_eq!(body["installed"], false);
-        assert_eq!(body["ready"], false);
-        assert_eq!(body["status"], "TARGET");
+        assert_eq!(body["installed"], ready);
+        assert_eq!(body["ready"], ready);
+        assert_eq!(body["status"], if ready { "partial" } else { "TARGET" });
         let checks = body["checks"].as_array().expect("checks");
         let row = |id: &str| checks.iter().find(|row| row["id"] == id).expect(id);
-        assert_eq!(row("version_and_digest")["status"], "pinned");
-        assert_eq!(row("version_and_digest")["passed"], false);
-        assert_eq!(row("supervised_process")["passed"], false);
+        assert_eq!(row("version_and_digest")["passed"], ready);
+        assert_eq!(row("supervised_process")["passed"], ready);
         assert_eq!(row("dead_process_not_ready")["passed"], false);
         assert_eq!(row("a2a")["passed"], false);
         assert_eq!(row("egress_deny")["passed"], false);
@@ -419,7 +520,12 @@ mod tests {
         assert!(!redacted.contains("\nabc\n"));
         assert!(!adapter_forwards());
         assert!(!pinned_digest_verified("cr.agentgateway.dev/agentgateway:v1.6.0"));
-        assert!(!process_ready());
+        assert!(open_proceed_may_forward(true, "proceed", false, true));
+        assert!(open_proceed_may_forward(true, "Proceed", false, true));
+        assert!(!open_proceed_may_forward(false, "proceed", false, true));
+        assert!(!open_proceed_may_forward(true, "ask_hitl", false, true));
+        assert!(!open_proceed_may_forward(true, "proceed", true, true));
+        assert!(!open_proceed_may_forward(true, "proceed", false, false));
         assert!(!body.to_string().contains("CONNECTOR READY"));
     }
 }

@@ -2017,6 +2017,80 @@ pub fn verify_id_token_with_jwks(
     Ok(serde_json::Value::Object(out))
 }
 
+/// One operator OIDC verification and one SPIRE fetch at boot.
+/// A missing token is not written as success. `deployment_verify::live` reads
+/// the OIDC evidence row and calls `fetch_spire_x509` itself.
+pub async fn verify_operator_on_boot(state: &crate::state::PlatformState) {
+    let token = std::env::var("CONNECTOR_OIDC_ID_TOKEN")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let jwks_url = std::env::var("CONNECTOR_OIDC_JWKS_URL")
+        .or_else(|_| std::env::var("CONNECTOR_SSO_JWKS_URL"))
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let client_id = std::env::var("CONNECTOR_OIDC_CLIENT_ID")
+        .or_else(|_| std::env::var("CONNECTOR_SSO_CLIENT_ID"))
+        .unwrap_or_default();
+    if let (Some(token), Some(jwks_url)) = (token, jwks_url) {
+        if !client_id.trim().is_empty() {
+            let insecure_tls = !crate::connector_profile::is_productionish_env()
+                && std::env::var("CONNECTOR_SSO_INSECURE_TLS")
+                    .map(|v| {
+                        matches!(
+                            v.trim().to_ascii_lowercase().as_str(),
+                            "1" | "true" | "yes" | "on"
+                        )
+                    })
+                    .unwrap_or(false);
+            if let Ok(client) = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .danger_accept_invalid_certs(insecure_tls)
+                .build()
+            {
+                if let Ok(jwks) = fetch_jwks(&client, &jwks_url).await {
+                    let issuer = std::env::var("CONNECTOR_OIDC_ISSUER")
+                        .or_else(|_| std::env::var("CONNECTOR_SSO_ISSUER"))
+                        .ok()
+                        .filter(|s| !s.trim().is_empty());
+                    let nonce = std::env::var("CONNECTOR_OIDC_NONCE").unwrap_or_default();
+                    if let Ok(claims) = verify_id_token_with_jwks(
+                        &token,
+                        &jwks,
+                        client_id.trim(),
+                        nonce.trim(),
+                        issuer.as_deref(),
+                    ) {
+                        if claims.get("connector_agent_pid").is_none() {
+                            crate::substrate::cvr::deployment_verify::record_operation_success(
+                                state,
+                                "iam",
+                                "oidc_jwks_token_verified",
+                                serde_json::json!({
+                                    "issuer": claims.get("iss"),
+                                    "subject_present": claims.get("sub").and_then(|v| v.as_str()).is_some(),
+                                    "token_stored": false,
+                                    "boot": true,
+                                }),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let spire = crate::services::cell_spiffe::fetch_spire_x509();
+    if let Some(id) = &spire.spiffe_id {
+        crate::substrate::cvr::deployment_verify::record_operation_success(
+            state,
+            "spire",
+            "fetch_x509",
+            serde_json::json!({ "spiffe_id": id, "detail": spire.detail }),
+        );
+    }
+}
+
 /// Verify a Keycloak access token for `audience` against `CONNECTOR_SSO_JWKS_URL` and `CONNECTOR_SSO_ISSUER`.
 /// JWKS is cached for five minutes and refetched once when the token's key is not in the cache.
 pub async fn verify_idp_access_token(token: &str, audience: &str) -> Result<serde_json::Value, String> {

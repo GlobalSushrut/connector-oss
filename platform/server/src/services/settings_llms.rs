@@ -256,7 +256,24 @@ pub fn talk_llm_router(
         // Never fall back to the global router — that is another tenant's key on a shared VM.
         return tenant_router_from_store(state, &tenant);
     }
-    state.llm_router_arc()
+    if let Some(router) = state.llm_router_arc() {
+        return Some(router);
+    }
+    supervised_broker_router()
+}
+
+fn supervised_broker_router() -> Option<Arc<LlmRouter>> {
+    let endpoint = crate::substrate::intelligence_plane::broker_loopback()?;
+    let model = std::env::var("CONNECTOR_INTELLIGENCE_BROKER_MODEL")
+        .unwrap_or_else(|_| "connector".into());
+    let model = model.trim();
+    if model.is_empty() {
+        return None;
+    }
+    let token =
+        std::env::var("CONNECTOR_INTELLIGENCE_BROKER_TOKEN").unwrap_or_else(|_| "connector".into());
+    let engine = EngineLlmConfig::custom(&endpoint, model, token.trim());
+    Some(Arc::new(state::build_llm_router(vec![engine])))
 }
 
 pub fn talk_llm_wired(state: &SharedState, headers: &HeaderMap, agent_pid: &str) -> bool {

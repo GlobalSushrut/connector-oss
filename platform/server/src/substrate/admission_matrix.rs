@@ -83,7 +83,7 @@ pub fn admission_matrix_json() -> Value {
         "inventory_complete": true,
         "agentgateway": "TARGET",
         "spine": "closed",
-        "honesty": "Operator API mutating methods and plugin-cage mutations close one PATE task or are refused before execution. Declared non-effects admit nothing. Ask stays open and the handler does not run. production_ready stays live evidence. effect_mediated stays per effect. agentgateway ext-auth denies forwarding. This is not Connector Ready.",
+        "honesty": "Operator API mutating methods and plugin-cage mutations close one PATE task or are refused before execution. Declared non-effects admit nothing. Ask stays open and the handler does not run. production_ready stays live evidence. effect_mediated stays per effect. agentgateway ext-auth forwards only an unobserved Proceed on a live generation while the pinned process is supervised. This is not Connector Ready.",
         "production_standard": {
             "claim": "each Connector-managed external effect traverses one PATE task or is refused before execution",
             "inventory_complete": true,

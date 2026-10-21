@@ -39,7 +39,6 @@ const WIZARD_ID: &str = "first-run";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct FirstRunState {
-    license_key: String,
     chosen_plugin: String,
     invite_email: String,
     #[serde(default)]
@@ -81,10 +80,6 @@ pub fn FirstRunWizard(auth: ReadSignal<AuthState>) -> impl IntoView {
                 .skippable());
             ids.push("import");
 
-            v.push(WizardStep::new("license", "Activate your license")
-                .with_subtitle("Paste your enterprise key, or skip to stay in community mode.")
-                .skippable());
-            ids.push("license");
         }
 
         v.push(WizardStep::new("plugin", "Install your first plugin")
@@ -115,7 +110,6 @@ pub fn FirstRunWizard(auth: ReadSignal<AuthState>) -> impl IntoView {
             "connection" => connection_step().into_any(),
             "workspace" => workspace_step(deployment).into_any(),
             "import" => import_session_step(state, set_state).into_any(),
-            "license" => license_step(state, set_state).into_any(),
             "plugin" => plugin_step(state, set_state).into_any(),
             "invite" => invite_step(state, set_state).into_any(),
             "done" => done_step().into_any(),
@@ -392,88 +386,6 @@ struct ImportProbe {
     detected: bool,
     filename: String,
     tenant: String,
-}
-
-fn license_step(
-    state: ReadSignal<FirstRunState>,
-    set_state: WriteSignal<FirstRunState>,
-) -> impl IntoView {
-    let (busy, set_busy) = signal(false);
-    let (flash, set_flash) = signal::<Option<(String, bool)>>(None);
-
-    let on_activate = move |_| {
-        if busy.get() { return; }
-        let key = state.get().license_key.trim().to_string();
-        if key.is_empty() {
-            set_flash.set(Some(("Paste a license key first.".into(), false)));
-            return;
-        }
-        set_busy.set(true);
-        spawn_local(async move {
-            match api::post_value("/license/activate", serde_json::json!({ "license_key": key })).await {
-                Ok(v) => {
-                    // Backend returns `{ activated: true, tier, … }` or soft `{ error, status }`.
-                    let ok = v.get("activated").and_then(|x| x.as_bool()).unwrap_or(false)
-                        && v.get("error").is_none();
-                    let msg = if ok {
-                        format!(
-                            "License activated ({})",
-                            v.get("tier").and_then(|t| t.as_str()).unwrap_or("ok")
-                        )
-                    } else {
-                        v.get("error")
-                            .and_then(|e| e.as_str())
-                            .unwrap_or("Server rejected the key.")
-                            .to_string()
-                    };
-                    set_flash.set(Some((msg, ok)));
-                }
-                Err(e) => set_flash.set(Some((format!("Activation failed: {}", e.message), false))),
-            }
-            set_busy.set(false);
-        });
-    };
-
-    view! {
-        <div class="space-y-3">
-            <label class="block">
-                <span class="block text-xs uppercase tracking-wider text-zinc-500 mb-1">"License key"</span>
-                <input
-                    type="text"
-                    class="w-full px-3 py-2 rounded-lg bg-zinc-900/60 border border-zinc-700/60 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500/60"
-                    placeholder="cnk-XXXXX-XXXXX-XXXXX"
-                    prop:value=move || state.get().license_key
-                    on:input=move |ev| {
-                        let v = event_target_value(&ev);
-                        set_state.update(|s| s.license_key = v);
-                    }
-                />
-            </label>
-            <div class="flex items-center gap-2">
-                <button
-                    type="button"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-60"
-                    prop:disabled=move || busy.get()
-                    on:click=on_activate
-                >
-                    {move || if busy.get() { "Activating…" } else { "Activate" }}
-                </button>
-                <A href="/license" attr:class="text-xs text-zinc-500 hover:text-zinc-300 underline-offset-2 hover:underline">
-                    "Open full License page →"
-                </A>
-            </div>
-            {move || flash.get().map(|(msg, ok)| view! {
-                <p class={if ok {
-                    "text-xs text-emerald-300"
-                } else {
-                    "text-xs text-amber-300"
-                }}>{msg}</p>
-            })}
-            <p class="text-xs text-zinc-500">
-                "No key? Skip this step to stay in community mode. You can activate any time from the License page."
-            </p>
-        </div>
-    }
 }
 
 fn plugin_step(

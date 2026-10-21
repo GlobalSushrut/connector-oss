@@ -401,8 +401,7 @@ pub(crate) fn resolved_kernel_agent_cap(state: &PlatformState) -> u32 {
         let mut es = state.engine_store.lock().unwrap();
         runtime_control::load_runtime_policy(&**es)
     };
-    let tier = format!("{:?}", state.license.tier).to_lowercase();
-    let policy_cap = runtime_control::effective_agent_limit(runtime_mode, &tier, &policy);
+    let policy_cap = runtime_control::effective_agent_limit(runtime_mode, "open", &policy);
     // Hosted trial: Indie license is 3 agents for the whole node. Each
     // visitor gets 3 session agents, so the kernel pool must be larger.
     if crate::services::playground::is_playground_mode() {
@@ -417,10 +416,7 @@ pub(crate) fn resolved_kernel_agent_cap(state: &PlatformState) -> u32 {
                 policy_cap.min(cap).max(1)
             }
         }
-        _ => match state.license.max_agents {
-            Some(n) => policy_cap.min(n as u32).max(1),
-            None => policy_cap,
-        },
+        _ => policy_cap,
     }
 }
 
@@ -1784,7 +1780,6 @@ pub(crate) fn kernel_agent_limit_gate(
     tenant: Option<&crate::middleware::TenantContext>,
 ) -> Result<(), serde_json::Value> {
     let runtime_mode = *state.runtime_mode.read().unwrap();
-    let tier = format!("{:?}", state.license.tier).to_lowercase();
     let limit = resolved_kernel_agent_cap_with_tenant(state, tenant);
 
     let mut k = state.kernel.lock().unwrap();
@@ -1797,7 +1792,7 @@ pub(crate) fn kernel_agent_limit_gate(
     let tier_label = match runtime_mode {
         RuntimeMode::Dev => "dev",
         RuntimeMode::Pilots => "pilots",
-        RuntimeMode::Production => tier.as_str(),
+        RuntimeMode::Production => "production",
     };
     let suspended_left: Vec<String> = k
         .agents()

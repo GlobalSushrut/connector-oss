@@ -1,0 +1,5 @@
+# OCI image index for tag main-v1.82.3-stable.
+# Fetched from ghcr.io on 2026-10-12.
+# The Docker-Content-Digest header matched the sha256 of the index body.
+# This pin does not install the process and does not pass the acceptance suite.
+ghcr.io/berriai/litellm@sha256:b959a1816fa454a14d2842242d0fa1cd0d39f96fc94d3a1f4e1de4e48e2398c6

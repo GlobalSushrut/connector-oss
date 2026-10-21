@@ -252,7 +252,7 @@ class GlooProject:
             f'name = "{name}"\n'
             f'version = "{version}"\n'
             'author = "gloo"\n'
-            'license = "MIT"\n'
+            'license = "Apache-2.0"\n'
             'min_kernel = "0.1.0"\n'
             'agos_abi = "agos.v1"\n'
             "\n"

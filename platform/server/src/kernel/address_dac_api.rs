@@ -410,3 +410,82 @@ pub async fn post_address_dac_unseal(
         })),
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct RelationBody {
+    pub address: String,
+    pub agent_pid: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MemoryMintBody {
+    pub agent_pid: String,
+    pub content: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct NsfsOpenQuery {
+    pub agent_pid: String,
+    pub path: String,
+}
+
+/// `PUT /api/v1/kernel/identity-stack/memory` — mint the last-memory pillar.
+pub async fn put_identity_stack_memory(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(body): Json<MemoryMintBody>,
+) -> Json<Value> {
+    if let Err(e) = require_admin_or_dev(&headers) {
+        return denied(e);
+    }
+    match crate::substrate::identity_stack::mint_last_memory(&state, &body.agent_pid, &body.content)
+    {
+        Ok(()) => Json(operator_envelope(json!({
+            "schema": "identity_last_memory_saved.v1",
+            "agent_pid": body.agent_pid,
+            "honesty": "The operator minted last memory. The identity stack reads this row.",
+        }))),
+        Err(e) => Json(json!({"ok": false, "error": e})),
+    }
+}
+
+/// `PUT /api/v1/kernel/address-dac/relation` — mint the address identity graph edge.
+pub async fn put_address_dac_relation(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(body): Json<RelationBody>,
+) -> Json<Value> {
+    if let Err(e) = require_admin_or_dev(&headers) {
+        return denied(e);
+    }
+    match crate::substrate::identity_stack::mint_address_relation(
+        &state,
+        &body.agent_pid,
+        &body.address,
+    ) {
+        Ok(()) => Json(operator_envelope(json!({
+            "schema": "address_identity_graph_saved.v1",
+            "address": body.address,
+            "agent_pid": body.agent_pid,
+            "honesty": "The operator minted the address relation. The identity stack reads this row.",
+        }))),
+        Err(e) => Json(json!({"ok": false, "error": e})),
+    }
+}
+
+/// `GET /api/v1/kernel/nsfs-open` — whether this agent may open that path.
+pub async fn get_nsfs_open(
+    State(_state): State<SharedState>,
+    headers: HeaderMap,
+    Query(q): Query<NsfsOpenQuery>,
+) -> Json<Value> {
+    if let Err(e) = require_admin_or_dev(&headers) {
+        return denied(e);
+    }
+    let denied = crate::kernel::address_cage::foreign_nsfs_open_denied(&q.agent_pid, &q.path);
+    Json(json!({
+        "agent_pid": q.agent_pid,
+        "path": q.path,
+        "denied": denied,
+    }))
+}

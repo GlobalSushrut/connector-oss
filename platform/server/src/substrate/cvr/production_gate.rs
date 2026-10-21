@@ -43,7 +43,7 @@ pub struct GateInput {
     pub openshell_ready: bool,
 }
 
-pub fn live() -> Value {
+pub fn live(state: Option<&crate::state::PlatformState>) -> Value {
     let playground = env_on("CONNECTOR_PLAYGROUND")
         || matches!(
             std::env::var("CONNECTOR_PRESET")
@@ -87,9 +87,7 @@ pub fn live() -> Value {
         firecracker_ready: probes
             .iter()
             .any(|p| p.kind == RuntimeKind::Firecracker && p.ready),
-        openshell_ready: probes
-            .iter()
-            .any(|p| p.kind == RuntimeKind::OpenShell && p.ready),
+        openshell_ready: state.is_some_and(super::deployment_verify::any_policy_applied),
     })
 }
 

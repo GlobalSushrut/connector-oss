@@ -137,3 +137,46 @@ pub fn backend_for(
         IsolationRuntime::Wasm => Box::new(WasmPluginBackend::new()),
     }
 }
+
+/// Host side of the guest vsock heartbeat. The cell is not live until a line arrives.
+pub struct GuestHeartbeatListen {
+    rx: Option<std::sync::mpsc::Receiver<String>>,
+}
+
+pub fn begin_guest_heartbeat_listen(vsock_base: &std::path::Path) -> GuestHeartbeatListen {
+    #[cfg(target_os = "linux")]
+    {
+        let port = microvm_vsock_agent::agent_vsock_port();
+        let listen = microvm_vsock_agent::guest_listen_uds_path(vsock_base, port);
+        let (tx, rx) = std::sync::mpsc::channel();
+        if microvm_vsock_agent::spawn_guest_initiated_vsock_listener(
+            listen,
+            "microcell".into(),
+            None,
+            false,
+            tx,
+            None,
+            false,
+        )
+        .is_ok()
+        {
+            return GuestHeartbeatListen { rx: Some(rx) };
+        }
+    }
+    let _ = vsock_base;
+    GuestHeartbeatListen { rx: None }
+}
+
+pub fn guest_heartbeat_line(
+    listen: GuestHeartbeatListen,
+    timeout: std::time::Duration,
+) -> Option<String> {
+    listen.rx.and_then(|rx| rx.recv_timeout(timeout).ok())
+}
+
+pub fn guest_heartbeat_received(
+    listen: GuestHeartbeatListen,
+    timeout: std::time::Duration,
+) -> bool {
+    guest_heartbeat_line(listen, timeout).is_some()
+}

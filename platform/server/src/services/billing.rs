@@ -1,21 +1,4 @@
-//! BIZ-4: BillingService — usage metering, entitlement enforcement, tier management.
-//!
-//! Three methods + Stripe Meter event firing:
-//!   - record_usage(account_id, tokens, agent_pid, session_id) — non-blocking, after every LLM call
-//!   - get_entitlements(account_id) -> EntitlementSet  — cached 60s, < 1μs hot path
-//!   - check_entitlement(account_id, feature) -> bool  — inline in dispatch
-//!
-//! Routes (BIZ-5):
-//!   GET /billing/usage       — current usage + limits + estimated overage
-//!   GET /billing/invoices    — Stripe invoice list proxy
-//!   GET /billing/portal      — Stripe Customer Portal redirect
-//!   GET /billing/entitlements — entitlement set for current user
-//!
-//! BIZ-6: Four pricing tiers with hard entitlement enforcement:
-//!   Community (free): 10K tokens/day  · 3 agents  · 30d memory  · 1 cell
-//!   Pro ($49/mo):    500K tokens/mo   · 20 agents · 1yr memory  · 1 cell
-//!   Team ($299/mo):  5M tokens/mo     · unlimited · unlimited   · 3 cells  · HIPAA BAA
-//!   Enterprise:      unlimited        · unlimited · unlimited   · dedicated · SOC2 · SSO
+//! Usage records. This build does not sell a license or gate features by plan.
 
 use crate::services::runtime_control;
 use crate::state::SharedState;
@@ -54,88 +37,27 @@ pub struct EntitlementSet {
 }
 
 impl EntitlementSet {
-    pub fn for_tier(tier: &str) -> Self {
-        match tier.to_lowercase().as_str() {
-            "pro" => Self {
-                tier: "pro".into(),
-                tokens_per_day: 0,
-                tokens_per_month: 500_000,
-                max_agents: 20,
-                memory_retention_days: 365,
-                max_cells: 1,
-                hipaa_enabled: false,
-                soc2_logging: false,
-                multi_cell: false,
-                custom_model_endpoints: false,
-                on_prem_license: false,
-                sso_enabled: false,
-                overage_per_1k_usd: 0.002,
-                overage_ceiling_usd: 100.0,
-            },
-            "team" => Self {
-                tier: "team".into(),
-                tokens_per_day: 0,
-                tokens_per_month: 5_000_000,
-                max_agents: 0,
-                memory_retention_days: 0,
-                max_cells: 3,
-                hipaa_enabled: true,
-                soc2_logging: true,
-                multi_cell: true,
-                custom_model_endpoints: true,
-                on_prem_license: false,
-                sso_enabled: true,
-                overage_per_1k_usd: 0.0015,
-                overage_ceiling_usd: 500.0,
-            },
-            "enterprise" => Self {
-                tier: "enterprise".into(),
-                tokens_per_day: 0,
-                tokens_per_month: 0,
-                max_agents: 0,
-                memory_retention_days: 0,
-                max_cells: 0,
-                hipaa_enabled: true,
-                soc2_logging: true,
-                multi_cell: true,
-                custom_model_endpoints: true,
-                on_prem_license: true,
-                sso_enabled: true,
-                overage_per_1k_usd: 0.0,
-                overage_ceiling_usd: 0.0,
-            },
-            _ => Self {
-                // Community (free)
-                tier: "community".into(),
-                tokens_per_day: 10_000,
-                tokens_per_month: 300_000,
-                max_agents: 3,
-                memory_retention_days: 30,
-                max_cells: 1,
-                hipaa_enabled: false,
-                soc2_logging: false,
-                multi_cell: false,
-                custom_model_endpoints: false,
-                on_prem_license: false,
-                sso_enabled: false,
-                overage_per_1k_usd: 0.0,
-                overage_ceiling_usd: 0.0,
-            },
+    pub fn for_tier(_tier: &str) -> Self {
+        Self {
+            tier: "open".into(),
+            tokens_per_day: 0,
+            tokens_per_month: 0,
+            max_agents: 0,
+            memory_retention_days: 0,
+            max_cells: 0,
+            hipaa_enabled: true,
+            soc2_logging: true,
+            multi_cell: true,
+            custom_model_endpoints: true,
+            on_prem_license: true,
+            sso_enabled: true,
+            overage_per_1k_usd: 0.0,
+            overage_ceiling_usd: 0.0,
         }
     }
 
-    /// BIZ-6: check a specific feature entitlement (inline-able, < 1µs hot path)
-    pub fn check(&self, feature: &str) -> bool {
-        match feature {
-            "dispatch" => true, // all tiers can dispatch
-            "hipaa" => self.hipaa_enabled,
-            "soc2_logging" => self.soc2_logging,
-            "multi_cell" => self.multi_cell,
-            "custom_model_endpoints" => self.custom_model_endpoints,
-            "on_prem_license" => self.on_prem_license,
-            "sso" => self.sso_enabled,
-            _ => false,
-        }
+    pub fn check(&self, _feature: &str) -> bool {
+        true
     }
 }
 
@@ -1909,98 +1831,14 @@ pub async fn stripe_webhook(
     tracing::info!(event_type = %event_type, "Stripe webhook received");
 
     match event_type {
-        "checkout.session.completed" => {
-            let customer_email = event["data"]["object"]["customer_email"]
-                .as_str()
-                .unwrap_or("");
-            let customer_id = event["data"]["object"]["customer"].as_str().unwrap_or("");
-            let metadata = &event["data"]["object"]["metadata"];
-            let target_tier = metadata["tier"].as_str().unwrap_or("pro");
-
-            // Update user tier
-            let mut us = state.user_store.lock().unwrap();
-            if let Some(uid) = us.email_index.get(customer_email).cloned() {
-                if let Some(user) = us.users.get_mut(&uid) {
-                    let old_tier = user.tier.clone();
-                    user.tier = target_tier.to_string();
-                    user.billing_state = "active".to_string();
-                    if !customer_id.is_empty() {
-                        user.stripe_customer_id = Some(customer_id.to_string());
-                    }
-                    tracing::info!(
-                        email = %customer_email,
-                        old_tier = %old_tier,
-                        new_tier = %target_tier,
-                        "Stripe CheckoutSessionCompleted: tier upgraded"
-                    );
-                }
-            }
-            drop(us);
-
-            // Issue a new license key for the upgraded tier and persist
-            let license_key = crate::auth::generate_api_key("cpk_live");
-            let mut es = state.engine_store.lock().unwrap();
-            let _ = es.folder_put(
-                "stripe_events",
-                &format!("checkout_{}", uuid::Uuid::new_v4().simple()),
-                &serde_json::json!({
-                    "event_type": "checkout.session.completed",
-                    "customer_email": customer_email,
-                    "customer_id": customer_id,
-                    "tier": target_tier,
-                    "license_key_issued": license_key,
-                    "received_at": chrono::Utc::now().to_rfc3339(),
-                }),
-            );
-            drop(es);
-
-            // BIZ-7: analytics funnel — billing.upgraded milestone
-            {
-                let uid = {
-                    let us = state.user_store.lock().unwrap();
-                    us.email_index
-                        .get(customer_email)
-                        .cloned()
-                        .unwrap_or_default()
-                };
-                if !uid.is_empty() {
-                    crate::services::analytics::emit(
-                        &state,
-                        crate::services::analytics::AnalyticsEvent::new(
-                            "billing.upgraded",
-                            &uid,
-                            serde_json::json!({ "tier": target_tier, "customer_id": customer_id }),
-                        ),
-                    );
-                }
-            }
-
+        "checkout.session.completed" | "customer.subscription.deleted" => {
             (
                 axum::http::StatusCode::OK,
                 Json(serde_json::json!({
                     "ok": true,
-                    "event": "checkout.session.completed",
-                    "tier": target_tier,
-                    "license_key_issued": true,
+                    "event": event_type,
+                    "license_key_issued": false,
                 })),
-            )
-                .into_response()
-        }
-
-        "customer.subscription.deleted" => {
-            let customer_id = event["data"]["object"]["customer"].as_str().unwrap_or("");
-            let mut us = state.user_store.lock().unwrap();
-            for user in us.users.values_mut() {
-                if user.stripe_customer_id.as_deref() == Some(customer_id) {
-                    user.tier = "community".to_string();
-                    user.billing_state = "cancelled".to_string();
-                    tracing::info!(customer_id = %customer_id, "Stripe subscription deleted: downgraded to community");
-                    break;
-                }
-            }
-            (
-                axum::http::StatusCode::OK,
-                Json(serde_json::json!({"ok": true, "event": "customer.subscription.deleted"})),
             )
                 .into_response()
         }
@@ -2033,32 +1871,14 @@ pub async fn stripe_webhook(
     }
 }
 
-/// GET /billing/upgrade-url?tier=pro|team|enterprise
-/// Returns a Stripe Checkout URL for upgrading to a paid tier.
+/// GET /billing/upgrade-url
+/// There is no paid upgrade in this build.
 pub async fn upgrade_url(
-    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+    axum::extract::Query(_params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Json<serde_json::Value> {
-    let tier = params.get("tier").map(|s| s.as_str()).unwrap_or("pro");
-    let base =
-        std::env::var("CONNECTOR_APP_URL").unwrap_or_else(|_| "https://connector.ai".to_string());
-    let price_id = match tier {
-        "pro" => std::env::var("STRIPE_PRICE_PRO").unwrap_or_else(|_| "price_pro".into()),
-        "team" => std::env::var("STRIPE_PRICE_TEAM").unwrap_or_else(|_| "price_team".into()),
-        "enterprise" => std::env::var("STRIPE_PRICE_ENT").unwrap_or_else(|_| "price_ent".into()),
-        other => {
-            return Json(
-                serde_json::json!({"error": format!("Unknown tier '{}'. Valid: pro, team, enterprise", other), "status": 400}),
-            )
-        }
-    };
-    // Build a Stripe Checkout session URL (in production use Stripe SDK;
-    // here we construct the canonical upgrade URL developers can share/open)
-    let url = format!("{}/upgrade?tier={}&price={}", base, tier, price_id);
     Json(serde_json::json!({
-        "tier": tier,
-        "url": url,
-        "price_id": price_id,
-        "note": "Open this URL to complete the upgrade. Tier activates instantly after payment.",
+        "license": "Apache-2.0",
+        "note": "This build has no paid upgrade.",
     }))
 }
 

@@ -196,6 +196,69 @@ pub fn graph_key_legacy_underscores(address: &str) -> String {
     address.replace([':', '/'], "_")
 }
 
+/// Operator record of the agent's last memory. The gated memory write cannot
+/// create the first packet, because that write itself requires this pillar.
+pub fn mint_last_memory(
+    state: &SharedState,
+    agent_pid: &str,
+    content: &str,
+) -> Result<(), String> {
+    let agent_pid = agent_pid.trim();
+    let content = content.trim();
+    if agent_pid.is_empty() || content.is_empty() {
+        return Err("agent_pid and content are required".into());
+    }
+    let cid = hex::encode(Sha256::digest(content.as_bytes()));
+    let doc = serde_json::json!({
+        "at_ms": chrono::Utc::now().timestamp_millis(),
+        "cid": cid,
+        "content_sha256": cid,
+        "honesty": "Operator-minted last memory.",
+    });
+    state
+        .engine_store
+        .lock()
+        .map_err(|e| e.to_string())?
+        .folder_put(LAST_MEMORY_FOLDER, agent_pid, &doc)
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Operator mint of the address↔agent edge. Tools stay incomplete until this
+/// document exists; the talk lane is the only path that writes one itself.
+pub fn mint_address_relation(
+    state: &SharedState,
+    agent_pid: &str,
+    address: &str,
+) -> Result<(), String> {
+    let agent_pid = agent_pid.trim();
+    let address = address.trim();
+    if agent_pid.is_empty() || address.is_empty() {
+        return Err("agent_pid and address are required".into());
+    }
+    let doc = serde_json::json!({
+        "schema": "address_identity_graph.v1",
+        "address": address,
+        "nodes": [
+            {"node_id": address, "kind": "tool_address"},
+            {"node_id": agent_pid, "kind": "agent"}
+        ],
+        "edges": [{
+            "from_node_id": agent_pid,
+            "to_node_id": address,
+            "rel": "may_invoke"
+        }]
+    });
+    let key = graph_key(address);
+    state
+        .engine_store
+        .lock()
+        .map_err(|e| e.to_string())?
+        .folder_put(ADDRESS_GRAPH_FOLDER, &key, &doc)
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 fn identity_keys(api_pid: &str, kernel_pid: &str) -> Vec<String> {
     let mut keys = vec![
         api_pid.to_string(),

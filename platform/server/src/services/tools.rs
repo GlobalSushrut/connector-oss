@@ -111,6 +111,47 @@ pub async fn dispatch_mcp_tool(
                         }));
                     }
                 };
+                if let Err(e) = crate::substrate::cvr::runtime_adapter::apply_proceed_patch(
+                    state,
+                    agent_pid,
+                    &atu.task_id,
+                ) {
+                    return Err(serde_json::json!({
+                        "ok": false,
+                        "error": "openshell_policy_not_applied",
+                        "denial_reason": e,
+                        "executed": false,
+                        "pate_task_id": atu.task_id,
+                    }));
+                }
+                if std::env::var("CONNECTOR_EFFECT_IN_CELL").ok().as_deref() == Some("1") {
+                    match crate::substrate::cvr::micro_cell::run_effect_in_cell(
+                        state.as_ref(),
+                        agent_pid,
+                        &atu.action_digest,
+                    ) {
+                        Ok(cell) => {
+                            let _ = crate::substrate::pate::complete_augmented_task(
+                                state,
+                                &atu,
+                                "ok",
+                                serde_json::json!({"observed": true, "runtime": "firecracker"}),
+                            );
+                            return Ok(serde_json::json!({
+                                "ok": true,
+                                "executed": true,
+                                "executed_in": "firecracker",
+                                "tool": tool_name,
+                                "pate_task_id": atu.task_id,
+                                "action_digest": atu.action_digest,
+                                "effect_sha256": cell.get("effect_sha256").cloned().unwrap_or(serde_json::Value::Null),
+                                "microcell_id": cell.get("microcell_id").cloned().unwrap_or(serde_json::Value::Null),
+                                "honesty": "The guest hashed the admitted effect and the heartbeat matched.",
+                            }));
+                        }
+                        Err(e) => return Err(e),
+                    }
+                }
                 let ticket = Some(crate::substrate::microvm_tool_plane::ExecutionTicket {
                     task_id: &atu.task_id,
                     action_digest: &atu.action_digest,
@@ -256,11 +297,15 @@ pub(crate) fn dispatch_mcp_tool_core(
                 }));
             }
         }
+        let tool_namespace = crate::kernel::agent_identity_envelope::load_setup(state.as_ref(), agent_pid)
+            .map(|s| s.namespace)
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| format!("tools/{bridge_id}"));
         let admission_result = crate::substrate::governed_effect::evaluate_effect(
             state,
             None,
             agent_pid,
-            &format!("tools/{}", bridge_id),
+            &tool_namespace,
             crate::services::admission::AdmissionOp::ToolDispatch {
                 tool_id: format!("{}:{}", bridge_id, tool_name),
             },
@@ -408,6 +453,52 @@ pub(crate) fn dispatch_mcp_tool_core(
         }
     };
     let mut open_proceed = crate::substrate::pate::OpenProceed::arm(&state, &tool_atu);
+    if crate::substrate::pate::host_admission_allows_execution(tool_atu.verdict) {
+        if let Err(e) = crate::substrate::cvr::runtime_adapter::apply_proceed_patch(
+            state,
+            agent_pid,
+            &tool_atu.task_id,
+        ) {
+            return Err(serde_json::json!({
+                "ok": false,
+                "error": "openshell_policy_not_applied",
+                "denial_reason": e,
+                "executed": false,
+                "pate_task_id": tool_atu.task_id,
+                "bridge_id": bridge_id,
+                "tool": tool_name,
+            }));
+        }
+        if std::env::var("CONNECTOR_EFFECT_IN_CELL").ok().as_deref() == Some("1") {
+            let _flow_cid = crate::substrate::intelligence_plane::run_named_flow(
+                state.as_ref(),
+                agent_pid,
+                &tool_atu.task_id,
+            );
+            match crate::substrate::cvr::micro_cell::run_effect_in_cell(
+                state.as_ref(),
+                agent_pid,
+                &tool_atu.action_digest,
+            ) {
+                Ok(cell) => {
+                    open_proceed.finish_observed(true);
+                    return Ok(serde_json::json!({
+                        "ok": true,
+                        "executed": true,
+                        "executed_in": "firecracker",
+                        "tool": tool_name,
+                        "bridge_id": bridge_id,
+                        "pate_task_id": tool_atu.task_id,
+                        "action_digest": tool_atu.action_digest,
+                        "effect_sha256": cell.get("effect_sha256").cloned().unwrap_or(serde_json::Value::Null),
+                        "microcell_id": cell.get("microcell_id").cloned().unwrap_or(serde_json::Value::Null),
+                        "honesty": "The guest hashed the admitted effect and the heartbeat matched.",
+                    }));
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
 
     // ARC-5 / C4: tool.dispatch is the first lease-only sink under CONNECTOR_ARC_LEASE.
     let mut arc_lease = match crate::substrate::arc::lease::LeaseSinkGuard::begin(
@@ -649,6 +740,11 @@ pub(crate) fn dispatch_mcp_tool_core(
         }));
     }
     let _ = (&zt_ticket, &envelope);
+    let _flow_cid = crate::substrate::intelligence_plane::run_named_flow(
+        state.as_ref(),
+        agent_pid,
+        &tool_atu.task_id,
+    );
 
     // U1 — WM syscalls as admit_tool (bridge wm). No MCP catalog. No OpenAI tool inject (Ring-1).
     if bridge_id == "wm" {

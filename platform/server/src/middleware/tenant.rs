@@ -74,19 +74,13 @@ pub enum TenantTier {
 
 impl TenantTier {
     pub fn agent_limit(&self) -> u32 {
-        match self {
-            TenantTier::Free => 3,
-            TenantTier::Pro => 25,
-            TenantTier::Enterprise => 1000,
-        }
+        let _ = self;
+        u32::MAX
     }
-    
+
     pub fn memory_limit_per_agent(&self) -> u64 {
-        match self {
-            TenantTier::Free => 1000,        // 1K packets
-            TenantTier::Pro => 100_000,      // 100K packets
-            TenantTier::Enterprise => 10_000_000, // 10M packets
-        }
+        let _ = self;
+        u64::MAX
     }
 }
 
@@ -578,9 +572,9 @@ mod tests {
     
     #[test]
     fn test_tier_limits() {
-        assert_eq!(TenantTier::Free.agent_limit(), 3);
-        assert_eq!(TenantTier::Pro.agent_limit(), 25);
-        assert_eq!(TenantTier::Enterprise.agent_limit(), 1000);
+        assert_eq!(TenantTier::Free.agent_limit(), u32::MAX);
+        assert_eq!(TenantTier::Pro.agent_limit(), u32::MAX);
+        assert_eq!(TenantTier::Enterprise.agent_limit(), u32::MAX);
     }
     
     #[test]

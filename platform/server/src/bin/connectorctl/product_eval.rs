@@ -419,6 +419,7 @@ pub fn decide_install(spec: &Result<DeploymentSpec, Vec<String>>, host: &HostFac
             "start-microd",
             "write-connector-env",
             "enable-reconcile-timer",
+            "load-egress-program",
             "run-deploy-verify",
         ],
     }

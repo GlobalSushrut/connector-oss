@@ -48,13 +48,10 @@ impl DeploymentMode {
         }
     }
 
-    pub fn edition(&self, license_tier: &str) -> &'static str {
+    pub fn edition(&self) -> &'static str {
         match self {
             DeploymentMode::Playground => "playground",
-            DeploymentMode::SelfHosted => match license_tier.to_ascii_lowercase().as_str() {
-                "enterprise" | "ent" => "enterprise",
-                _ => "community",
-            },
+            DeploymentMode::SelfHosted => "self_hosted",
         }
     }
 }
@@ -99,14 +96,7 @@ fn feature_flags(mode: DeploymentMode) -> Value {
 /// is the only intended consumer but the endpoint is open to any caller.
 pub fn deployment_info_value(state: &PlatformState) -> Value {
     let mode = DeploymentMode::from_env();
-    let tier = format!("{:?}", state.license.tier).to_ascii_lowercase();
-    let now_secs = now_unix() as i64;
-    let license_status = if state.license.is_time_valid(now_secs) {
-        "active"
-    } else {
-        "expired"
-    };
-    let edition = mode.edition(&tier);
+    let edition = mode.edition();
     let mut payload = json!({
         "mode": mode.as_str(),
         "edition": edition,
@@ -127,8 +117,7 @@ pub fn deployment_info_value(state: &PlatformState) -> Value {
             });
         }
         DeploymentMode::SelfHosted => {
-            payload["license_tier"] = json!(tier);
-            payload["license_status"] = json!(license_status);
+            payload["license"] = json!("Apache-2.0");
         }
     }
     payload

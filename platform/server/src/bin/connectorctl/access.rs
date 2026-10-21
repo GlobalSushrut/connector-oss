@@ -110,13 +110,8 @@ fn pilot(opts: &GlobalOpts, args: &[String]) -> Result<ExitCode, String> {
     }
 }
 
-fn license(opts: &GlobalOpts, args: &[String]) -> Result<ExitCode, String> {
-    let sub = args.first().map(|s| s.as_str()).unwrap_or("status");
-    match sub {
-        "status" => get(opts, "access license status", "/api/v1/license/status"),
-        "tiers" => get(opts, "access license tiers", "/api/v1/license/tiers"),
-        _ => Err("usage: connectorctl access license <status|tiers>".into()),
-    }
+fn license(_opts: &GlobalOpts, _args: &[String]) -> Result<ExitCode, String> {
+    Err("Apache-2.0. This build has no license key.".into())
 }
 
 fn get(opts: &GlobalOpts, command: &str, route: &str) -> Result<ExitCode, String> {

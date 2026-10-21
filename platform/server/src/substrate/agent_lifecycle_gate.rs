@@ -381,6 +381,10 @@ pub fn register_and_start(
     };
 
     super::agent_progeny::persist_progeny_meta(state, &kernel_pid, params.parent_kernel_pid);
+    // A pid that cannot get a directory cannot act. Mode 0700 does not separate
+    // two agents that share the platform uid; the address cage denies the other tree.
+    crate::kernel::nsfs::ensure_tree(&kernel_pid)?;
+    crate::kernel::agent_cgroup::bind_agent_process_tree(state.as_ref(), &kernel_pid, &kernel_pid)?;
     Ok(kernel_pid)
 }
 

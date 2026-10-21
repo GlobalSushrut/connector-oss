@@ -35,7 +35,6 @@ pub mod intelligence_authority;
 pub mod intelligence_quick;
 pub mod kecs_calculator;
 pub mod knowledge_pipeline;
-pub mod licensing;
 pub mod mcp_hosting;
 pub mod membership_heartbeat;
 pub mod memory;

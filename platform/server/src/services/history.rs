@@ -909,7 +909,7 @@ pub async fn agent_archive(
     let limit = q.limit.unwrap_or(200).min(1000);
 
     // Retention window by tier
-    let retention_days: i64 = state.license.retention_days as i64;
+    let retention_days: i64 = 3650;
     let cutoff_ms = now.timestamp_millis() - retention_days * 86_400_000;
 
     // Active agents from kernel
@@ -976,7 +976,7 @@ pub async fn agent_archive(
         "total_agents":        total_active + total_terminated,
         "include_terminated":  q.include_terminated.unwrap_or(false),
         "retention_days":      retention_days,
-        "retention_tier":      format!("{:?}", state.license.tier),
+        "retention_tier":      "open",
         "active_agents":       active_agents,
         "terminated_agents":   terminated_agents,
         "archive_hint":        "Terminated agents persist for retention_days. Full timeline, sessions, and cost data remain accessible.",
@@ -1059,7 +1059,7 @@ pub async fn terminate_agent(
         "archived_at":  now.to_rfc3339(),
         "status":       "terminated",
         "message":      "Agent archived and removed from kernel. Full history accessible via GET /history/agents/archive?include_terminated=true",
-        "retention_tier": format!("{:?}", state.license.tier),
+        "retention_tier": "open",
         "task_id": admitted.task_id,
         "executed": true,
         "admits": false,

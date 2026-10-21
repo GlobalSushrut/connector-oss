@@ -289,12 +289,7 @@ async fn resolve_allowlist_ips(
 }
 
 fn license_enforcement_enabled() -> bool {
-    matches!(
-        std::env::var("CONNECTOR_LICENSE_ENFORCE")
-            .ok()
-            .as_deref(),
-        Some("1") | Some("true") | Some("yes")
-    )
+    false
 }
 
 fn license_time_valid(snapshot: &serde_json::Value) -> bool {

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Connector Team"]
 description = "Universal API witness layer — capture, govern, seal, and prove any API interaction"
-license = "MIT"
+license = "Apache-2.0"
 
 [dependencies]
 connector-plugin-handshake = { path = "../../platform/plugin-handshake" }

@@ -68,7 +68,7 @@ id = "acme/demo-pkg"
 name = "Demo Package"
 version = "0.1.0"
 author = "acme"
-license = "MIT"
+license = "Apache-2.0"
 min_kernel = "0.1.0"
 agos_abi = "agos.v1"
 

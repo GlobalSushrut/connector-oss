@@ -773,9 +773,6 @@ fn event_target_value(ev: &web_sys::Event) -> String {
 
 #[component]
 fn SystemTab() -> impl IntoView {
-    // Live license comes from /license/status (activation truth), not the
-    // operator-editable settings blob at /settings/system/license.
-    let license = LocalResource::new(|| api::get_value("/license/status"));
     view! {
         <OpText text="System".to_string() variant=OpTextVariant::Title />
         <p class="mb-4 mt-1 text-xs text-zinc-500">"Identity, backup, telemetry, and live license status."</p>
@@ -800,26 +797,8 @@ fn SystemTab() -> impl IntoView {
         <RetentionPolicySection />
         <SystemSection title="Telemetry" path="/settings/system/telemetry" key="telemetry" />
         <section class="mb-4">
-            <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">"License (live)"</h3>
-            <p class="mb-2 text-[10px] text-zinc-600">"GET /license/status — open License topic to activate a key."</p>
-            <Suspense fallback=move || view! { <p class="text-xs text-zinc-600">"Loading…"</p> }>
-                {move || Suspend::new(async move {
-                    match license.await {
-                        Ok(v) => {
-                            let pairs = kv_pairs(&v, &[
-                                "tier", "valid_until", "instance_id", "price_cents",
-                            ]);
-                            let usage = v.get("usage").cloned().unwrap_or(json!({}));
-                            let mut all = pairs;
-                            let limits = v.get("limits").cloned().unwrap_or(json!({}));
-                            all.extend(kv_pairs(&usage, &["agents", "packets"]));
-                            all.extend(kv_pairs(&limits, &["max_agents", "max_packets", "retention_days"]));
-                            view! { <KvList pairs=all /> }.into_any()
-                        }
-                        Err(e) => view! { <OpApiErrorBanner error=e /> }.into_any(),
-                    }
-                })}
-            </Suspense>
+            <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">"License"</h3>
+            <p class="text-xs text-zinc-400">"Apache-2.0. This node does not take a license key."</p>
         </section>
     }
 }

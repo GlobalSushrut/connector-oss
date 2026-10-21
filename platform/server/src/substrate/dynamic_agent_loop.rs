@@ -318,6 +318,14 @@ pub async fn run_turn(
     let projection = crate::substrate::svf::gateway_injection_block(state, &run.agent_pid);
     let tool_stubs = crate::substrate::svf::gateway_tool_stub_block(state, &run.agent_pid);
     run.advance(AgentPhase::Recall);
+    let recall_cid =
+        crate::substrate::intelligence_plane::recall_if_admitted(state.as_ref(), &run.agent_pid)
+            .await;
+    if let Some(ref cid) = recall_cid {
+        if !run.working_memory.context_cids.iter().any(|existing| existing == cid) {
+            run.working_memory.context_cids.push(cid.clone());
+        }
+    }
 
     let action_digest = run
         .pending_action_digest

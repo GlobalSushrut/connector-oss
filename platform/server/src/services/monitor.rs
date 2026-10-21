@@ -74,7 +74,7 @@ pub fn kernel_health_snapshot(state: &SharedState) -> serde_json::Value {
     let isolation_runtime = *state.isolation_runtime.read().unwrap();
     let enforced_agent_limit: usize =
         crate::services::agents::resolved_kernel_agent_cap(state.as_ref()) as usize;
-    let packet_limit = state.license.packet_limit();
+    let packet_limit = usize::MAX;
     let agent_pct = if enforced_agent_limit == usize::MAX {
         0.0_f64
     } else {
@@ -166,7 +166,7 @@ pub fn kernel_health_snapshot(state: &SharedState) -> serde_json::Value {
             "operational_health": trust.dimensions.operational_health,
         },
         "tier_usage": {
-            "tier": format!("{:?}", state.license.tier),
+            "tier": "open",
             "runtime_mode": format!("{:?}", runtime_mode),
             "isolation_runtime": isolation_runtime.as_str(),
             "docker_available": crate::services::runtime_control::docker_available(),
@@ -174,9 +174,9 @@ pub fn kernel_health_snapshot(state: &SharedState) -> serde_json::Value {
             "agents_limit": enforced_agent_limit,
             "agents_pct": agent_pct,
             "packets_used": packet_count,
-            "packets_limit": state.license.packet_limit(),
+            "packets_limit": packet_limit,
             "packets_pct": packet_pct,
-            "retention_days": state.license.retention_days,
+            "retention_days": 3650,
         },
         "recommendations": recommendations,
         "substrate": {
@@ -691,7 +691,7 @@ pub async fn cost_center(State(state): State<SharedState>) -> Json<serde_json::V
             "denied_ops": denied_ops,
             "tool_dispatches": tool_dispatches,
         },
-        "tier": format!("{:?}", state.license.tier),
+        "tier": "open",
         // Optional list-price estimates — not primary FinOps; null when no usage.
         "total_cost_usd": if has_usage && total_cost > 0.0 {
             serde_json::Value::from(total_cost)
@@ -1761,7 +1761,7 @@ pub async fn capacity_forecast(
     };
 
     // Agent limit projection
-    let agent_limit_raw = state.license.agent_limit();
+    let agent_limit_raw = 0usize;
     let max_agents: Option<f64> = if agent_limit_raw == 0 {
         None
     } else {

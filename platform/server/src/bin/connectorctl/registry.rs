@@ -49,7 +49,7 @@ fn help_text() -> String {
            node       start|stop|restart|status|health|doctor|logs|support-bundle|config\n\
            data       backup|restore|upgrade|storage\n\
            workload   list|show|deploy|start|stop|logs|inspect\n\
-           govern     policy|compliance|cost|metrics|events|aipsprt|spend|backends|deploy-verify|ecosystem|explain|cease-proof\n\
+           govern     up|status|policy|compliance|cost|metrics|events|aipsprt|spend|backends|deploy-verify|ecosystem|explain|cease-proof\n\
            product    install|start|stop|restart|upgrade|rollback|status|diagnose|uninstall|reconcile|demo|providers|compatibility\n\
            substrate  status|arc|svf|dal|rollup|worldline\n\
            access     status|mode|activate|pilot|license\n\
@@ -146,7 +146,7 @@ fn namespace_help(opts: &GlobalOpts, ns: &str) -> Result<ExitCode, String> {
         "node" => "node start|stop|restart|status|health|doctor|logs [--follow] [-n N]|support-bundle [--out FILE]|config show",
         "data" => "data backup [--out FILE]|restore <FILE> --yes|upgrade [--from-tarball PATH] [--apply]|storage",
         "workload" => "workload list|show <pid>|deploy <manifest>|start <pid>|stop <pid>|logs <pid>|inspect <pid>",
-        "govern" => "govern policy|compliance scorecard|cost <pid>|metrics|events|backends|deploy-verify [linux-kvm|kubernetes]|ecosystem|explain <receipt-id>|cease-proof <agent-pid>",
+        "govern" => "govern up|status|policy|compliance scorecard|cost <pid>|metrics|events|backends|deploy-verify [linux-kvm|kubernetes]|ecosystem|explain <receipt-id>|cease-proof <agent-pid>",
         "product" => "product install <spec.json>|start|stop|restart|upgrade <spec.json>|rollback|status|diagnose|uninstall [purge]|reconcile|demo governed-agent|task --model <llm> --surface <path|sandbox|dedicated> --purpose <sentence>|providers|compatibility",
         "substrate" => "substrate status|arc posture|svf posture|dal posture|rollup posture|worldline export --agent <pid>",
         "access" => "access status|mode [dev|pilots|production]|activate|pilot list|license status|license tiers",

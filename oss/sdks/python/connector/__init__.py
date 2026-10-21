@@ -348,6 +348,31 @@ class Agent:
         if self._native:
             return self._run_native(input_text, user)
         return self._run_http(input_text, user)
+
+    def call_tool(self, tool: str, params: Dict[str, Any] = None, *, bridge_id: str = "default", agent_pid: str = None):
+        """Send one tool call to the platform dispatch.
+
+        This is POST /api/v1/tools/mcp/invoke on the platform. It is not the
+        library LLM POST /run path and it is not the OSS /tools/call stub.
+        """
+        try:
+            import requests
+        except ImportError:
+            raise ImportError("Tool calls require 'requests'. Install with: pip install requests")
+
+        platform = os.getenv("CONNECTOR_PLATFORM_URL", "http://127.0.0.1:9091")
+        resp = requests.post(
+            f"{platform.rstrip('/')}/api/v1/tools/mcp/invoke",
+            json={
+                "bridge_id": bridge_id,
+                "tool": tool,
+                "agent_pid": agent_pid or self.name,
+                "input": params or {},
+            },
+            timeout=60,
+        )
+        resp.raise_for_status()
+        return resp.json()
     
     def _run_native(self, input_text: str, user: str = None) -> AgentResult:
         """Run using native Rust kernel."""

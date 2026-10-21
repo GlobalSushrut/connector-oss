@@ -21,7 +21,6 @@
 //!    **active** host profile (`kernel_host`, Step 1.5) until `connector-kerneld` is wired.
 
 use crate::error::{ConnectorError, DenialReason};
-use crate::license;
 use crate::services::kernel_host;
 use crate::state::SharedState;
 use connector_engine::engine_store::EngineAuditEntry;
@@ -405,29 +404,6 @@ pub fn check(
                     .with_audit_cid(audit_cid),
             );
         }
-    }
-
-    // ── Step 1.25 License time validity (CONNECTOR_LICENSE_ENFORCE=1) ─────────────────
-    if license::license_enforce_enabled()
-        && !state.license.is_time_valid(chrono::Utc::now().timestamp())
-    {
-        let audit_cid = audit_decision(
-            state,
-            req,
-            &ticket_id,
-            "blocked_license_invalid",
-            now_ms,
-            Some("CONNECTOR_LICENSE_ENFORCE=1: license outside valid_until window"),
-        );
-        return Err(
-            ConnectorError::new(
-                DenialReason::LicenseInvalid,
-                "Platform license is not active (outside valid_until). Renew the license or unset CONNECTOR_LICENSE_ENFORCE for non-production evaluation.",
-            )
-            .with_denied_resource(req.operation.resource())
-            .with_agent_scope(req.namespace)
-            .with_audit_cid(audit_cid),
-        );
     }
 
     // ── Step 1.5 Host kernel attachment (Connector Phase A — checklist §10.1 / §10.4) ──

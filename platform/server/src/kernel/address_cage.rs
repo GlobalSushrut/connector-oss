@@ -140,8 +140,9 @@ fn classify_named(raw: &str, agent_pid: &str) -> CagedAddress {
     let t = raw.trim();
     let lower = t.to_ascii_lowercase();
     if lower.starts_with("nsfs:") {
-        let other = t.get(5..).unwrap_or("").trim();
-        if other == agent_pid {
+        let rest = t.get(5..).unwrap_or("").trim().trim_matches('/');
+        let owner = rest.split('/').next().unwrap_or("");
+        if !owner.is_empty() && owner == agent_pid {
             return CagedAddress::new(
                 format!("nsfs:{agent_pid}"),
                 "agent_nsfs",
@@ -150,9 +151,13 @@ fn classify_named(raw: &str, agent_pid: &str) -> CagedAddress {
                 false,
             );
         }
-        return CagedAddress::new(t.to_string(), "agent_nsfs", true, false, false);
+        return CagedAddress::new(t.to_string(), "foreign_nsfs", true, false, false);
     }
-    if lower.starts_with("file:") || lower.starts_with('/') || lower.starts_with("~/") {
+    if lower.starts_with("file:")
+        || lower.starts_with('/')
+        || lower.starts_with("~/")
+        || lower.contains("/nsfs/")
+    {
         let rest = t
             .get(5..)
             .filter(|_| lower.starts_with("file:"))
@@ -203,10 +208,7 @@ fn classify_named(raw: &str, agent_pid: &str) -> CagedAddress {
 
 fn classify_path(path: &str, agent_pid: &str) -> CagedAddress {
     let t = path.trim();
-    if t.is_empty()
-        || (!t.starts_with('/') && !t.starts_with('~') && !t.starts_with("file:"))
-    {
-        // Relative paths live in the agent's own NS FS — not the host cwd.
+    if t.is_empty() {
         return CagedAddress::new(
             format!("nsfs:{agent_pid}"),
             "agent_nsfs",
@@ -224,6 +226,28 @@ fn classify_path(path: &str, agent_pid: &str) -> CagedAddress {
         t.to_string()
     };
     let p = PathBuf::from(&expanded);
+    if let Some(owner) = nsfs_tree_owner(&p) {
+        if owner == agent_pid {
+            return CagedAddress::new(
+                format!("nsfs:{agent_pid}"),
+                "agent_nsfs",
+                true,
+                true,
+                false,
+            );
+        }
+        return CagedAddress::new(p.display().to_string(), "foreign_nsfs", true, false, false);
+    }
+    if !t.starts_with('/') && !t.starts_with('~') && !t.starts_with("file:") {
+        // Relative paths live in the agent's own NS FS — not the host cwd.
+        return CagedAddress::new(
+            format!("nsfs:{agent_pid}"),
+            "agent_nsfs",
+            true,
+            true,
+            false,
+        );
+    }
     if let Ok(root) = nsfs::nsfs_root(agent_pid) {
         if path_is_under(&p, &root) {
             return CagedAddress::new(
@@ -236,6 +260,33 @@ fn classify_path(path: &str, agent_pid: &str) -> CagedAddress {
         }
     }
     CagedAddress::new(format!("file:{}", p.display()), "host_fs", true, false, true)
+}
+
+/// True when `raw` names another agent's nsfs tree, including `nsfs/{other}/workspace`.
+/// Same-uid `open()` is not this check: both agents run as the platform user.
+pub fn foreign_nsfs_open_denied(agent_pid: &str, raw: &str) -> bool {
+    classify_address(raw, agent_pid).address_type == "foreign_nsfs"
+}
+
+fn nsfs_tree_owner(path: &Path) -> Option<String> {
+    let root = nsfs::data_dir().join("nsfs");
+    if let Ok(rel) = path.strip_prefix(&root) {
+        let owner = rel.components().next()?.as_os_str().to_str()?.to_string();
+        if !owner.is_empty() {
+            return Some(owner);
+        }
+    }
+    let parts: Vec<String> = path
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .collect();
+    parts.windows(2).find_map(|pair| {
+        if pair[0] == "nsfs" && !pair[1].is_empty() && pair[1] != ".." {
+            Some(pair[1].clone())
+        } else {
+            None
+        }
+    })
 }
 
 fn http_route_is_node_posture(route: &str) -> bool {
@@ -610,7 +661,21 @@ mod tests {
     fn other_agent_nsfs_is_not_self() {
         let c = classify_named("nsfs:agt_b", "agt_a");
         assert!(!c.self_nsfs);
-        assert_eq!(c.address_type, "agent_nsfs");
+        assert_eq!(c.address_type, "foreign_nsfs");
+    }
+
+    #[test]
+    fn other_agent_workspace_is_denied() {
+        assert!(foreign_nsfs_open_denied("agt_a", "nsfs:agt_b/workspace"));
+        assert!(!foreign_nsfs_open_denied("agt_a", "nsfs:agt_a/workspace"));
+        let other = nsfs::data_dir()
+            .join("nsfs")
+            .join("agt_b")
+            .join("workspace");
+        assert!(foreign_nsfs_open_denied(
+            "agt_a",
+            &other.display().to_string()
+        ));
     }
 
     #[test]

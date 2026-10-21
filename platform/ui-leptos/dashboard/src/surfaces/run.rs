@@ -7,6 +7,7 @@ use crate::auth::AuthState;
 use crate::api;
 use crate::components::operator::cards::{OpAgentCard, OpCardAccent, OpEventRow, OpWorkflowCard};
 use crate::components::operator::overlays::confirm::OpConfirm;
+use crate::components::operator::overlays::eleven_fingers::ElevenFingersPanel;
 use crate::components::operator::journey_choice::AgentJourney;
 use crate::components::operator::overlays::llm_connect::OpLlmQuickConnect;
 use crate::components::operator::primitives::{
@@ -97,6 +98,9 @@ pub fn RunCanvas(auth: ReadSignal<AuthState>) -> impl IntoView {
                         />
                         <a class="inline-flex items-center rounded-md px-3 py-1.5 text-xs text-indigo-400 hover:underline" href="/dev">"DEV"</a>
                     </div>
+                </div>
+                <div class="mt-4">
+                    <ElevenFingersPanel />
                 </div>
                 <section class="mt-3 max-w-3xl rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
                     <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-300">"Bring your agent"</p>

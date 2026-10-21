@@ -30,8 +30,6 @@ mod config;
 mod phase5_operator_display;
 mod connector_profile;
 mod error;
-mod license;
-mod license_file;
 mod machine;
 mod auth;
 mod middleware;
@@ -122,7 +120,6 @@ use connector_engine::llm::LlmConfig as EngineLlmConfig;
 use connector_engine::guard_pipeline::GuardPipeline;
 
 use crate::config::PlatformConfig;
-use crate::license::LicenseInfo;
 use crate::state::{PlatformState, PlatformMetrics, LlmConfig};
 use crate::services::runtime_control::{self, RuntimeMode};
 
@@ -356,6 +353,11 @@ async fn main() {
                     )
                     .build();
                 let tracer = provider.tracer("connector-platform");
+                {
+                    use opentelemetry::trace::Tracer;
+                    let _span = tracer.start("connector.ring1.boot");
+                }
+                let _ = provider.force_flush();
                 let _ = opentelemetry::global::set_tracer_provider(provider);
                 let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 
@@ -391,45 +393,6 @@ async fn main() {
 
     let config = PlatformConfig::from_env();
 
-    // License validation — try Ed25519 license file first, then key-string, then community
-    let machine_fp = machine::machine_fingerprint();
-    tracing::info!("machine fingerprint: {}", &machine_fp[..16]);
-
-    let license = match license_file::load_and_validate(Some(&machine_fp)) {
-        Ok(validated) => {
-            if validated.is_expired {
-                tracing::error!("License file is EXPIRED — falling back to community tier");
-                LicenseInfo::community()
-            } else if !validated.fingerprint_ok {
-                tracing::warn!("License fingerprint mismatch — running in community tier");
-                LicenseInfo::community()
-            } else {
-                let lic = validated.to_license_info();
-                tracing::info!("license: {:?} (file-based, id: {})", lic.tier, lic.instance_id);
-                lic
-            }
-        }
-        Err(license_file::LicenseError::Io(_)) => {
-            // No license file — fall back to key-string or community
-            match &config.license_key {
-                Some(key) => {
-                    let lic = LicenseInfo::validate_key(key);
-                    tracing::info!("license: {:?} (key-based, instance: {})", lic.tier, lic.instance_id);
-                    lic
-                }
-                None => {
-                    let lic = LicenseInfo::community();
-                    tracing::info!("license: Community (max {} agents, {} packets)",
-                        lic.agent_limit(), lic.packet_limit());
-                    lic
-                }
-            }
-        }
-        Err(e) => {
-            tracing::error!("License validation failed: {} — running community tier", e);
-            LicenseInfo::community()
-        }
-    };
 
     // LLM config from env
     let llm_config = config.llm.api_key.as_ref().map(|key| {
@@ -745,7 +708,6 @@ async fn main() {
         isolation_runtime: std::sync::RwLock::new(isolation_runtime),
         storage_layout,
         config: config.clone(),
-        license,
         health: crate::state::HealthSnapshot::default(),
         metrics: PlatformMetrics::new(),
         observability: Mutex::new(services::observability::NativeObservabilityStore::default()),
@@ -1224,6 +1186,8 @@ async fn main() {
     if dev_mode {
         std::env::set_var("CONNECTOR_DEV_MODE", "1");
     }
+
+    crate::auth::verify_operator_on_boot(state.as_ref()).await;
 
     // Build router after final CONNECTOR_* sync so `dashboard_static::dashboard_dev_html_enabled`
     // sees the same env as API middleware (Leptos login `data-dev` / Dev Bypass).

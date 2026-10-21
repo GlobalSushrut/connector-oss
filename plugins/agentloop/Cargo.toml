@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Connector Team"]
 description = "AgentLoop — Cloudflare for the agentic web. DNS, Mesh, Workers, Observability — powered by ConnectorOS."
-license = "MIT"
+license = "Apache-2.0"
 
 [dependencies]
 # Async runtime

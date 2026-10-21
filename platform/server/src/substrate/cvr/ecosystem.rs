@@ -16,6 +16,10 @@ use super::runtime_adapter::{self, RuntimeKind};
 pub const SCHEMA: &str = "connector.ecosystem_conformance.v1";
 
 pub fn report() -> Value {
+    report_for(None)
+}
+
+pub fn report_for(state: Option<&crate::state::PlatformState>) -> Value {
     let probes = runtime_adapter::probe_all();
     let supply = runtime_adapter::cosign_status();
     let backend_view = super::backends::assemble(&probes, &supply);
@@ -103,7 +107,7 @@ pub fn report() -> Value {
         "ownership": ownership(),
         "runtimes": runtime_adapter::catalog(),
         "checks": checks,
-        "production_gate": super::production_gate::live(),
+        "production_gate": super::production_gate::live(state),
         "backends": backend_view,
         "supply_chain": supply,
         "iam": {

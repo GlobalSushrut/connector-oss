@@ -1,64 +1,85 @@
-Business Source License 1.1
+Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
 
-License text copyright (c) 2017 MariaDB Corporation Ab, All Rights Reserved.
-"Business Source License" is a trademark of MariaDB Corporation Ab.
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
-Parameters
+1. Definitions.
 
-Licensor:             Connector Platform, Inc.
-Licensed Work:        Connector Platform Server
-                      The Licensed Work is (c) 2024-2026 Connector Platform, Inc.
-Additional Use Grant: You may make production use of the Licensed Work, provided
-                      your use does not include offering the Licensed Work to third
-                      parties as a commercial hosted service that competes with
-                      Connector Platform's paid offerings.
-Change Date:          Four years from the date the Licensed Work is published.
-Change License:       Apache License, Version 2.0
+"License" shall mean the terms and conditions for use, reproduction,
+and distribution as defined by Sections 1 through 9 of this document.
 
-For information about alternative licensing arrangements for the Licensed Work,
-please contact licensing@connector.dev.
+"Licensor" shall mean the copyright owner or entity authorized by
+the copyright owner that is granting the License.
 
-Notice
+"Legal Entity" shall mean the union of the acting entity and all
+other entities that control, are controlled by, or are under common
+control with that entity.
 
-Business Source License 1.1
+"You" (or "Your") shall mean an individual or Legal Entity
+exercising permissions granted by this License.
 
-Terms
+"Source" form shall mean the preferred form for making modifications,
+including but not limited to software source code, documentation
+source, and configuration files.
 
-The Licensor hereby grants you the right to copy, modify, create derivative
-works, redistribute, and make non-production use of the Licensed Work. The
-Licensor may make an Additional Use Grant, above, permitting limited production
-use.
+"Object" form shall mean any form resulting from mechanical
+transformation or translation of a Source form.
 
-Effective on the Change Date, or the fourth anniversary of the first publicly
-available distribution of a specific version of the Licensed Work under this
-License, whichever comes first, the Licensor hereby grants you rights under the
-terms of the Change License, and the rights granted in the paragraph above
-terminate.
+"Work" shall mean the work of authorship made available under the License.
 
-If your use of the Licensed Work does not comply with the requirements currently
-in effect as described in this License, you must purchase a commercial license
-from the Licensor, its affiliated entities, or authorized resellers, or you must
-refrain from using the Licensed Work.
+"Derivative Works" shall mean any work that is based on the Work.
 
-All copies of the original and modified Licensed Work, and derivative works of
-the Licensed Work, are subject to this License. This License applies separately
-for each version of the Licensed Work and the Change Date may vary for each
-version of the Licensed Work released by Licensor.
+"Contribution" shall mean any work of authorship submitted to the
+Licensor for inclusion in the Work.
 
-You must conspicuously display this License on each original or modified copy of
-the Licensed Work. If you receive the Licensed Work in original or modified form
-from a third party, the terms and conditions set forth in this License apply to
-your use of that work.
+"Contributor" shall mean Licensor and any individual or Legal Entity
+on behalf of whom a Contribution has been received by Licensor.
 
-Any use of the Licensed Work in violation of this License will automatically
-terminate your rights under this License for the current and all other versions
-of the Licensed Work.
+2. Grant of Copyright License. Each Contributor grants to You a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright
+license to reproduce, prepare Derivative Works of, publicly display,
+publicly perform, sublicense, and distribute the Work.
 
-This License does not grant you any right in any trademark or logo of Licensor
-or its affiliates (provided that you may use a trademark or logo of Licensor as
-expressly required by this License).
+3. Grant of Patent License. Each Contributor grants to You a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent
+license to make, have made, use, offer to sell, sell, import, and
+otherwise transfer the Work.
 
-TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSED WORK IS PROVIDED ON AN
-"AS IS" BASIS. LICENSOR HEREBY DISCLAIMS ALL WARRANTIES AND CONDITIONS, EXPRESS
-OR IMPLIED, INCLUDING (WITHOUT LIMITATION) WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND TITLE.
+4. Redistribution. You may reproduce and distribute copies of the Work
+provided that You meet the following conditions:
+(a) You must give recipients a copy of this License; and
+(b) You must cause modified files to carry prominent notices; and
+(c) You must retain all copyright, patent, trademark notices; and
+(d) You must include attribution notices if the Work includes a NOTICE file.
+
+5. Submission of Contributions. Any Contribution submitted for inclusion
+shall be under the terms of this License.
+
+6. Trademarks. This License does not grant permission to use trade names,
+trademarks, service marks, or product names of the Licensor.
+
+7. Disclaimer of Warranty. The Work is provided "AS IS", WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, either express or implied.
+
+8. Limitation of Liability. In no event shall any Contributor be liable
+for any damages arising from the use of the Work.
+
+9. Accepting Warranty or Additional Liability. You may choose to offer
+warranty, support, or liability obligations for a fee.
+
+END OF TERMS AND CONDITIONS
+
+Copyright 2024-2026 Connector Contributors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

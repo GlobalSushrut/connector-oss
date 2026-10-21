@@ -121,6 +121,7 @@ pub fn acquire_shared(
         agent_pid,
         false,
         resource,
+        None,
     )?;
     let now = chrono::Utc::now().timestamp_millis();
     let entry = SharedPoolEntry {

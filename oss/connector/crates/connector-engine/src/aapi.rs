@@ -563,6 +563,30 @@ impl ActionEngine {
         self.capabilities.iter().find(|c| c.token_id == id).map(|c| c.is_valid())
     }
 
+    /// True when this token is live and its resources cover `resource`.
+    pub fn capability_covers(&self, id: &str, resource: &str) -> bool {
+        self.capabilities
+            .iter()
+            .any(|cap| cap.token_id == id && cap.is_valid() && cap.covers_resource(resource))
+    }
+
+    /// Live resources on this token. An expired or revoked token returns none.
+    pub fn capability_resources(&self, id: &str) -> Option<Vec<String>> {
+        self.capabilities
+            .iter()
+            .find(|cap| cap.token_id == id && cap.is_valid())
+            .map(|cap| cap.resources.clone())
+    }
+
+    /// Live grants already issued to this subject. This does not issue a new token.
+    pub fn grants_for_subject(&self, subject: &str) -> Vec<(String, Vec<String>)> {
+        self.capabilities
+            .iter()
+            .filter(|cap| cap.is_valid() && cap.subject == subject)
+            .map(|cap| (cap.token_id.clone(), cap.resources.clone()))
+            .collect()
+    }
+
     pub fn capability_count(&self) -> usize {
         self.capabilities.len()
     }

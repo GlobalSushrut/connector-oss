@@ -54,8 +54,10 @@ pub async fn get_deploy_verify(
 }
 
 /// GET /api/v1/runtime/ecosystem — honest HAVE / PARTIAL / TARGET report.
-pub async fn get_ecosystem() -> Json<Value> {
-    Json(operator_envelope(crate::substrate::cvr::ecosystem::report()))
+pub async fn get_ecosystem(State(state): State<SharedState>) -> Json<Value> {
+    Json(operator_envelope(crate::substrate::cvr::ecosystem::report_for(Some(
+        state.as_ref(),
+    ))))
 }
 
 /// GET /api/v1/runtime/cease-proof/:agent_pid — ten steps scored from stored records.

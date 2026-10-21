@@ -26,7 +26,6 @@ use connector_engine::context_manager::ContextManager;
 use connector_engine::adaptive_threshold::AdaptiveThresholdManager;
 
 use crate::config::PlatformConfig;
-use crate::license::LicenseInfo;
 use crate::auth::UserStore;
 use crate::services::runtime_control::{IsolationRuntime, RuntimeMode};
 use crate::services::payment::PaymentProvider;
@@ -81,7 +80,6 @@ pub struct PlatformState {
     pub isolation_runtime: std::sync::RwLock<IsolationRuntime>,
     pub storage_layout: StorageLayout,
     pub config: PlatformConfig,
-    pub license: LicenseInfo,
     /// Atomic agent counts for `/health` — never takes the kernel mutex.
     pub health: HealthSnapshot,
     pub metrics: PlatformMetrics,

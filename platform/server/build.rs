@@ -1,24 +1,13 @@
 /// build.rs — Inject build-time constants into the connector-platform binary.
 ///
 /// These constants are read at compile time and embedded as `option_env!()` macros.
-/// This enables:
-///   - Offline license validation without phone-home on every startup
-///   - Tamper detection via baked-in binary ID
-///   - Reproducible build metadata (git hash, timestamp, tier)
+/// This enables reproducible build metadata (git hash, timestamp).
 ///
-/// Production build workflow:
-///   1. Operator obtains license key from license server
-///   2. Creates `.license-seed` file in server/ with key_id, instance_id, tier
-///   3. Runs: cargo build --release
-///   4. build.rs reads .license-seed and injects values as env vars
-///   5. Binary contains baked-in identity — no env vars needed at runtime
-///
-/// .license-seed format (one KEY=VALUE per line):
-///   CONNECTOR_KEY_ID=key_abc123
-///   CONNECTOR_INSTANCE_ID=inst_xyz789
-///   CONNECTOR_TIER_BAKED=Enterprise
-///   CONNECTOR_BINARY_ID_BAKED=bin_prod_abc123
-///   CONNECTOR_LICENSE_SERVER=https://license.connector.dev
+/// Optional `.license-seed` keys that are still copied into the binary:
+///   CONNECTOR_KEY_ID
+///   CONNECTOR_INSTANCE_ID
+///   CONNECTOR_BINARY_ID_BAKED
+///   CONNECTOR_BANNER
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -299,11 +288,8 @@ fn main() {
                         match key {
                             "CONNECTOR_KEY_ID"
                             | "CONNECTOR_INSTANCE_ID"
-                            | "CONNECTOR_TIER_BAKED"
                             | "CONNECTOR_BINARY_ID_BAKED"
-                            | "CONNECTOR_LICENSE_SERVER"
-                            | "CONNECTOR_BANNER"
-                            | "CONNECTOR_SIGNING_PUBKEY_HEX" => {
+                            | "CONNECTOR_BANNER" => {
                                 println!("cargo:rustc-env={}={}", key, value);
                                 eprintln!("[build.rs] Injected {} into binary", key);
                             }

@@ -179,6 +179,7 @@ fn apply_step(step: &str, spec: &DeploymentSpec, state: &Path, stack: &Path) -> 
         "start-microd" => systemctl(&["enable", "--now", "connector-microd"]),
         "write-connector-env" => write_connector_env(spec),
         "enable-reconcile-timer" => enable_reconcile(stack),
+        "load-egress-program" => load_egress_program(),
         "run-deploy-verify" => Ok(()),
         other => Err(format!("unknown install step {other}")),
     }
@@ -288,7 +289,7 @@ fn write_connector_env(spec: &DeploymentSpec) -> Result<(), String> {
     let client = read_secret(&spec.sso_client_secret_file)?;
     let host = &spec.hostname;
     let body = format!(
-        "CONNECTOR_SSO_CLIENT_ID=connector-platform\nCONNECTOR_SSO_CLIENT_SECRET={client}\nCONNECTOR_SSO_ISSUER=https://{host}/realms/connector\nCONNECTOR_SSO_DISCOVERY_URL=https://{host}/realms/connector/.well-known/openid-configuration\nCONNECTOR_SSO_AUTHORIZATION_URL=https://{host}/realms/connector/protocol/openid-connect/auth\nCONNECTOR_SSO_TOKEN_URL=https://{host}/realms/connector/protocol/openid-connect/token\nCONNECTOR_SSO_USERINFO_URL=https://{host}/realms/connector/protocol/openid-connect/userinfo\nCONNECTOR_SSO_JWKS_URL=https://{host}/realms/connector/protocol/openid-connect/certs\nSPIFFE_ENDPOINT_SOCKET=unix:///run/spire/agent/sockets/api.sock\nOTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317\n"
+        "CONNECTOR_SSO_CLIENT_ID=connector-platform\nCONNECTOR_SSO_CLIENT_SECRET={client}\nCONNECTOR_SSO_ISSUER=https://{host}/realms/connector\nCONNECTOR_SSO_DISCOVERY_URL=https://{host}/realms/connector/.well-known/openid-configuration\nCONNECTOR_SSO_AUTHORIZATION_URL=https://{host}/realms/connector/protocol/openid-connect/auth\nCONNECTOR_SSO_TOKEN_URL=https://{host}/realms/connector/protocol/openid-connect/token\nCONNECTOR_SSO_USERINFO_URL=https://{host}/realms/connector/protocol/openid-connect/userinfo\nCONNECTOR_SSO_JWKS_URL=https://{host}/realms/connector/protocol/openid-connect/certs\nSPIFFE_ENDPOINT_SOCKET=unix:///run/spire/agent/sockets/api.sock\nOTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317\nCONNECTOR_COSIGN_BLOB=/var/lib/connector/release/manifest\nCONNECTOR_COSIGN_SIGNATURE=/var/lib/connector/release/manifest.sig\n"
     );
     fs::create_dir_all("/etc/connector").map_err(|e| e.to_string())?;
     write_private(
@@ -296,6 +297,42 @@ fn write_connector_env(spec: &DeploymentSpec) -> Result<(), String> {
         body.as_bytes(),
         0o600,
     )
+}
+
+fn load_egress_program() -> Result<(), String> {
+    if !Path::new("/sys/fs/bpf").exists() {
+        return Err("bpffs is not mounted at /sys/fs/bpf".into());
+    }
+    let bin = std::env::var("CONNECTOR_KERNELD_BIN").unwrap_or_else(|_| "connector-kerneld".into());
+    let agent = std::env::var("CONNECTOR_EGRESS_AGENT").unwrap_or_else(|_| "host".into());
+    let status = Command::new(&bin)
+        .args(["ebpf-load", "--agent", &agent])
+        .status()
+        .map_err(|e| format!("connector-kerneld ebpf-load: {e}"))?;
+    if !status.success() {
+        return Err(format!("connector-kerneld ebpf-load exited {status}"));
+    }
+    let pin_root = std::env::var("CONNECTOR_EBPF_PIN_ROOT")
+        .unwrap_or_else(|_| "/sys/fs/bpf/connector".into());
+    let root = Path::new(&pin_root).join(&agent);
+    let prog = root.join("prog");
+    let map = root.join("deny_marks");
+    let pinned = (prog.is_file() || prog.is_dir()) && (map.is_file() || map.is_dir());
+    let named = root.join("connector_mark_deny").exists() && map.exists();
+    if !pinned && !named {
+        return Err(format!(
+            "bpffs pins absent under {} after connector-kerneld ebpf-load",
+            root.display()
+        ));
+    }
+    let redirect = Command::new(&bin)
+        .args(["egress-redirect-load", "--agent", &agent])
+        .status()
+        .map_err(|e| format!("connector-kerneld egress-redirect-load: {e}"))?;
+    if !redirect.success() {
+        return Err(format!("connector-kerneld egress-redirect-load exited {redirect}"));
+    }
+    Ok(())
 }
 
 fn enable_reconcile(stack: &Path) -> Result<(), String> {

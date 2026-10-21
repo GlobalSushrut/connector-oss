@@ -157,19 +157,10 @@ pub async fn set_telemetry(
     Json(json!({"ok": true}))
 }
 
-pub async fn get_license(State(state): State<SharedState>) -> Json<Value> {
-    let v = get_value(&state, "license");
+pub async fn get_license(State(_state): State<SharedState>) -> Json<Value> {
     Json(json!({
         "ok": true,
-        "license": if v.is_null() {
-            json!({
-                "tier": format!("{:?}", state.license.tier),
-                "instance_id": state.license.instance_id.clone(),
-                "max_agents": state.license.max_agents,
-                "max_packets": state.license.max_packets,
-                "retention_days": state.license.retention_days
-            })
-        } else { v }
+        "license": "Apache-2.0"
     }))
 }
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Connector Team"]
 description = "AgentPassport — Know Your Agent. Cryptographic identity, human sponsorship, W3C credentials, reputation registry, and external verification for every AI agent."
-license = "MIT"
+license = "Apache-2.0"
 
 [dependencies]
 # Async runtime

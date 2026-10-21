@@ -264,6 +264,21 @@ impl Connector {
         ConnectorBuilder::default()
     }
 
+    /// Run a tool that was registered on this process, including its handler.
+    /// A missing tool or a definition with no handler is an error. The caller
+    /// must not report that call as executed.
+    pub fn execute_tool(
+        &self,
+        name: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let registry = self
+            .tool_registry
+            .lock()
+            .map_err(|e| format!("tool_registry_lock:{e}"))?;
+        registry.execute(name, params)
+    }
+
     /// **The ultimate one-liner.** Zero config, auto-detect LLM, auto-session.
     ///
     /// ```rust,ignore

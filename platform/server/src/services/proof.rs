@@ -867,26 +867,10 @@ pub async fn scitt_verify(
 
 /// GET /proof/{id}/certificate.pdf
 /// Returns a PDF-like text certificate for a proof record.
-/// Feature-gated to Startup+ tier (Feature::PdfExport).
 pub async fn certificate_pdf(
     State(state): State<SharedState>,
     axum::extract::Path(proof_id): axum::extract::Path<String>,
 ) -> axum::response::Response {
-    use axum::response::IntoResponse;
-
-    if !state
-        .license
-        .has_feature(crate::license::Feature::PdfExport)
-    {
-        return axum::response::Response::builder()
-            .status(402)
-            .header("content-type", "application/json")
-            .body(axum::body::Body::from(
-                r#"{"error":"PDF certificate export requires Startup tier or higher","upgrade_url":"/billing"}"#
-            ))
-            .unwrap_or_default();
-    }
-
     let now = chrono::Utc::now();
     let es = state.engine_store.lock().unwrap();
 

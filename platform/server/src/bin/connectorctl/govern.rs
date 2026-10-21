@@ -16,6 +16,8 @@ pub fn run(opts: &GlobalOpts, args: &[String]) -> Result<ExitCode, String> {
         "aipsprt" => aipsprt(opts, rest),
         "spend" => spend(opts, rest),
         "backends" => get(opts, "govern backends", "/api/v1/runtime/backends"),
+        "up" => up(opts),
+        "status" => status(opts),
         "deploy-verify" => deploy_verify(opts, rest),
         "ecosystem" => get(opts, "govern ecosystem", "/api/v1/runtime/ecosystem"),
         "cease-proof" => {
@@ -39,7 +41,7 @@ pub fn run(opts: &GlobalOpts, args: &[String]) -> Result<ExitCode, String> {
             )
         }
         _ => Err(
-            "usage: connectorctl govern <policy|compliance|cost|metrics|events|aipsprt|spend|backends|deploy-verify|ecosystem|explain|cease-proof>"
+            "usage: connectorctl govern <up|status|policy|compliance|cost|metrics|events|aipsprt|spend|backends|deploy-verify|ecosystem|explain|cease-proof>"
                 .into(),
         ),
     }
@@ -212,6 +214,195 @@ fn spend(opts: &GlobalOpts, args: &[String]) -> Result<ExitCode, String> {
     }
 }
 
+const OPERATOR_ROLES: &[(&str, &str)] = &[
+    ("iam", "sign-in"),
+    ("spire", "workload"),
+    ("openshell", "boundary"),
+    ("opa", "policy"),
+    ("firecracker", "isolation"),
+    ("otel", "trace"),
+    ("cosign", "supply"),
+    ("traffic", "traffic"),
+    ("brain", "recall"),
+    ("broker", "model"),
+    ("orchestrate", "flow"),
+];
+
+pub(crate) fn operator_state(state: &str) -> &'static str {
+    match state {
+        "followed" => "up",
+        "supervised" => "not following this task",
+        _ => "down",
+    }
+}
+
+fn status(opts: &GlobalOpts) -> Result<ExitCode, String> {
+    let client = Client::new(opts)?;
+    let route = "/api/v1/reports/system";
+    let report = match client.get_json(route) {
+        Ok(value) => value,
+        Err(err) => {
+            return Ok(CmdResult {
+                ok: false,
+                command: "govern status".into(),
+                exit: err.exit_code(),
+                source: Provenance::api("GET", route),
+                data: json!({}),
+                warnings: vec![],
+                error: Some(err.message()),
+            }
+            .emit(opts));
+        }
+    };
+    let fingers = report
+        .pointer("/body/fingers")
+        .and_then(|value| value.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let mut roles = Vec::new();
+    let mut lines = Vec::new();
+    for (id, role) in OPERATOR_ROLES {
+        let state = fingers
+            .iter()
+            .find(|row| row.get("id").and_then(|value| value.as_str()) == Some(*id))
+            .and_then(|row| row.get("state").and_then(|value| value.as_str()))
+            .unwrap_or("absent");
+        let operator = operator_state(state);
+        lines.push(format!("{role}: {operator}"));
+        roles.push(json!({
+            "role": role,
+            "reading": state,
+            "operator": operator,
+        }));
+    }
+    Ok(CmdResult {
+        ok: true,
+        command: "govern status".into(),
+        exit: ExitCode::Success,
+        source: Provenance::api("GET", route),
+        data: json!({
+            "_human": lines,
+            "roles": roles,
+            "acceptance_passed": false,
+            "seven_backend": false,
+        }),
+        warnings: vec![],
+        error: None,
+    }
+    .emit(opts))
+}
+
+fn up(opts: &GlobalOpts) -> Result<ExitCode, String> {
+    let oss = oss_boot_dir()?;
+    let seven = run_boot(&oss.join("boot-backends.sh"));
+    let intel = run_boot(&oss.join("boot-intelligence.sh"));
+    let seven_up = seven.0 == 0;
+    let intel_up = intel.0 == 0;
+    let mut lines = vec![
+        format!(
+            "sign-in, workload, boundary, policy, isolation, trace, supply, traffic: {}",
+            if seven_up { "started" } else { "down" }
+        ),
+        format!(
+            "recall, model, flow: {}",
+            if intel_up { "started" } else { "down" }
+        ),
+        "This command does not run deploy-verify.".into(),
+    ];
+    let mut warnings = Vec::new();
+    if !seven_up && !seven.1.is_empty() {
+        warnings.push(seven.1);
+    }
+    if !intel_up && !intel.1.is_empty() {
+        warnings.push(intel.1);
+    }
+    Ok(CmdResult {
+        ok: seven_up && intel_up,
+        command: "govern up".into(),
+        exit: if seven_up && intel_up {
+            ExitCode::Success
+        } else {
+            ExitCode::Degraded
+        },
+        source: Provenance::host("oss boot scripts"),
+        data: json!({
+            "_human": lines,
+            "sign_in_through_traffic_exit": seven.0,
+            "recall_model_flow_exit": intel.0,
+            "platform_started": false,
+            "acceptance_passed": false,
+        }),
+        warnings,
+        error: None,
+    }
+    .emit(opts))
+}
+
+fn oss_boot_dir() -> Result<std::path::PathBuf, String> {
+    if let Ok(root) = std::env::var("CONNECTOR_REPO_ROOT") {
+        let oss = std::path::PathBuf::from(root).join("oss");
+        if boot_scripts_present(&oss) {
+            return Ok(oss);
+        }
+    }
+    let mut dir = std::env::current_dir().map_err(|err| err.to_string())?;
+    loop {
+        let oss = dir.join("oss");
+        if boot_scripts_present(&oss) {
+            return Ok(oss);
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    Err("finger boot scripts are not in this tree".into())
+}
+
+fn boot_scripts_present(oss: &std::path::Path) -> bool {
+    oss.join("boot-backends.sh").is_file() && oss.join("boot-intelligence.sh").is_file()
+}
+
+fn run_boot(script: &std::path::Path) -> (i32, String) {
+    match std::process::Command::new("bash")
+        .arg(script)
+        .stdin(std::process::Stdio::null())
+        .output()
+    {
+        Ok(output) => (
+            output.status.code().unwrap_or(1),
+            safe_boot_note(&output.stdout, &output.stderr),
+        ),
+        Err(err) => (127, safe_boot_note(err.to_string().as_bytes(), b"")),
+    }
+}
+
+fn safe_boot_note(stdout: &[u8], stderr: &[u8]) -> String {
+    let mut text = String::from_utf8_lossy(stderr).into_owned();
+    if !text.is_empty() && !text.ends_with('\n') {
+        text.push('\n');
+    }
+    text.push_str(&String::from_utf8_lossy(stdout));
+    for line in text.lines().rev() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let lower = trimmed.to_ascii_lowercase();
+        if lower.contains("password")
+            || lower.contains("secret")
+            || lower.contains("token")
+            || lower.contains("api_key")
+            || lower.contains("bearer")
+            || lower.contains("docker ")
+            || lower.contains("curl ")
+        {
+            continue;
+        }
+        return trimmed.chars().take(180).collect();
+    }
+    String::new()
+}
+
 fn get(opts: &GlobalOpts, command: &str, route: &str) -> Result<ExitCode, String> {
     let client = Client::new(opts)?;
     match client.get_json(route) {
@@ -261,5 +452,31 @@ fn post(opts: &GlobalOpts, command: &str, route: &str, body: serde_json::Value) 
             error: Some(e.message()),
         }
         .emit(opts)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn operator_rows_use_the_report_reading() {
+        assert_eq!(operator_state("followed"), "up");
+        assert_eq!(operator_state("supervised"), "not following this task");
+        assert_eq!(operator_state("absent"), "down");
+        assert_eq!(operator_state("ready"), "down");
+        assert_eq!(OPERATOR_ROLES.len(), 11);
+        assert_eq!(OPERATOR_ROLES[0].1, "sign-in");
+        assert_eq!(OPERATOR_ROLES[10].1, "flow");
+    }
+
+    #[test]
+    fn boot_notes_drop_vendor_commands_and_secrets() {
+        let note = safe_boot_note(
+            b"docker pull example\npassword=hidden\n[not ready] sign-in\n",
+            b"",
+        );
+        assert_eq!(note, "[not ready] sign-in");
+        assert!(safe_boot_note(b"curl -s http://example\n", b"").is_empty());
     }
 }

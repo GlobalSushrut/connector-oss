@@ -522,11 +522,6 @@ fn LlmUsageTab() -> impl IntoView {
                 desc="Usage as the billing path sees it.".to_string()
                 path="/billing/usage".to_string()
             />
-            <ReadCard
-                title="License usage".to_string()
-                desc="Seat and entitlement consumption.".to_string()
-                path="/license/usage".to_string()
-            />
 
             <section class="fcs-pad space-y-2">
                 <p class="fcs-pad-id">"PER-AGENT SPEND"</p>

@@ -163,5 +163,4 @@ Report exploitable findings privately through [SECURITY.md](SECURITY.md).
 
 ## License
 
-Libraries under `oss/` use the [Apache License 2.0](LICENSE). The node under
-`platform/` uses the [Business Source License 1.1](../platform/LICENSE).
+The code in this repository is under the [Apache License 2.0](LICENSE).

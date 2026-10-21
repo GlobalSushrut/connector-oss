@@ -168,7 +168,6 @@ const SHELL_PATHS: &[&str] = &[
     "/kernel/aios/operate",
     "/kernel/aios/syscall",
     "/knowledge-graph/transfer",
-    "/license/activate",
     "/marketplace/contracts",
     "/marketplace/discover",
     "/marketplace/index/:pid/health",

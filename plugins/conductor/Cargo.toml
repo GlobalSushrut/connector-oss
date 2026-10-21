@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Connector Team"]
 description = "Governed multi-agent orchestration platform built on Connector"
-license = "MIT"
+license = "Apache-2.0"
 
 [dependencies]
 # Async runtime

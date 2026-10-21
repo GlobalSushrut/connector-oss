@@ -342,7 +342,7 @@ pub fn on_cease(state: &SharedState, pid: &str, reason: &str) {
                     rec["last_error"] = Value::Null;
                     crate::substrate::cvr::deployment_verify::record_operation_success(
                         state.as_ref(),
-                        "iam",
+                        "iam_agent_account",
                         "agent_account_disabled",
                         json!({"api_pid": key, "sessions_ended": true}),
                     );

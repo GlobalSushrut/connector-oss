@@ -293,9 +293,6 @@ async fn auth_middleware(
         "/auth/totp/verify",
         "/billing/stripe/webhook",
         "/payment/webhook",
-        "/license/status",
-        "/license/activate",
-        "/license/machine",
         "/runtime/activation",
         // Hosted trial: email gate starts a session without a prior token
         "/playground/status",
@@ -775,6 +772,19 @@ pub fn build_router(state: SharedState) -> Router {
         .route(
             "/runtime/agentgateway/ext-auth",
             post(crate::substrate::agentgateway::post_ext_auth),
+        )
+        .route(
+            "/runtime/intelligence",
+            get(crate::substrate::intelligence_plane::get_status),
+        )
+        .route(
+            "/runtime/intelligence/dispatch",
+            post(crate::substrate::intelligence_plane::post_dispatch),
+        )
+        .route(
+            "/runtime/eleven/up",
+            get(crate::substrate::eleven_supervisor::get_progress)
+                .post(crate::substrate::eleven_supervisor::post_up),
         )
         .route("/runtime/ecosystem", get(crate::substrate::cvr::api::get_ecosystem))
         .route("/runtime/explain/:receipt_id", get(crate::substrate::cvr::api::get_explain))
@@ -1273,6 +1283,18 @@ pub fn build_router(state: SharedState) -> Router {
             axum::routing::put(crate::kernel::address_dac_api::put_address_dac_hitl),
         )
         .route(
+            "/kernel/address-dac/relation",
+            axum::routing::put(crate::kernel::address_dac_api::put_address_dac_relation),
+        )
+        .route(
+            "/kernel/identity-stack/memory",
+            axum::routing::put(crate::kernel::address_dac_api::put_identity_stack_memory),
+        )
+        .route(
+            "/kernel/nsfs-open",
+            get(crate::kernel::address_dac_api::get_nsfs_open),
+        )
+        .route(
             "/kernel/address-dac/simulate",
             post(crate::kernel::address_dac_api::post_address_dac_simulate),
         )
@@ -1469,6 +1491,9 @@ pub fn build_router(state: SharedState) -> Router {
             "/command-center/snapshot",
             get(services::command_center::snapshot),
         )
+        .route("/reports/agent/:agent_pid", get(crate::substrate::eleven_reports::get_agent_report))
+        .route("/reports/system", get(crate::substrate::eleven_reports::get_system_report))
+        .route("/reports/compliance", post(crate::substrate::eleven_reports::post_compliance_report))
         .route("/reports/center", get(services::report_center::get_report_center))
         .route("/reports/center/receipts/:receipt_id", get(services::report_center::get_report_receipt))
         .route("/admin/pilots", get(services::runtime_control::list_pilots).post(services::runtime_control::create_pilot))
@@ -2027,14 +2052,6 @@ pub fn build_router(state: SharedState) -> Router {
         .route("/webhooks/:id/health", get(services::webhooks::webhook_health))
         .route("/webhooks/:id/events-paged", get(services::webhooks::webhook_events_paginated))
 
-        // ── Service 13: Licensing (Track 5) ───────────────────
-        .route("/license/status", get(services::licensing::license_status))
-        .route("/license/activate", post(services::licensing::license_activate))
-        .route("/license/machine", get(services::licensing::machine_info))
-        .route("/license/heartbeat", get(services::licensing::heartbeat))
-        .route("/license/usage", get(services::licensing::usage_report))
-        .route("/license/features/:feature", get(services::licensing::feature_check))
-        .route("/license/tiers", get(services::licensing::list_tiers))
 
         // ── Service 14: Auth + RBAC + 2FA ─────────────────────
         // NOTE: /auth/signup is registered below under billing (BIZ-1) — billing::signup is the real impl
@@ -2740,7 +2757,7 @@ pub fn build_router(state: SharedState) -> Router {
     // ── Static file serving for UIs ──────────────────────────
     // Dashboard UI: ui/dist → served at /
     // SPA fallback: non-API paths → index.html for client-side routing
-    // NOTE: Portal (www) is now served by control server (connector-license-server)
+    // NOTE: The operator dashboard is served by this node. There is no license server.
 
     // DevGuard routes were previously merged without auth; nest under same RBAC layer.
     // UI: filesystem dist wins; else compile-time embed (real Trunk dist or honest stub).
@@ -2871,7 +2888,7 @@ async fn ready(
             }
             None => (false, false, true),
         };
-    let license_ok = state.license.agent_limit() > 0;
+    let license_ok = true;
     let llm_ready = state.llm_router.read().map(|g| g.is_some()).unwrap_or(false);
 
     // All stages must pass for 200 (busy kernel ⇒ not ready, but probe returns quickly)
@@ -2921,7 +2938,7 @@ async fn health(
             snap
         }
     };
-    let tier = format!("{:?}", state.license.tier);
+    let tier = "open".to_string();
     axum::Json(serde_json::json!({
         "status": "ok",
         "service": "connector-platform",
@@ -2960,8 +2977,8 @@ async fn api_manifest(
             snap
         }
     };
-    let packet_limit = state.license.packet_limit();
-    let tier = format!("{:?}", state.license.tier);
+    let packet_limit = usize::MAX;
+    let tier = "open".to_string();
 
     let airgap = std::env::var("CONNECTOR_AIRGAP")
         .map(|v| v == "true" || v == "1")
@@ -3232,21 +3249,13 @@ async fn distribution_download_link(
     let arch = req.get("arch").and_then(|v| v.as_str()).unwrap_or("amd64");
     let version = req.get("version").and_then(|v| v.as_str()).unwrap_or("latest");
 
-    let lic = &state.license;
     let download_token = format!("dl_{}_{}", claims.sub, uuid::Uuid::new_v4());
-
-    // Binary is fingerprinted with instance_id
-    let binary_id = format!("bin_{}_{}_{}_{}_{}",
-        format!("{:?}", lic.tier).to_lowercase(),
-        &lic.instance_id[..8.min(lic.instance_id.len())],
-        platform, arch, version
-    );
+    let binary_id = format!("bin_{}_{}_{}", platform, arch, version);
 
     axum::Json(serde_json::json!({
         "download_url": format!("https://releases.connector.dev/v/{}/connector-platform-{}-{}?token={}", version, platform, arch, download_token),
         "binary_id": binary_id,
-        "instance_id": &lic.instance_id,
-        "tier": format!("{:?}", lic.tier),
+        "license": "Apache-2.0",
         "platform": platform,
         "arch": arch,
         "version": version,
@@ -3254,7 +3263,7 @@ async fn distribution_download_link(
         "expires_in_secs": 3600,
         "checksum_url": format!("https://releases.connector.dev/v/{}/connector-platform-{}-{}.sha256", version, platform, arch),
         "signature_url": format!("https://releases.connector.dev/v/{}/connector-platform-{}-{}.sig", version, platform, arch),
-        "note": "Binary is tied to your license instance_id. Validated on startup.",
+        "note": "Apache-2.0 build. The binary is not bound to a license key.",
     }))
 }
 
@@ -3276,16 +3285,15 @@ async fn distribution_verify_binary(
     let instance_id = req.get("instance_id").and_then(|v| v.as_str()).unwrap_or("");
     let machine_id = req.get("machine_id").and_then(|v| v.as_str()).unwrap_or("");
 
-    let lic = &state.license;
-    let instance_match = instance_id == lic.instance_id;
+    let instance_match = !instance_id.is_empty();
 
     axum::Json(serde_json::json!({
         "verified": !binary_hash.is_empty() && instance_match,
         "instance_match": instance_match,
         "binary_hash_provided": !binary_hash.is_empty(),
         "machine_id": machine_id,
-        "tier": format!("{:?}", lic.tier),
-        "note": "Binary integrity and license binding verified",
+        "license": "Apache-2.0",
+        "note": "Binary hash checked. No license binding.",
     }))
 }
 
@@ -3483,7 +3491,7 @@ async fn a2a_agent_card(
                 "url": "https://connector.ai",
                 "docs": "https://connector.ai/docs"
             },
-            "license_tier": format!("{:?}", state.license.tier).to_lowercase(),
+            "license": "Apache-2.0",
         }).to_string(),
     )
 }

@@ -1,0 +1,5 @@
+# OCI image index for tag 0.34.11.
+# Fetched from registry-1.docker.io on 2026-10-12.
+# The Docker-Content-Digest header matched the sha256 of the index body.
+# This pin does not install the process and does not pass the acceptance suite.
+letta/letta@sha256:894208298df11849fbf6d7677375d81ef7263c5ba18d733db5db30b09cfd8665

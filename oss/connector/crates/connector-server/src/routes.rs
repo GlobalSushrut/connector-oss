@@ -802,6 +802,7 @@ pub async fn tools_call(
         None => {
             return Json(serde_json::json!({
                 "ok": false,
+                "executed": false,
                 "error": format!("tool '{}' not registered — use POST /tools/register first", req.tool),
             }))
         }
@@ -820,56 +821,55 @@ pub async fn tools_call(
         );
     }
 
-    // 3. Execute: check ToolRegistry for a live handler first
-    let connector_engine_result = {
-        use connector_engine::tool_def::ToolParams;
-        let params = ToolParams::from_json(&req.params);
-        // Build a minimal Tool from StoredToolDef for schema export
-        let mcp_def = serde_json::json!({
-            "name": td.name,
-            "description": td.description,
-            "inputSchema": td.params_json,
-            "domain": td.domain,
-        });
-        // Validate required params from stored schema
-        let missing: Vec<String> =
-            if let Some(arr) = td.params_json.get("required").and_then(|v| v.as_array()) {
-                arr.iter()
-                    .filter_map(|v| v.as_str())
-                    .filter(|p| req.params.get(p).is_none())
-                    .map(|s| s.to_string())
-                    .collect()
-            } else {
-                Vec::new()
-            };
-        if !missing.is_empty() {
-            return Json(serde_json::json!({
-                "ok": false,
-                "error": format!("Missing required parameters: {}", missing.join(", ")),
-                "tool": td.name,
-                "mcp_schema": mcp_def,
-            }));
-        }
-        mcp_def
-    };
-
-    // 4. Return structured result with full MCP-compatible schema
-    let now = chrono::Utc::now().timestamp_millis();
-    Json(serde_json::json!({
-        "ok": true,
-        "tool": req.tool,
-        "agent_pid": req.agent_pid,
-        "params": req.params,
-        "result": {
-            "type": "Text",
-            "value": format!("Tool '{}' authorized and dispatched. Audit entry written to kernel.", req.tool),
-        },
-        "mcp_def": connector_engine_result,
-        "authorized_at_ms": now,
+    let mcp_def = serde_json::json!({
+        "name": td.name,
+        "description": td.description,
+        "inputSchema": td.params_json,
         "domain": td.domain,
-        "compliance": [],
-        "audit_written": true,
-    }))
+    });
+    let missing: Vec<String> =
+        if let Some(arr) = td.params_json.get("required").and_then(|v| v.as_array()) {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .filter(|p| req.params.get(p).is_none())
+                .map(|s| s.to_string())
+                .collect()
+        } else {
+            Vec::new()
+        };
+    if !missing.is_empty() {
+        return Json(serde_json::json!({
+            "ok": false,
+            "executed": false,
+            "error": format!("Missing required parameters: {}", missing.join(", ")),
+            "tool": td.name,
+            "mcp_schema": mcp_def,
+        }));
+    }
+
+    match state.connector.execute_tool(&req.tool, req.params.clone()) {
+        Ok(value) => Json(serde_json::json!({
+            "ok": true,
+            "executed": true,
+            "tool": req.tool,
+            "agent_pid": req.agent_pid,
+            "params": req.params,
+            "result": value,
+            "mcp_def": mcp_def,
+            "domain": td.domain,
+            "audit_written": true,
+        })),
+        Err(error) => Json(serde_json::json!({
+            "ok": false,
+            "executed": false,
+            "error": error,
+            "tool": req.tool,
+            "agent_pid": req.agent_pid,
+            "mcp_def": mcp_def,
+            "audit_written": true,
+            "honesty": "No handler ran. A stored tool definition is not an execution.",
+        })),
+    }
 }
 
 // ── Route handlers — Custom Folders ─────────────────────────────

@@ -345,7 +345,7 @@ fn evidence_success(state: &PlatformState, backend: &str, operation: &str) -> bo
         })
 }
 
-fn any_policy_applied(state: &PlatformState) -> bool {
+pub(crate) fn any_policy_applied(state: &PlatformState) -> bool {
     let Ok(store) = state.engine_store.lock() else {
         return false;
     };

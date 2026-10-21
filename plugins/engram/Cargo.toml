@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Connector Team"]
 description = "Engram — The SQL of agent memory. One URL. Enterprise-grade governed memory with dehallucination chains, entropy control, CoT anchor, and knot resolver — powered by the Connector kernel."
-license = "MIT"
+license = "Apache-2.0"
 
 [dependencies]
 # Async runtime

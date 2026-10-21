@@ -105,6 +105,7 @@ pub fn create_and_start(
         agent_pid,
         dedicated,
         super::resources::ResourceProfile::Default,
+        None,
     )
 }
 
@@ -115,7 +116,21 @@ pub fn create_and_start_with_resources(
     agent_pid: &str,
     dedicated: bool,
     resource: super::resources::ResourceProfile,
+    effect: Option<&str>,
 ) -> Result<MicroCellInstance, Value> {
+    let effect = match effect {
+        None => None,
+        Some(e) if !e.is_empty() && e.len() <= 128 && e.chars().all(|c| c.is_ascii_hexdigit()) => {
+            Some(e)
+        }
+        Some(_) => {
+            return Err(json!({
+                "ok": false,
+                "error": "START_REFUSED",
+                "denial_reason": "effect_not_hex",
+            }));
+        }
+    };
     let probe = probe_host();
     if !probe.microcell_ready() {
         return Err(json!({
@@ -167,11 +182,15 @@ pub fn create_and_start_with_resources(
     let (vcpu_count, mem_mib) = resource.machine(dedicated);
 
     // Fresh identity in boot args — no reusable authority in base image.
-    let boot_args = format!(
+    let mut boot_args = format!(
         "console=ttyS0 reboot=k panic=1 pci=off connector.agent_pid={agent_pid} connector.microcell_id={microcell_id} connector.boot_nonce={boot_nonce} connector.dedicated={} connector.resources={}",
         if dedicated { "1" } else { "0" },
         resource.as_str(),
     );
+    if let Some(effect) = effect {
+        boot_args.push_str(" connector.effect=");
+        boot_args.push_str(effect);
+    }
 
     let cfg = FirecrackerVmConfig {
         vm_id: vm_id.clone(),
@@ -186,7 +205,10 @@ pub fn create_and_start_with_resources(
         boot_source: BootSource {
             kernel_image_path: kernel.clone(),
             boot_args: Some(boot_args),
-            initrd_path: None,
+            initrd_path: std::env::var("CONNECTOR_MICROVM_INITRD")
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && std::path::Path::new(s).is_file()),
         },
         drives: vec![Drive {
             drive_id: "rootfs".into(),
@@ -203,37 +225,85 @@ pub fn create_and_start_with_resources(
     };
 
     let host = build_host();
-    let started = if super::microd_client::microd_socket_present() {
-        match super::microd_client::start_vm(&cfg, use_jailer) {
+    let heartbeat = connector_plugin_runtime::begin_guest_heartbeat_listen(&vsock_path);
+    let started = if use_jailer {
+        if !super::microd_client::microd_socket_present() {
+            return Err(json!({
+                "ok": false,
+                "error": "START_REFUSED",
+                "denial_reason": "microd_required",
+                "detail": "jailer is required and connector-microd is not listening",
+                "jailed_requested": true,
+            }));
+        }
+        match super::microd_client::start_vm(&cfg, true) {
             Ok(v) => v,
             Err(e) => {
-                if use_jailer || super::microd_client::microd_verified_ready() {
+                return Err(json!({
+                    "ok": false,
+                    "error": "START_REFUSED",
+                    "denial_reason": "microd_start_failed",
+                    "detail": e,
+                    "jailed_requested": true,
+                }));
+            }
+        }
+    } else if super::microd_client::microd_socket_present() {
+        match super::microd_client::start_vm(&cfg, false) {
+            Ok(v) => v,
+            Err(e) => {
+                if super::microd_client::microd_verified_ready() {
                     tracing::warn!(error = %e, "microd start failed; attempting in-process fallback");
                 }
-                host.start_with_options(&cfg, use_jailer).map_err(|e2| {
+                host.start_with_options(&cfg, false).map_err(|e2| {
                     json!({
                         "ok": false,
                         "error": "START_REFUSED",
                         "denial_reason": "firecracker_start_failed",
                         "microd_error": e,
                         "detail": e2.to_string(),
-                        "jailed_requested": use_jailer,
+                        "jailed_requested": false,
                     })
                 })?
             }
         }
     } else {
-        host.start_with_options(&cfg, use_jailer).map_err(|e| {
+        host.start_with_options(&cfg, false).map_err(|e| {
             json!({
                 "ok": false,
                 "error": "START_REFUSED",
                 "denial_reason": "firecracker_start_failed",
                 "detail": e.to_string(),
-                "jailed_requested": use_jailer,
+                "jailed_requested": false,
                 "hint": "Start connector-microd for privileged VMM path",
             })
         })?
     };
+
+    let heartbeat_line = connector_plugin_runtime::guest_heartbeat_line(
+        heartbeat,
+        std::time::Duration::from_secs(5),
+    );
+    let heartbeat_ok = match (effect, heartbeat_line.as_deref()) {
+        (None, Some(raw)) => !raw.trim().is_empty(),
+        (Some(effect), Some(raw)) => heartbeat_matches_effect(raw, effect),
+        _ => false,
+    };
+    if !heartbeat_ok {
+        let pid = started.get("pid").and_then(|v| v.as_u64()).map(|p| p as u32);
+        let _ = super::microd_client::stop(&api_socket.display().to_string(), pid);
+        return Err(json!({
+            "ok": false,
+            "error": "START_REFUSED",
+            "denial_reason": if effect.is_some() {
+                "guest_effect_digest_mismatch"
+            } else {
+                "microvm_heartbeat_required"
+            },
+            "detail": "guest vsock heartbeat did not carry the admitted effect digest; the cell is not marked live",
+            "jailed_requested": use_jailer,
+        }));
+    }
 
     let now = chrono::Utc::now().timestamp_millis();
     let inst = MicroCellInstance {
@@ -415,4 +485,47 @@ pub fn stop(state: &PlatformState, microcell_id: &str) -> Value {
         }
         Err(e) => json!({"ok": false, "error": "microvm_stop_failed", "detail": e}),
     }
+}
+
+fn effect_sha256(effect: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(effect.as_bytes()))
+}
+
+fn heartbeat_matches_effect(raw: &str, effect: &str) -> bool {
+    let Ok(v) = serde_json::from_str::<Value>(raw.trim()) else {
+        return false;
+    };
+    let Some(got) = v.get("effect_sha256").and_then(|x| x.as_str()) else {
+        return false;
+    };
+    got.eq_ignore_ascii_case(&effect_sha256(effect))
+}
+
+/// Boot a dedicated cell whose guest hashes `effect` and returns that digest
+/// on the vsock heartbeat. The cell stays dark when the digest does not match.
+pub fn run_effect_in_cell(
+    state: &PlatformState,
+    agent_pid: &str,
+    effect: &str,
+) -> Result<Value, Value> {
+    let effect = effect.trim();
+    let mc_id = format!(
+        "mc-e-{}",
+        &uuid::Uuid::new_v4().simple().to_string()[..12]
+    );
+    let inst = create_and_start_with_resources(
+        state,
+        &mc_id,
+        agent_pid,
+        true,
+        super::resources::ResourceProfile::Default,
+        Some(effect),
+    )?;
+    Ok(json!({
+        "ok": true,
+        "microcell_id": inst.microcell_id,
+        "effect_sha256": effect_sha256(effect),
+        "agent_pid": agent_pid,
+    }))
 }

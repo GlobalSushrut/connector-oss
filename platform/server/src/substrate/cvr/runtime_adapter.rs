@@ -197,6 +197,65 @@ pub fn create_openshell_sandbox(yaml: Option<&str>) -> Value {
     }
 }
 
+/// A live sandbox rejects a policy that drops a path or replaces landlock.
+/// Keep the loaded document and add the contract's filesystem paths onto it.
+fn merge_projection_onto_live_policy(bin: &std::path::Path, sandbox: &str, yaml: &str) -> Option<String> {
+    let got = run_cli(
+        bin,
+        &[
+            "policy".into(),
+            "get".into(),
+            sandbox.into(),
+            "--base".into(),
+            "-o".into(),
+            "json".into(),
+        ],
+        std::time::Duration::from_secs(15),
+    )
+    .ok()?;
+    if !got.success {
+        return None;
+    }
+    let stdout = got.stdout.trim();
+    let json_at = stdout.find('{')?;
+    let live_doc: Value = serde_json::from_str(&stdout[json_at..]).ok()?;
+    let mut policy = live_doc.get("policy")?.clone();
+    let projection: Value = serde_yaml::from_str(yaml).ok()?;
+    let proj_fs = projection.get("filesystem_policy")?;
+    if let Some(live_fs) = policy
+        .get_mut("filesystem_policy")
+        .and_then(|v| v.as_object_mut())
+    {
+        for key in ["read_only", "read_write"] {
+            let Some(extra) = proj_fs.get(key).and_then(|v| v.as_array()) else {
+                continue;
+            };
+            let slot = live_fs
+                .entry(key.to_string())
+                .or_insert_with(|| json!([]));
+            let Some(list) = slot.as_array_mut() else {
+                continue;
+            };
+            for item in extra {
+                if item.as_str().is_some() && !list.iter().any(|e| e == item) {
+                    list.push(item.clone());
+                }
+            }
+        }
+    }
+    if let (Some(live_net), Some(proj_net)) = (
+        policy.get_mut("network_policies").and_then(|v| v.as_object_mut()),
+        projection.get("network_policies").and_then(|v| v.as_object()),
+    ) {
+        for (k, v) in proj_net {
+            if k != "{}" {
+                live_net.insert(k.clone(), v.clone());
+            }
+        }
+    }
+    serde_json::to_string(&policy).ok()
+}
+
 /// Apply the compiled contract with the real `openshell policy set` CLI.
 /// No sandbox name means the policy is not pushed. A non-zero exit is not ready.
 pub fn push_openshell_policy(yaml: Option<&str>) -> Value {
@@ -230,7 +289,8 @@ pub fn push_openshell_policy(yaml: Option<&str>) -> Value {
         "connector-openshell-policy-{}.yaml",
         chrono::Utc::now().timestamp_millis()
     ));
-    if let Err(e) = std::fs::write(&path, yaml) {
+    let body = merge_projection_onto_live_policy(&bin, &sandbox, yaml).unwrap_or_else(|| yaml.to_string());
+    if let Err(e) = std::fs::write(&path, &body) {
         return json!({"pushed": false, "ready": false, "reason": format!("write policy: {e}")});
     }
     let result = run_cli(
@@ -326,6 +386,22 @@ fn truncate(s: &str) -> String {
     }
 }
 
+/// Release manifest paths. The self-signed blob in `oss/boot-backends.sh` is not this check.
+fn release_manifest_path(env_key: &str, release_path: &str) -> Option<String> {
+    if let Some(set) = std::env::var(env_key)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+    {
+        return Some(set);
+    }
+    if std::path::Path::new(release_path).is_file() {
+        Some(release_path.to_string())
+    } else {
+        None
+    }
+}
+
 /// Sigstore cosign. `ready` is true only after `cosign verify-blob` exits 0.
 pub fn cosign_status() -> Value {
     let Some(bin) = bin_on_path("cosign", "CONNECTOR_COSIGN_BIN") else {
@@ -338,8 +414,11 @@ pub fn cosign_status() -> Value {
         });
     };
     let version = run_cli(&bin, &["version".into()], std::time::Duration::from_secs(5));
-    let blob = std::env::var("CONNECTOR_COSIGN_BLOB").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
-    let sig = std::env::var("CONNECTOR_COSIGN_SIGNATURE").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    let blob = release_manifest_path("CONNECTOR_COSIGN_BLOB", "/var/lib/connector/release/manifest");
+    let sig = release_manifest_path(
+        "CONNECTOR_COSIGN_SIGNATURE",
+        "/var/lib/connector/release/manifest.sig",
+    );
     let (Some(blob), Some(sig)) = (blob, sig) else {
         return json!({
             "present": true,
@@ -429,6 +508,8 @@ pub fn compile_openshell_projection(contract: &AgentContractV2, generation: &str
     out.push_str("# denied_operations are enforced by the Connector contract. OpenShell process policy has no field for them.\n");
     out.push_str("version: 1\n");
     out.push_str("filesystem_policy:\n");
+    // A live sandbox rejects a policy that flips this off. The community image boots with it on.
+    out.push_str("  include_workdir: true\n");
     let reads = openshell_paths(&contract.filesystem_read);
     let writes = openshell_paths(&contract.filesystem_write);
     if reads.is_empty() {
@@ -507,7 +588,7 @@ fn yaml_escape(s: &str) -> String {
 
 /// Cease fan-out. Context-token invalidation already happened in `kernel_cease`.
 /// This function seals the memory epoch, stores the policy generation, and pauses
-/// a Firecracker MicroCell when one is bound to the agent.
+/// then destroys a Firecracker MicroCell when one is bound to the agent.
 pub fn fanout_cease(state: &PlatformState, agent_pid: &str, generation_next: &str) -> Value {
     let memory = seal_memory_epoch(state, agent_pid, generation_next);
     let pause = pause_microcell_if_bound(state, agent_pid);
@@ -670,10 +751,16 @@ fn pause_microcell_if_bound(state: &PlatformState, agent_pid: &str) -> Value {
         });
     };
     let result = micro_cell::pause(state, &inst.microcell_id);
+    let destroy = if result.get("ok").and_then(|v| v.as_bool()) == Some(true) {
+        micro_cell::stop(state, &inst.microcell_id)
+    } else {
+        json!({"ok": false, "skipped": "pause_did_not_exit_0"})
+    };
     json!({
         "attempted": true,
         "microcell_id": inst.microcell_id,
         "result": result,
+        "destroy": destroy,
     })
 }
 
@@ -695,6 +782,107 @@ pub fn seal_memory_epoch(state: &PlatformState, agent_pid: &str, generation_next
         "sealed": stored,
         "sealed_generation": generation_next,
     })
+}
+
+/// After PATE Proceed: MemWrite the admitted contract, then `openshell policy set --wait`.
+/// In production a push that did not exit 0 is an error and the effect must not run.
+pub fn apply_proceed_patch(
+    state: &crate::state::SharedState,
+    agent_pid: &str,
+    task_id: &str,
+) -> Result<Value, String> {
+    let generation_n = crate::substrate::llm_context_broker::current_generation(state, agent_pid);
+    let generation = if generation_n == 0 {
+        task_id.to_string()
+    } else {
+        generation_n.to_string()
+    };
+    let contract = crate::kernel::agent_principal::load_contract(state.as_ref(), agent_pid);
+    let digest = contract
+        .as_ref()
+        .map(|c| c.contract_digest_sha256.clone());
+    let yaml = match &contract {
+        Some(c) => compile_openshell_projection(c, &generation),
+        None => String::new(),
+    };
+    memwrite_admitted_contract(state, agent_pid, &yaml)?;
+    let push = push_openshell_policy(if yaml.is_empty() {
+        None
+    } else {
+        Some(yaml.as_str())
+    });
+    let pushed = push.get("pushed").and_then(|v| v.as_bool()) == Some(true);
+    let probe = probe_openshell();
+    let _ = store_policy_generation(
+        state.as_ref(),
+        agent_pid,
+        &generation,
+        &probe,
+        &json!({"paused": false, "reason": "proceed_patch"}),
+        if yaml.is_empty() { None } else { Some(yaml.as_str()) },
+        digest.as_deref(),
+        &push,
+    );
+    if crate::connector_profile::is_productionish_env() && !pushed {
+        let reason = push
+            .get("reason")
+            .and_then(|v| v.as_str())
+            .or_else(|| push.get("stderr").and_then(|v| v.as_str()))
+            .unwrap_or("openshell policy set did not exit 0");
+        return Err(format!("openshell_policy_not_applied: {reason}"));
+    }
+    Ok(push)
+}
+
+fn memwrite_admitted_contract(
+    state: &crate::state::SharedState,
+    agent_pid: &str,
+    yaml: &str,
+) -> Result<(), String> {
+    use vac_core::cid::compute_cid;
+    use vac_core::types::{MemoryKernelOp, MemoryType, OpOutcome, PacketType, Source, SourceKind};
+    use vac_core::{MemPacket, SyscallPayload, SyscallRequest};
+
+    let body = if yaml.is_empty() {
+        serde_json::json!("no AgentContractV2 to project")
+    } else {
+        serde_json::Value::String(yaml.to_string())
+    };
+    let payload_cid = compute_cid(&body).map_err(|e| e.to_string())?;
+    let (kernel_pid, _) = crate::services::agents::resolve_kernel_pid_pub(state, agent_pid);
+    let writer = if kernel_pid.trim().is_empty() {
+        agent_pid.to_string()
+    } else {
+        kernel_pid
+    };
+    let mut packet = MemPacket::new(
+        PacketType::Action,
+        body,
+        payload_cid,
+        writer.clone(),
+        "proceed-patch".to_string(),
+        Source {
+            kind: SourceKind::Tool,
+            principal_id: writer.clone(),
+        },
+        chrono::Utc::now().timestamp_millis(),
+    );
+    packet.memory_type = MemoryType::Episodic;
+    let mut kernel = state.kernel.lock().map_err(|e| e.to_string())?;
+    let result = kernel.dispatch(SyscallRequest {
+        agent_pid: writer,
+        operation: MemoryKernelOp::MemWrite,
+        payload: SyscallPayload::MemWrite { packet },
+        reason: Some("proceed_patch_contract".into()),
+        vakya_id: None,
+        trace_parent: None,
+        trace_state: None,
+        api_version: None,
+    });
+    if result.outcome != OpOutcome::Success {
+        return Err(format!("memwrite_contract_failed: {:?}", result.outcome));
+    }
+    Ok(())
 }
 
 fn store_policy_generation(
@@ -719,7 +907,11 @@ fn store_policy_generation(
         "push": push,
         "firecracker_pause": pause,
         "issued_at_ms": chrono::Utc::now().timestamp_millis(),
-        "honesty": "Projection is stored. It is not loaded into an OpenShell supervisor.",
+        "honesty": if push.get("pushed").and_then(|v| v.as_bool()) == Some(true) {
+            "Policy was applied. openshell policy set --wait exited 0."
+        } else {
+            "Policy was not applied. The projection is stored. It is not loaded into an OpenShell supervisor."
+        },
     });
     match state.engine_store.lock() {
         Ok(mut es) => es

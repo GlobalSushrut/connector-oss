@@ -11,18 +11,12 @@ use crate::{
     state::SharedState,
 };
 
-fn node_instance_id(state: &SharedState) -> String {
+fn node_instance_id(_state: &SharedState) -> String {
     std::env::var("CONNECTOR_INSTANCE_ID")
         .or_else(|_| std::env::var("CONNECTOR_NODE_ID"))
         .ok()
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| {
-            if state.license.instance_id.trim().is_empty() {
-                "local".into()
-            } else {
-                state.license.instance_id.clone()
-            }
-        })
+        .unwrap_or_else(|| "local".into())
 }
 
 /// `GET /api/v1/runtime/policy-lineage` — principal + policy id fields shared across institutions.
@@ -59,7 +53,6 @@ pub async fn get_policy_lineage(State(state): State<SharedState>) -> Json<Value>
             "contract_version"
         ],
         "node_instance_id": instance_id,
-        "license_instance_id": state.license.instance_id,
         "runtime_mode": runtime_mode.as_str(),
         "isolation_runtime": isolation.as_str(),
         "kernel_policy": {

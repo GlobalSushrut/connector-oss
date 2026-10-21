@@ -120,6 +120,7 @@ impl FirecrackerBackend {
             agent_pid,
             dedicated,
             resource,
+            None,
         )?;
         Ok(json!({
             "ok": true,

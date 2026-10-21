@@ -110,16 +110,7 @@ pub fn use_entitlements() -> Memo<Tier> {
         let dep = info.get();
         match dep.mode {
             DeploymentMode::Playground => Tier::Trial,
-            DeploymentMode::SelfHosted => match dep
-                .license_tier
-                .as_deref()
-                .map(str::to_ascii_lowercase)
-                .as_deref()
-            {
-                Some("team" | "pro") => Tier::Team,
-                Some("business" | "enterprise" | "ent") => Tier::Enterprise,
-                _ => Tier::Community,
-            },
+            DeploymentMode::SelfHosted => Tier::Enterprise,
             DeploymentMode::Unknown => Tier::Unknown,
         }
     })

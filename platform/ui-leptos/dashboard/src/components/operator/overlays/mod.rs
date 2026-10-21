@@ -32,6 +32,7 @@ pub mod secrets_webhooks_panel;
 pub mod books_economy_panel;
 pub mod isolation_posture;
 pub mod operational_evidence;
+pub mod eleven_fingers;
 pub mod fleet_chain;
 pub mod expometer;
 

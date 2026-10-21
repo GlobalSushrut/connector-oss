@@ -38,11 +38,8 @@ pub async fn get_system_info(
         uptime_hours: Some(crate::boot::uptime_secs() / 3600),
         start_time: boot_start_rfc3339(),
         license: LicenseInfo {
-            tier: format!("{:?}", state.license.tier),
-            valid_until: state.license.valid_until
-                .and_then(|ts| chrono::DateTime::from_timestamp(ts / 1000, 0))
-                .map(|d| d.to_rfc3339())
-                .unwrap_or_else(|| "never".to_string()),
+            tier: "Apache-2.0".to_string(),
+            valid_until: "never".to_string(),
             features: vec![
                 "agents".to_string(),
                 "memory".to_string(),

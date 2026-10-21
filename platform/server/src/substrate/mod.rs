@@ -2,6 +2,9 @@
 
 pub mod admission_gate;
 pub mod agentgateway;
+pub mod intelligence_plane;
+pub mod eleven_reports;
+pub mod eleven_supervisor;
 pub mod release_gate;
 pub mod admission_matrix;
 pub mod spine_shell;
