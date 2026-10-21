@@ -49,18 +49,7 @@ jobs:
       - name: Install Trunk
         run: |
           set -euo pipefail
-          url="$(python3 - <<'PY'
-          import json, urllib.request
-          rel = json.load(urllib.request.urlopen("https://api.github.com/repos/trunk-rs/trunk/releases/latest"))
-          for asset in rel["assets"]:
-              name = asset["name"]
-              if "x86_64-unknown-linux-gnu" in name and name.endswith(".tar.gz"):
-                  print(asset["browser_download_url"])
-                  break
-          else:
-              raise SystemExit("no trunk linux tarball in the latest release")
-          PY
-          )"
+          url="$(curl -fsSL https://api.github.com/repos/trunk-rs/trunk/releases/latest | python3 -c 'import json,sys; rel=json.load(sys.stdin); print(next(a["browser_download_url"] for a in rel["assets"] if "x86_64-unknown-linux-gnu" in a["name"] and a["name"].endswith(".tar.gz")))')"
           stage="$(mktemp -d)"
           curl -fL "$url" | tar -xz -C "$stage"
           bin="$(find "$stage" -type f -name trunk | head -1)"
@@ -86,18 +75,19 @@ jobs:
         run: |
           set -euo pipefail
           short="${GITHUB_SHA::12}"
-          cat > /tmp/prebuilt-notes.md <<EOF
-Prebuilt from \`${GITHUB_SHA}\`.
-
-This release is replaced on every push to \`main\`.
-
-\`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | bash
-connector-platform
-\`\`\`
-
-Direct download: [${short}](https://github.com/GlobalSushrut/connector-oss/releases/download/prebuilt/connector-os-linux-x86_64.tar.gz)
-EOF
+          {
+            echo "Prebuilt from \`${GITHUB_SHA}\`."
+            echo
+            echo "This release is replaced on every push to \`main\`."
+            echo
+            echo '```bash'
+            echo 'curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | bash'
+            echo 'connector-platform'
+            echo '```'
+            echo
+            echo "Download: https://github.com/GlobalSushrut/connector-oss/releases/download/prebuilt/connector-os-linux-x86_64.tar.gz"
+            echo "Commit: ${short}"
+          } > /tmp/prebuilt-notes.md
           if gh release view prebuilt >/dev/null 2>&1; then
             gh release edit prebuilt --target "$GITHUB_SHA" --title "Prebuilt (${short})" --notes-file /tmp/prebuilt-notes.md
           else
