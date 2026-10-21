@@ -78,11 +78,21 @@ Open <http://127.0.0.1:9091/>. The machine needs glibc 2.35 or newer (Ubuntu 22.
 
 ### Docker, including a cloud VM
 
+From a clone:
+
 ```bash
 docker compose -f platform/deploy/docker-compose.yml up -d
 ```
 
-The image is `ghcr.io/globalsushrut/connector-oss:prebuilt`. Map port 9091 and open that address.
+Or without cloning, in an empty directory:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/deploy/docker-compose.yml
+curl -fsSLO https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/deploy/Dockerfile.cloud
+docker compose up -d
+```
+
+That installs the published package inside a container and publishes port 9091. Open that address on the computer or the cloud VM.
 
 ## Quick start
 
