@@ -1,0 +1,10 @@
+# Local node config installed with the prebuilt tarball.
+# The installer copies this to ~/.connector/connector.yaml when that file is absent.
+# No license server is required.
+
+version: 1
+preset: local
+
+connector:
+  host: "127.0.0.1"
+  port: 9091

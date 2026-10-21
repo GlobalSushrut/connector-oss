@@ -1,176 +1,151 @@
 #!/usr/bin/env bash
-# Connector OS — Official Installer
-# Usage:
-#   curl -fsSL https://get.cnktros.com/install.sh | bash
-#   curl -fsSL https://get.cnktros.com/install.sh | bash -s -- --arch arm64
-#   curl -fsSL https://get.cnktros.com/install.sh | bash -s -- --os darwin --arch amd64
+# Install the latest prebuilt Connector node from GitHub. No compiler.
 #
-# What this does:
-#   1. Detects your OS and architecture
-#   2. Downloads the correct connector tarball
-#   3. Installs connector-platform and connectorctl to /usr/local/bin
-#   4. Creates a default config at ~/.connector/connector.toml
-#   5. (Linux only) Installs a systemd user service
+#   curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | bash
+#   curl -fsSL .../install.sh | bash -s -- --system
 #
-# Requirements: curl, tar, sha256sum (or shasum on macOS)
+# Default: ~/.connector and ~/.local/bin
+# --system: /usr/local/bin (uses sudo when needed)
+#
+# Each push to main replaces the GitHub release tagged "prebuilt".
 set -euo pipefail
 
-VERSION="0.1.0"
-BASE_URL="https://github.com/connector-os/connector-private/releases/download/v${VERSION}"
-INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="${HOME}/.connector"
-PORTAL="https://portal.cnktros.com"
+REPO="${CONNECTOR_GITHUB_REPO:-GlobalSushrut/connector-oss}"
+TAG="${CONNECTOR_RELEASE_TAG:-prebuilt}"
+SYSTEM=0
 
-BOLD="\033[1m"
-GREEN="\033[32m"
-CYAN="\033[36m"
-YELLOW="\033[33m"
-RED="\033[31m"
-RESET="\033[0m"
-
-log()  { echo -e "${BOLD}${GREEN}==>${RESET} $*"; }
-info() { echo -e "    ${CYAN}$*${RESET}"; }
-warn() { echo -e "    ${YELLOW}warning:${RESET} $*"; }
-err()  { echo -e "    ${RED}error:${RESET} $*" >&2; exit 1; }
-
-# ── Parse args ────────────────────────────────────────────────────────────────
-OS=""
-ARCH=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --os)    OS="$2";   shift 2 ;;
-    --arch)  ARCH="$2"; shift 2 ;;
-    --version) VERSION="$2"; shift 2 ;;
-    *) warn "Unknown argument: $1"; shift ;;
+    --system) SYSTEM=1; shift ;;
+    --repo) REPO="$2"; shift 2 ;;
+    --tag) TAG="$2"; shift 2 ;;
+    -h|--help)
+      echo "usage: install.sh [--system] [--repo owner/name] [--tag prebuilt]"
+      exit 0
+      ;;
+    *) echo "install: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
-# ── Auto-detect OS ────────────────────────────────────────────────────────────
-if [[ -z "$OS" ]]; then
-  case "$(uname -s)" in
-    Linux*)  OS="linux" ;;
-    Darwin*) OS="darwin" ;;
-    *) err "Unsupported OS: $(uname -s). Only Linux and macOS are supported." ;;
+OS="$(uname -s)"
+ARCH_RAW="$(uname -m)"
+if [[ "$OS" != "Linux" ]]; then
+  echo "install: prebuilt tarballs are Linux only (this machine is $OS)." >&2
+  exit 1
+fi
+case "$ARCH_RAW" in
+  x86_64) ARCH=x86_64 ;;
+  *)
+    echo "install: prebuilt tarballs are published for Linux x86_64 only (this machine is $OS/$ARCH_RAW)." >&2
+    exit 1
+    ;;
+esac
+
+ASSET="connector-os-linux-${ARCH}.tar.gz"
+BASE="https://github.com/${REPO}/releases/download/${TAG}"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/connector-install.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+
+echo "install: downloading ${ASSET} from ${REPO} (${TAG})"
+if ! curl -fL --retry 3 --retry-delay 2 "${BASE}/${ASSET}" -o "${TMP}/${ASSET}"; then
+  echo "install: download failed." >&2
+  echo "install: the tarball is published by GitHub Actions after each push to main." >&2
+  echo "install: see https://github.com/${REPO}/releases/tag/${TAG}" >&2
+  exit 1
+fi
+if ! curl -fL --retry 3 --retry-delay 2 "${BASE}/${ASSET}.sha256" -o "${TMP}/${ASSET}.sha256"; then
+  echo "install: checksum download failed" >&2
+  exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  (cd "$TMP" && sha256sum -c "${ASSET}.sha256")
+elif command -v shasum >/dev/null 2>&1; then
+  expected="$(awk '{print $1}' "${TMP}/${ASSET}.sha256")"
+  actual="$(shasum -a 256 "${TMP}/${ASSET}" | awk '{print $1}')"
+  if [[ "$expected" != "$actual" ]]; then
+    echo "install: checksum mismatch" >&2
+    exit 1
+  fi
+else
+  echo "install: sha256sum or shasum is required" >&2
+  exit 1
+fi
+
+tar -xzf "${TMP}/${ASSET}" -C "$TMP"
+ROOT_DIR="$(find "$TMP" -mindepth 1 -maxdepth 1 -type d -name 'connector-os-*' | head -1)"
+if [[ -z "$ROOT_DIR" ]]; then
+  echo "install: tarball has no connector-os directory" >&2
+  exit 1
+fi
+test -x "$ROOT_DIR/bin/connector-platform"
+test -x "$ROOT_DIR/bin/connectorctl"
+
+COMMIT="unknown"
+if [[ -f "$ROOT_DIR/COMMIT" ]]; then
+  COMMIT="$(tr -d '[:space:]' < "$ROOT_DIR/COMMIT")"
+fi
+
+install_tree() {
+  local bin_dir="$1"
+  local home_dir="$2"
+  local ui_dir="$3"
+  local config="$4"
+  local ui_export=""
+  mkdir -p "$bin_dir" "$home_dir/bin" "$home_dir/data" "$(dirname "$config")"
+  install -m755 "$ROOT_DIR/bin/connector-platform" "$home_dir/bin/connector-platform"
+  install -m755 "$ROOT_DIR/bin/connectorctl" "$home_dir/bin/connectorctl"
+  if [[ -d "$ROOT_DIR/ui" && -n "$ui_dir" ]]; then
+    rm -rf "$ui_dir"
+    mkdir -p "$ui_dir"
+    cp -a "$ROOT_DIR/ui/." "$ui_dir/"
+    ui_export="export CONNECTOR_UI_DIR=\"\${CONNECTOR_UI_DIR:-$ui_dir}\""
+  fi
+  if [[ ! -f "$config" ]]; then
+    install -m644 "$ROOT_DIR/etc/connector.yaml.example" "$config"
+  fi
+  {
+    echo '#!/bin/sh'
+    echo "export CONNECTOR_DATA_DIR=\"\${CONNECTOR_DATA_DIR:-$home_dir/data}\""
+    echo "export CONNECTOR_CONFIG_FILE=\"\${CONNECTOR_CONFIG_FILE:-$config}\""
+    if [[ -n "$ui_export" ]]; then
+      echo "$ui_export"
+    fi
+    echo "exec \"$home_dir/bin/connector-platform\" \"\$@\""
+  } > "$bin_dir/connector-platform"
+  {
+    echo '#!/bin/sh'
+    echo "export CONNECTOR_DATA_DIR=\"\${CONNECTOR_DATA_DIR:-$home_dir/data}\""
+    echo "export CONNECTOR_CONFIG_FILE=\"\${CONNECTOR_CONFIG_FILE:-$config}\""
+    echo "exec \"$home_dir/bin/connectorctl\" \"\$@\""
+  } > "$bin_dir/connectorctl"
+  chmod 755 "$bin_dir/connector-platform" "$bin_dir/connectorctl"
+}
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  SYSTEM=1
+fi
+
+if [[ "$SYSTEM" == "1" ]]; then
+  if [[ "$(id -u)" -ne 0 ]]; then
+    echo "install: --system needs root. Run:" >&2
+    echo "  curl -fsSL https://raw.githubusercontent.com/${REPO}/main/platform/release/install.sh | sudo bash -s -- --system" >&2
+    exit 1
+  fi
+  install_tree /usr/local/bin /var/lib/connector /var/lib/connector/ui /etc/connector/connector.yaml
+  echo "install: system binaries are on PATH (/usr/local/bin)"
+else
+  install_tree "${HOME}/.local/bin" "${HOME}/.connector" "${HOME}/.connector/ui" "${HOME}/.connector/connector.yaml"
+  echo "install: user binaries are in ${HOME}/.local/bin"
+  case ":$PATH:" in
+    *":${HOME}/.local/bin:"*) ;;
+    *)
+      echo "install: add this to your shell profile if connector-platform is not found:"
+      echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+      ;;
   esac
 fi
 
-# ── Auto-detect arch ──────────────────────────────────────────────────────────
-if [[ -z "$ARCH" ]]; then
-  case "$(uname -m)" in
-    x86_64|amd64)  ARCH="amd64" ;;
-    aarch64|arm64) ARCH="arm64" ;;
-    *) err "Unsupported architecture: $(uname -m). Use --arch amd64 or --arch arm64." ;;
-  esac
-fi
-
-TARBALL="connector-${VERSION}-${OS}-${ARCH}.tar.gz"
-TARBALL_URL="${BASE_URL}/${TARBALL}"
-CHECKSUM_URL="${BASE_URL}/${TARBALL}.sha256"
-
-echo ""
-echo -e "${BOLD}  Connector OS — Installer v${VERSION}${RESET}"
-echo -e "  ${CYAN}https://cnktros.com${RESET}"
-echo ""
-log "Detected: ${OS}/${ARCH}"
-log "Version:  ${VERSION}"
-echo ""
-
-# ── Check dependencies ────────────────────────────────────────────────────────
-for dep in curl tar; do
-  command -v "$dep" &>/dev/null || err "$dep is required but not installed."
-done
-
-# ── Download ──────────────────────────────────────────────────────────────────
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
-
-log "Downloading ${TARBALL}…"
-curl -fsSL --progress-bar "${TARBALL_URL}" -o "${TMP_DIR}/${TARBALL}" \
-  || err "Download failed. Check your connection or visit ${PORTAL} to download manually."
-
-# ── Verify checksum ───────────────────────────────────────────────────────────
-log "Verifying checksum…"
-curl -fsSL "${CHECKSUM_URL}" -o "${TMP_DIR}/${TARBALL}.sha256" 2>/dev/null || warn "Checksum file unavailable — skipping verification."
-if [[ -f "${TMP_DIR}/${TARBALL}.sha256" ]]; then
-  EXPECTED="$(cat "${TMP_DIR}/${TARBALL}.sha256" | awk '{print $1}')"
-  if command -v sha256sum &>/dev/null; then
-    ACTUAL="$(sha256sum "${TMP_DIR}/${TARBALL}" | awk '{print $1}')"
-  else
-    ACTUAL="$(shasum -a 256 "${TMP_DIR}/${TARBALL}" | awk '{print $1}')"
-  fi
-  if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-    err "Checksum mismatch! Expected ${EXPECTED}, got ${ACTUAL}. The download may be corrupted."
-  fi
-  info "Checksum OK"
-fi
-
-# ── Extract ───────────────────────────────────────────────────────────────────
-log "Extracting…"
-tar -xzf "${TMP_DIR}/${TARBALL}" -C "${TMP_DIR}"
-EXTRACT_DIR="${TMP_DIR}/connector-${VERSION}"
-
-# ── Install binaries ──────────────────────────────────────────────────────────
-log "Installing binaries to ${INSTALL_DIR}…"
-if [[ ! -w "${INSTALL_DIR}" ]]; then
-  info "Requesting sudo to install to ${INSTALL_DIR}"
-  SUDO="sudo"
-else
-  SUDO=""
-fi
-
-$SUDO install -m 755 "${EXTRACT_DIR}/bin/connector-platform" "${INSTALL_DIR}/connector-platform"
-$SUDO install -m 755 "${EXTRACT_DIR}/bin/connectorctl"       "${INSTALL_DIR}/connectorctl"
-info "connector-platform → ${INSTALL_DIR}/connector-platform"
-info "connectorctl       → ${INSTALL_DIR}/connectorctl"
-
-# ── Default config ────────────────────────────────────────────────────────────
-mkdir -p "${CONFIG_DIR}"
-if [[ ! -f "${CONFIG_DIR}/connector.toml" ]]; then
-  cp "${EXTRACT_DIR}/connector.toml.example" "${CONFIG_DIR}/connector.toml"
-  info "Config template → ${CONFIG_DIR}/connector.toml"
-else
-  info "Existing config preserved at ${CONFIG_DIR}/connector.toml"
-fi
-
-# ── Systemd service (Linux only) ──────────────────────────────────────────────
-if [[ "$OS" == "linux" ]] && command -v systemctl &>/dev/null; then
-  SERVICE_DIR="${HOME}/.config/systemd/user"
-  mkdir -p "${SERVICE_DIR}"
-  cat > "${SERVICE_DIR}/connector.service" <<EOF
-[Unit]
-Description=Connector OS Node
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-ExecStart=${INSTALL_DIR}/connector-platform --config ${CONFIG_DIR}/connector.toml
-Restart=on-failure
-RestartSec=5
-Environment=RUST_LOG=info
-
-[Install]
-WantedBy=default.target
-EOF
-  systemctl --user daemon-reload 2>/dev/null || true
-  info "Systemd user service → ${SERVICE_DIR}/connector.service"
-fi
-
-# ── Done ──────────────────────────────────────────────────────────────────────
-echo ""
-echo -e "${BOLD}${GREEN}  Installation complete!${RESET}"
-echo ""
-echo -e "  ${BOLD}Next steps:${RESET}"
-echo -e "  ${CYAN}1.${RESET} Add your pilot API key to ${CONFIG_DIR}/connector.toml"
-echo -e "     Get your key at ${PORTAL}/app/api-keys"
-echo ""
-echo -e "  ${CYAN}2.${RESET} Start the node:"
-echo -e "     ${BOLD}connector-platform --config ~/.connector/connector.toml${RESET}"
-echo -e "     or (with systemd): ${BOLD}systemctl --user start connector${RESET}"
-echo ""
-echo -e "  ${CYAN}3.${RESET} Open the dashboard:"
-echo -e "     ${BOLD}http://localhost:9090${RESET}"
-echo ""
-echo -e "  ${CYAN}4.${RESET} Connect Cursor / Windsurf / Claude to your node."
-echo -e "     Docs: ${PORTAL}/docs/quickstart"
-echo ""
+echo "install: commit ${COMMIT}"
+echo "install: start with:  connector-platform"
+echo "install: dashboard:   http://127.0.0.1:9091/"

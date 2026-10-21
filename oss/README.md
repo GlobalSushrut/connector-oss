@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="https://cnktros.com">Website</a> ·
+  <a href="#install">Install</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="SECURITY.md">Security</a>
@@ -54,7 +55,26 @@ Connector is for teams whose agents can affect real systems:
 If an agent only produces text in a disposable sandbox, Connector may be more
 infrastructure than you need.
 
+## Install
+
+Linux x86_64, no compiler. Every push to `main` replaces this tarball, so the download is the latest commit.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/GlobalSushrut/connector-oss/main/platform/release/install.sh | bash
+connector-platform
+```
+
+Open <http://127.0.0.1:9091/>.
+
+The same file is always current:
+
+<https://github.com/GlobalSushrut/connector-oss/releases/download/prebuilt/connector-os-linux-x86_64.tar.gz>
+
+The binary is built on Ubuntu 22.04, so the machine needs glibc 2.35 or newer.
+
 ## Quick start
+
+This path compiles from source. Use [Install](#install) when you want the prebuilt tarball.
 
 ```bash
 git clone https://github.com/GlobalSushrut/connector-oss.git
