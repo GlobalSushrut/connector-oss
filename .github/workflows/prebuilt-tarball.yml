@@ -38,10 +38,17 @@ jobs:
         run: |
           set -euo pipefail
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
-          sudo fallocate -l 8G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo swapoff /swapfile 2>/dev/null || true
+          sudo rm -f /swapfile || true
+          if sudo dd if=/dev/zero of=/swapfile bs=1M count=8192 status=none \
+            && sudo chmod 600 /swapfile \
+            && sudo mkswap /swapfile \
+            && sudo swapon /swapfile; then
+            echo "swap ready"
+          else
+            echo "swap unavailable; continuing without it"
+            sudo rm -f /swapfile || true
+          fi
 
       - name: System packages
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config build-essential ca-certificates curl protobuf-compiler
